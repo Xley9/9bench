@@ -1,0 +1,140 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="Privacy Policy — 9bench"
+  description="9bench privacy policy: what data we collect, what we don't, how to delete your data. GDPR-compliant."
+  keywords="9bench privacy policy, gdpr benchmark privacy, data protection"
+>
+  <main class="max-w-3xl mx-auto px-5 py-12">
+    <header class="text-center mb-10">
+      <a href="/" class="inline-block px-3 py-1 bg-brand-light/10 text-brand rounded-full text-xs font-bold tracking-wider uppercase mb-4">
+        ← back to 9bench
+      </a>
+      <h1 class="text-4xl md:text-5xl font-extrabold mb-3">Privacy</h1>
+      <p class="text-lg text-slate-400">Plain-language. No legalese marathon.</p>
+    </header>
+
+    <article class="prose-content">
+      <section>
+        <h2>The TL;DR</h2>
+        <p>
+          The benchmark runs entirely in your browser. No data leaves your device <em>during the test</em>.
+          When the test finishes, your scores are automatically submitted to our global ranking database
+          (anonymously). If you don't want this, disable JavaScript or close the tab before the test completes.
+        </p>
+      </section>
+
+      <section>
+        <h2>What we collect when you submit a result</h2>
+        <ul>
+          <li>Your benchmark numbers: scores (overall, GPU, CPU, RAM), GFLOPS, hash rates, GB/s, latency</li>
+          <li>GPU adapter name (only if your browser exposes it — many privacy-focused browsers don't)</li>
+          <li>CPU core count (from <code>navigator.hardwareConcurrency</code>)</li>
+          <li>An anonymous user-agent fragment (e.g. "Chrome 130 / Windows / x64") — truncated to 200 chars</li>
+          <li>An anonymous fingerprint (optional, hashed if provided — used to deduplicate test runs)</li>
+          <li>The timestamp of submission</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>What we don't collect</h2>
+        <ul>
+          <li>Your IP address (Cloudflare may have it for routing — we don't store it)</li>
+          <li>Your name, email, or any account info — you can't have an account here</li>
+          <li>Your exact location (no geo-IP lookup, no GPS)</li>
+          <li>Your browsing history</li>
+          <li>Cookies for tracking (only Google Analytics' standard, see below)</li>
+          <li>Any data while the test is running (zero network activity during measurement)</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Google Analytics 4 (third-party)</h2>
+        <p>
+          We use Google Analytics 4 (Measurement ID: G-6DGWR5Y2CS) to count visitors and understand which
+          pages get used. GA4 is configured with <code>anonymize_ip: true</code>, so no precise IP is sent.
+        </p>
+        <p>
+          To opt out: enable "Do Not Track" in your browser, use a tracking blocker (uBlock Origin, Privacy
+          Badger), or visit our site in incognito/private mode. We don't have a separate cookie-consent banner
+          because we don't use cookies beyond GA4's standard ones — the EU ePrivacy directive allows this for
+          aggregate statistics under "legitimate interest".
+        </p>
+      </section>
+
+      <section>
+        <h2>Cloudflare</h2>
+        <p>
+          The site is hosted on Cloudflare Pages. Cloudflare maintains its own access logs (timestamps,
+          requested URLs, country-level geographic origin) for security and performance, retained
+          24-48 hours. We don't have access to or store these logs ourselves.
+        </p>
+      </section>
+
+      <section>
+        <h2>Result URLs and discoverability</h2>
+        <p>
+          When your benchmark completes, you get a permalink like <code>9bench.com/r/abc12345</code>. This URL
+          is shareable but <strong>not search-engine indexed</strong> (we set <code>noindex</code> via robots.txt
+          for /r/ paths). Only people you share the link with can see your result.
+        </p>
+        <p>
+          The result is also visible on the leaderboard at <code>/top</code> if your score is in the top 50.
+          The leaderboard shows: anonymous result ID, overall score, GPU name (if available), core count,
+          timestamp. No identifying information.
+        </p>
+      </section>
+
+      <section>
+        <h2>Deletion / Right to be forgotten</h2>
+        <p>
+          To delete your submitted result: email <a href="mailto:atillakrk@gmail.com">atillakrk@gmail.com</a>
+          with the result ID (visible in the URL: <code>/r/&lt;id&gt;</code>). We'll delete it within 7 days.
+        </p>
+        <p>
+          To delete your local history: visit <a href="/history" class="text-brand hover:underline">/history</a>
+          and click "Clear all history". This removes data stored in your browser only.
+        </p>
+      </section>
+
+      <section>
+        <h2>GDPR + EU users</h2>
+        <p>
+          The legal basis for processing benchmark submissions is "legitimate interest" (improving the service,
+          providing percentile rankings). Submissions are voluntary — you can simply not visit the site.
+        </p>
+        <p>
+          You have the right to: access (your data is what's at the result URL), rectification (we'll correct
+          mistakes if reported), erasure (email us), data portability (the result URL serves as your data),
+          objection (don't submit), and to lodge a complaint with your data protection authority.
+        </p>
+      </section>
+
+      <section>
+        <h2>Children</h2>
+        <p>
+          The site has no age verification. The benchmark itself is harmless. If your child submits a result
+          and you'd like it removed, email us with the result ID.
+        </p>
+      </section>
+
+      <section>
+        <h2>Changes to this policy</h2>
+        <p>
+          We'll update this page if anything changes. The last-modified date appears in the page meta and
+          on commits at <a href="https://github.com/atillakuruk/9bench" rel="external">github.com/atillakuruk/9bench</a>.
+          Last meaningful update: 2026-04-27.
+        </p>
+      </section>
+
+      <section>
+        <h2>Contact</h2>
+        <p>
+          Atilla Kürük (operator) — <a href="mailto:atillakrk@gmail.com">atillakrk@gmail.com</a>
+        </p>
+      </section>
+    </article>
+  </main>
+</BaseLayout>

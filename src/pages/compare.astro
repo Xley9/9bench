@@ -1,0 +1,255 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="Compare Two Benchmark Results — 9bench"
+  description="Compare two 9bench hardware benchmark results side by side. Paste two result IDs to see CPU, GPU, RAM differences."
+  keywords="compare hardware benchmark, compare cpu gpu ram, side by side computer comparison, benchmark difference"
+>
+  <main class="max-w-4xl mx-auto px-5 py-12">
+    <header class="text-center mb-8">
+      <a href="/" class="inline-block px-3 py-1 bg-brand-light/10 text-brand rounded-full text-xs font-bold tracking-wider uppercase mb-4">
+        ← back to 9bench
+      </a>
+      <h1 class="text-4xl md:text-5xl font-extrabold mb-3">Compare</h1>
+      <p class="text-lg text-slate-400">Paste two 9bench result IDs to compare hardware side by side.</p>
+    </header>
+
+    <div class="compare-inputs">
+      <div class="compare-input-group">
+        <label>System A — paste result ID or full URL</label>
+        <input type="text" id="id-a" placeholder="abc12345 or https://9bench.com/r/abc12345" />
+      </div>
+      <div class="compare-input-group">
+        <label>System B — paste result ID or full URL</label>
+        <input type="text" id="id-b" placeholder="xyz67890 or https://9bench.com/r/xyz67890" />
+      </div>
+      <button id="compare-btn" class="run-btn mt-2">Compare →</button>
+    </div>
+
+    <div id="compare-loading" hidden class="text-center text-slate-400 py-8">⏳ Loading…</div>
+    <div id="compare-error" hidden class="text-center text-red-500 py-4"></div>
+    <div id="compare-result" hidden class="mt-10"></div>
+
+    <div class="text-center mt-12">
+      <p class="text-slate-500 text-sm mb-3">Don't have two results yet?</p>
+      <a href="/" class="inline-block px-6 py-3 bg-brand text-white rounded-xl font-bold">Run a benchmark →</a>
+    </div>
+  </main>
+
+  <script>
+    const idA = document.getElementById('id-a') as HTMLInputElement;
+    const idB = document.getElementById('id-b') as HTMLInputElement;
+    const btn = document.getElementById('compare-btn') as HTMLButtonElement;
+    const loading = document.getElementById('compare-loading')!;
+    const errorDiv = document.getElementById('compare-error')!;
+    const result = document.getElementById('compare-result')!;
+
+    function fmt(n: number) { return Number(n).toLocaleString(); }
+
+    function extractId(input: string): string {
+      const m = input.trim().match(/([a-f0-9]{8})/);
+      return m ? m[1] : '';
+    }
+
+    function diff(a: number, b: number): string {
+      if (a === b) return '0%';
+      const pct = ((a - b) / b) * 100;
+      const sign = pct > 0 ? '+' : '';
+      const color = pct > 5 ? '#10B981' : pct < -5 ? '#DC2626' : '#94A3B8';
+      return `<span style="color:${color}">${sign}${pct.toFixed(1)}%</span>`;
+    }
+
+    btn.addEventListener('click', async () => {
+      const a = extractId(idA.value);
+      const b = extractId(idB.value);
+      if (!a || !b) {
+        errorDiv.hidden = false;
+        errorDiv.textContent = 'Both inputs must contain a valid 8-character result ID.';
+        return;
+      }
+      if (a === b) {
+        errorDiv.hidden = false;
+        errorDiv.textContent = 'Comparing the same result with itself wouldn\'t reveal much.';
+        return;
+      }
+
+      btn.disabled = true;
+      loading.hidden = false;
+      errorDiv.hidden = true;
+      result.hidden = true;
+
+      try {
+        const [resA, resB] = await Promise.all([
+          fetch(`/api/r/${a}`).then(r => r.json()) as any,
+          fetch(`/api/r/${b}`).then(r => r.json()) as any
+        ]);
+        if (!resA.ok) throw new Error(`Result A: ${resA.error || 'not found'}`);
+        if (!resB.ok) throw new Error(`Result B: ${resB.error || 'not found'}`);
+
+        const A = resA.result;
+        const B = resB.result;
+
+        loading.hidden = true;
+        result.hidden = false;
+        result.innerHTML = `
+          <div class="compare-grid">
+            <div class="compare-col">
+              <div class="compare-col-header">System A</div>
+              <a href="/r/${A.id}/" class="compare-id">/r/${A.id}</a>
+              <div class="compare-score">${fmt(A.scores.overall)}</div>
+              <div class="compare-detail-list">
+                <div class="compare-detail-row"><span>GPU</span><span>${fmt(A.scores.gpu)}</span></div>
+                <div class="compare-detail-row"><span>CPU·1</span><span>${fmt(A.scores.cpuSingle)}</span></div>
+                <div class="compare-detail-row"><span>CPU·M</span><span>${fmt(A.scores.cpuMulti)}</span></div>
+                <div class="compare-detail-row"><span>RAM</span><span>${fmt(A.scores.ram)}</span></div>
+                <div class="compare-detail-row"><span>GFLOPS</span><span>${A.gpu.gflops.toFixed(0)}</span></div>
+                <div class="compare-detail-row"><span>Cores</span><span>${A.cpu.cores}</span></div>
+                <div class="compare-detail-row"><span>RAM read</span><span>${A.ram.readGBs.toFixed(1)} GB/s</span></div>
+              </div>
+            </div>
+            <div class="compare-vs">vs</div>
+            <div class="compare-col">
+              <div class="compare-col-header">System B</div>
+              <a href="/r/${B.id}/" class="compare-id">/r/${B.id}</a>
+              <div class="compare-score">${fmt(B.scores.overall)}</div>
+              <div class="compare-detail-list">
+                <div class="compare-detail-row"><span>GPU</span><span>${fmt(B.scores.gpu)}</span></div>
+                <div class="compare-detail-row"><span>CPU·1</span><span>${fmt(B.scores.cpuSingle)}</span></div>
+                <div class="compare-detail-row"><span>CPU·M</span><span>${fmt(B.scores.cpuMulti)}</span></div>
+                <div class="compare-detail-row"><span>RAM</span><span>${fmt(B.scores.ram)}</span></div>
+                <div class="compare-detail-row"><span>GFLOPS</span><span>${B.gpu.gflops.toFixed(0)}</span></div>
+                <div class="compare-detail-row"><span>Cores</span><span>${B.cpu.cores}</span></div>
+                <div class="compare-detail-row"><span>RAM read</span><span>${B.ram.readGBs.toFixed(1)} GB/s</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="compare-summary">
+            <h3 class="text-lg font-bold mb-3 text-brand">A vs B (% difference)</h3>
+            <div class="compare-detail-list">
+              <div class="compare-detail-row"><span>Overall</span><span>${diff(A.scores.overall, B.scores.overall)}</span></div>
+              <div class="compare-detail-row"><span>GPU</span><span>${diff(A.scores.gpu, B.scores.gpu)}</span></div>
+              <div class="compare-detail-row"><span>CPU·M</span><span>${diff(A.scores.cpuMulti, B.scores.cpuMulti)}</span></div>
+              <div class="compare-detail-row"><span>RAM</span><span>${diff(A.scores.ram, B.scores.ram)}</span></div>
+            </div>
+          </div>
+        `;
+      } catch (e: any) {
+        loading.hidden = true;
+        errorDiv.hidden = false;
+        errorDiv.textContent = e.message;
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  </script>
+
+  <style is:global>
+    .compare-inputs {
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    .compare-input-group label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 0.4rem;
+    }
+    .compare-input-group input {
+      width: 100%;
+      padding: 0.85rem 1rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      color: var(--text);
+      font-family: ui-monospace, monospace;
+      font-size: 0.92rem;
+    }
+    .compare-input-group input:focus {
+      outline: none;
+      border-color: var(--brand);
+    }
+
+    .compare-grid {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 1.5rem;
+      align-items: start;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    @media (max-width: 640px) {
+      .compare-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .compare-col {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 0.85rem;
+      padding: 1.25rem;
+    }
+    .compare-col-header {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+    }
+    .compare-id {
+      display: block;
+      font-family: ui-monospace, monospace;
+      font-size: 0.78rem;
+      color: var(--brand);
+      margin-bottom: 0.75rem;
+    }
+    .compare-score {
+      font-size: 3rem;
+      font-weight: 800;
+      line-height: 1;
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    .compare-vs {
+      align-self: center;
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--text-muted);
+      font-style: italic;
+    }
+    @media (max-width: 640px) {
+      .compare-vs { text-align: center; padding: 0.5rem 0; }
+    }
+
+    .compare-detail-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+    .compare-detail-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.4rem 0.7rem;
+      background: var(--bg-elevated);
+      border-radius: 0.4rem;
+      font-size: 0.92rem;
+    }
+    .compare-detail-row span:first-child { color: var(--text-muted); }
+    .compare-detail-row span:last-child { font-family: ui-monospace, monospace; font-weight: 600; }
+
+    .compare-summary {
+      max-width: 600px;
+      margin: 2rem auto 0;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 0.85rem;
+      padding: 1.25rem;
+    }
+  </style>
+</BaseLayout>

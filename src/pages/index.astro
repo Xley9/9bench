@@ -232,6 +232,21 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           console.warn('Submit failed (offline?):', e);
         }
 
+        // Save to local history (privacy-respecting)
+        try {
+          const hist = JSON.parse(localStorage.getItem('9bench:history') || '[]');
+          hist.push({
+            timestamp: Date.now(),
+            resultId: submitted.id || null,
+            score: r.scores.overall,
+            scores: r.scores,
+            gpu: r.hardware.gpu,
+            cores: r.cpu.cores
+          });
+          // Keep last 50 entries
+          localStorage.setItem('9bench:history', JSON.stringify(hist.slice(-50)));
+        } catch {}
+
         // Render result card
         const fmt = (n: number) => n.toLocaleString();
         const pct = (n: number, max: number) => Math.min(100, Math.round((n / max) * 100));

@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import Header from '../components/Header.astro';
 import { GSC_META_VERIFICATION, BING_META_VERIFICATION, YANDEX_META_VERIFICATION, GA4_ID } from '../config';
 
 export interface Props {
@@ -231,6 +232,7 @@ const baseSchema = {
     )}
   </head>
   <body>
+    <Header />
     <slot />
   </body>
 </html>

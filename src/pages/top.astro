@@ -1,0 +1,193 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="Top Scores Leaderboard — 9bench"
+  description="Top 9bench hardware benchmark scores from across the globe. See the fastest CPUs, GPUs, and RAM measured in browser."
+  keywords="top hardware benchmark scores, fastest computer 9bench, leaderboard, gpu benchmark ranking, cpu benchmark top, browser benchmark leaderboard"
+>
+  <main class="max-w-4xl mx-auto px-5 py-12">
+    <header class="text-center mb-10">
+      <a href="/" class="inline-block px-3 py-1 bg-brand-light/10 text-brand rounded-full text-xs font-bold tracking-wider uppercase mb-4">
+        ← back to 9bench
+      </a>
+      <h1 class="text-4xl md:text-5xl font-extrabold mb-3">Top Scores</h1>
+      <p class="text-lg text-slate-400">The fastest computers measured by 9bench, anonymously.</p>
+    </header>
+
+    <!-- Period switcher -->
+    <div class="flex justify-center gap-2 mb-8">
+      <button data-period="all" class="period-btn active">All time</button>
+      <button data-period="month">This month</button>
+      <button data-period="week">This week</button>
+    </div>
+
+    <div id="loading" class="text-center text-slate-400 py-12">⏳ Loading leaderboard…</div>
+    <div id="error" hidden class="text-center text-red-500"></div>
+    <div id="leaderboard" hidden></div>
+
+    <div class="text-center mt-12">
+      <a href="/" class="inline-block px-6 py-3 bg-brand text-white rounded-xl font-bold">Test your hardware →</a>
+    </div>
+  </main>
+
+  <script>
+    const loading = document.getElementById('loading')!;
+    const errorDiv = document.getElementById('error')!;
+    const leaderboard = document.getElementById('leaderboard')!;
+
+    function fmt(n: number) { return Number(n).toLocaleString(); }
+    function rankIcon(rank: number) {
+      if (rank === 1) return '🥇';
+      if (rank === 2) return '🥈';
+      if (rank === 3) return '🥉';
+      if (rank <= 10) return '⭐';
+      return '#' + rank;
+    }
+    function bracket(score: number) {
+      if (score >= 4000) return { c: '#10B981', l: 'Elite' };
+      if (score >= 2500) return { c: '#10B981', l: 'High-end' };
+      if (score >= 1700) return { c: '#0EA5E9', l: 'Mainstream' };
+      if (score >= 1000) return { c: '#0EA5E9', l: 'Mid-range' };
+      if (score >= 500) return { c: '#F59E0B', l: 'Older' };
+      return { c: '#DC2626', l: 'Office' };
+    }
+
+    async function loadPeriod(period: string) {
+      loading.hidden = false;
+      leaderboard.hidden = true;
+      errorDiv.hidden = true;
+
+      try {
+        const res = await fetch(`/api/top?limit=50&period=${period}`);
+        const data = await res.json() as any;
+        if (!data.ok) throw new Error(data.error || 'Load failed');
+
+        loading.hidden = true;
+        leaderboard.hidden = false;
+
+        if (data.results.length === 0) {
+          leaderboard.innerHTML = `<div class="text-center text-slate-500 py-12">No results yet for this period — be the first!</div>`;
+          return;
+        }
+
+        leaderboard.innerHTML = `
+          <div class="text-center text-sm text-slate-500 mb-4">
+            ${fmt(data.total)} total benchmarks · top ${data.results.length} shown
+          </div>
+          <div class="leaderboard-list">
+            ${data.results.map((r: any) => {
+              const b = bracket(r.scores.overall);
+              const date = new Date(r.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+              return `
+                <a href="/r/${r.id}/" class="leaderboard-row">
+                  <div class="leaderboard-rank">${rankIcon(r.rank)}</div>
+                  <div class="leaderboard-score">${fmt(r.scores.overall)}</div>
+                  <div class="leaderboard-bracket" style="color:${b.c}">${b.l}</div>
+                  <div class="leaderboard-hardware">
+                    <div class="leaderboard-gpu">${r.gpu.name || 'Unknown GPU'}</div>
+                    <div class="leaderboard-meta">${r.cpu.cores} cores · ${r.gpu.gflops.toFixed(0)} GFLOPS · ${date}</div>
+                  </div>
+                </a>
+              `;
+            }).join('')}
+          </div>
+        `;
+      } catch (e: any) {
+        loading.hidden = true;
+        errorDiv.hidden = false;
+        errorDiv.textContent = `Failed to load: ${e.message}`;
+      }
+    }
+
+    // Period switcher
+    document.querySelectorAll('.period-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        loadPeriod((btn as HTMLElement).dataset.period!);
+      });
+    });
+
+    loadPeriod('all');
+  </script>
+
+  <style is:global>
+    .period-btn {
+      padding: 0.45rem 1rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .period-btn:hover { border-color: var(--brand); color: var(--text); }
+    .period-btn.active {
+      background: var(--brand);
+      color: #fff;
+      border-color: var(--brand);
+    }
+
+    .leaderboard-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .leaderboard-row {
+      display: grid;
+      grid-template-columns: 60px 100px 100px 1fr;
+      gap: 0.85rem;
+      align-items: center;
+      padding: 0.85rem 1rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 0.65rem;
+      color: var(--text);
+      text-decoration: none;
+      transition: all 0.15s;
+    }
+    .leaderboard-row:hover {
+      border-color: var(--brand);
+      transform: translateX(4px);
+    }
+    .leaderboard-rank {
+      font-size: 1.3rem;
+      font-weight: 700;
+      text-align: center;
+    }
+    .leaderboard-score {
+      font-size: 1.2rem;
+      font-weight: 800;
+      font-family: ui-monospace, monospace;
+    }
+    .leaderboard-bracket {
+      font-size: 0.85rem;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .leaderboard-gpu {
+      font-size: 0.95rem;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .leaderboard-meta {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 0.15rem;
+    }
+
+    @media (max-width: 600px) {
+      .leaderboard-row {
+        grid-template-columns: 40px 80px 1fr;
+      }
+      .leaderboard-bracket { display: none; }
+    }
+  </style>
+</BaseLayout>

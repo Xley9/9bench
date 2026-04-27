@@ -1,0 +1,154 @@
+---
+const path = Astro.url.pathname;
+function isActive(p: string) {
+  if (p === '/' && path === '/') return true;
+  if (p !== '/' && path.startsWith(p)) return true;
+  return false;
+}
+---
+
+<header class="site-header">
+  <div class="site-header-inner">
+    <a href="/" class="site-logo" aria-label="9bench home">
+      <svg width="32" height="32" viewBox="0 0 64 64" aria-hidden="true">
+        <defs>
+          <linearGradient id="hdr-grad" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#10B981"/>
+            <stop offset="100%" stop-color="#4F46E5"/>
+          </linearGradient>
+        </defs>
+        <rect width="64" height="64" rx="14" fill="url(#hdr-grad)"/>
+        <text x="32" y="46" text-anchor="middle"
+              font-family="ui-rounded, system-ui, sans-serif"
+              font-size="44" font-weight="900" fill="#FFFFFF">9</text>
+      </svg>
+      <span>9bench</span>
+    </a>
+
+    <nav class="site-nav" aria-label="Main">
+      <a href="/" class={isActive('/') ? 'active' : ''}>Test</a>
+      <a href="/top" class={isActive('/top') ? 'active' : ''}>Top</a>
+      <a href="/compare" class={isActive('/compare') ? 'active' : ''}>Compare</a>
+      <a href="/history" class={isActive('/history') ? 'active' : ''}>History</a>
+      <a href="/methodology" class={isActive('/methodology') ? 'active' : ''}>How</a>
+      <a href="/faq" class={isActive('/faq') ? 'active' : ''}>FAQ</a>
+    </nav>
+
+    <button class="site-nav-burger" id="site-nav-burger" aria-label="Open menu">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <line x1="4" y1="6" x2="20" y2="6"/>
+        <line x1="4" y1="12" x2="20" y2="12"/>
+        <line x1="4" y1="18" x2="20" y2="18"/>
+      </svg>
+    </button>
+  </div>
+
+  <div class="site-nav-drawer" id="site-nav-drawer" hidden>
+    <a href="/">Test</a>
+    <a href="/top">Top scores</a>
+    <a href="/compare">Compare two</a>
+    <a href="/history">My history</a>
+    <a href="/methodology">Methodology</a>
+    <a href="/faq">FAQ</a>
+    <a href="/about">About</a>
+    <a href="/privacy">Privacy</a>
+  </div>
+</header>
+
+<style>
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgba(11, 17, 32, 0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+  .site-header-inner {
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 0.7rem 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  .site-logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 800;
+    font-size: 1.1rem;
+    color: var(--text);
+    text-decoration: none;
+  }
+  .site-logo svg {
+    border-radius: 0.5rem;
+  }
+  .site-nav {
+    display: none;
+    gap: 0.25rem;
+  }
+  .site-nav a {
+    padding: 0.45rem 0.85rem;
+    border-radius: 0.5rem;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: all 0.15s;
+  }
+  .site-nav a:hover { color: var(--text); background: var(--bg-elevated); }
+  .site-nav a.active { color: var(--brand); background: var(--bg-elevated); }
+  @media (min-width: 768px) {
+    .site-nav { display: flex; }
+  }
+
+  .site-nav-burger {
+    background: none;
+    border: none;
+    color: var(--text);
+    cursor: pointer;
+    padding: 0.4rem;
+    border-radius: 0.4rem;
+  }
+  .site-nav-burger:hover { background: var(--bg-elevated); }
+  @media (min-width: 768px) {
+    .site-nav-burger { display: none; }
+  }
+
+  .site-nav-drawer {
+    display: none;
+    flex-direction: column;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    padding: 0.5rem 1rem;
+  }
+  .site-nav-drawer.is-open { display: flex; }
+  .site-nav-drawer a {
+    padding: 0.85rem 0.5rem;
+    color: var(--text);
+    text-decoration: none;
+    font-weight: 600;
+    border-bottom: 1px solid var(--border);
+  }
+  .site-nav-drawer a:last-child { border-bottom: none; }
+  @media (min-width: 768px) {
+    .site-nav-drawer { display: none !important; }
+  }
+</style>
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', () => {
+    const burger = document.getElementById('site-nav-burger');
+    const drawer = document.getElementById('site-nav-drawer');
+    if (burger && drawer) {
+      burger.addEventListener('click', () => {
+        drawer.classList.toggle('is-open');
+      });
+      drawer.querySelectorAll('a').forEach(a => {
+        a.addEventListener('click', () => drawer.classList.remove('is-open'));
+      });
+    }
+  });
+</script>

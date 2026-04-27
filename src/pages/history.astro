@@ -1,0 +1,140 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="Your Test History — 9bench"
+  description="See your past 9bench hardware benchmark results, stored locally on your device. Track performance changes over time."
+  keywords="benchmark history, past test results, track computer performance, my benchmarks"
+>
+  <main class="max-w-3xl mx-auto px-5 py-12">
+    <header class="text-center mb-10">
+      <a href="/" class="inline-block px-3 py-1 bg-brand-light/10 text-brand rounded-full text-xs font-bold tracking-wider uppercase mb-4">
+        ← back to 9bench
+      </a>
+      <h1 class="text-4xl md:text-5xl font-extrabold mb-3">Your history</h1>
+      <p class="text-lg text-slate-400">Past tests stored locally on this device. Nothing on our servers.</p>
+    </header>
+
+    <div id="empty" hidden class="text-center text-slate-400 py-12">
+      <div class="text-3xl mb-2">📭</div>
+      <p>No tests on this device yet.</p>
+      <a href="/" class="inline-block mt-4 px-6 py-3 bg-brand text-white rounded-xl font-bold">Run your first benchmark →</a>
+    </div>
+
+    <div id="history-list" hidden></div>
+
+    <div class="text-center mt-8" id="actions" hidden>
+      <button id="clear-btn" class="text-sm text-red-400 hover:text-red-300 underline">Clear all history (this device only)</button>
+    </div>
+
+    <div class="text-center mt-12">
+      <a href="/" class="inline-block px-6 py-3 bg-brand text-white rounded-xl font-bold">Run another benchmark →</a>
+    </div>
+  </main>
+
+  <script>
+    const empty = document.getElementById('empty')!;
+    const list = document.getElementById('history-list')!;
+    const actions = document.getElementById('actions')!;
+
+    function fmt(n: number) { return Number(n).toLocaleString(); }
+
+    function load() {
+      let history: any[] = [];
+      try {
+        history = JSON.parse(localStorage.getItem('9bench:history') || '[]');
+      } catch {}
+
+      if (history.length === 0) {
+        empty.hidden = false;
+        return;
+      }
+
+      list.hidden = false;
+      actions.hidden = false;
+
+      // Sort newest first
+      history.sort((a, b) => b.timestamp - a.timestamp);
+
+      list.innerHTML = `
+        <div class="text-center text-sm text-slate-500 mb-4">
+          ${history.length} test${history.length === 1 ? '' : 's'} stored locally
+        </div>
+        <div class="history-grid">
+          ${history.map(h => {
+            const date = new Date(h.timestamp).toLocaleString('en-US', {
+              month: 'short', day: 'numeric', year: 'numeric',
+              hour: '2-digit', minute: '2-digit'
+            });
+            const link = h.resultId ? `/r/${h.resultId}/` : null;
+            return `
+              <${link ? 'a' : 'div'} ${link ? `href="${link}"` : ''} class="history-row">
+                <div class="history-score">${fmt(h.score)}</div>
+                <div class="history-meta">
+                  <div class="history-gpu">${h.gpu || 'Unknown GPU'}</div>
+                  <div class="history-date">${date}</div>
+                </div>
+                ${link ? '<div class="history-link">→</div>' : '<div class="history-link" style="color:var(--text-muted)">offline</div>'}
+              </${link ? 'a' : 'div'}>
+            `;
+          }).join('')}
+        </div>
+      `;
+    }
+
+    document.getElementById('clear-btn')!.addEventListener('click', () => {
+      if (confirm('Delete all history on this device? Cannot be undone.')) {
+        localStorage.removeItem('9bench:history');
+        localStorage.removeItem('9bench:reactions');
+        location.reload();
+      }
+    });
+
+    load();
+  </script>
+
+  <style is:global>
+    .history-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 0.55rem;
+    }
+    .history-row {
+      display: grid;
+      grid-template-columns: 100px 1fr 30px;
+      gap: 1rem;
+      align-items: center;
+      padding: 0.85rem 1.1rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 0.65rem;
+      color: var(--text);
+      text-decoration: none;
+      transition: all 0.15s;
+    }
+    .history-row:hover {
+      border-color: var(--brand);
+      transform: translateX(3px);
+    }
+    .history-score {
+      font-size: 1.6rem;
+      font-weight: 800;
+      font-family: ui-monospace, monospace;
+      color: var(--brand);
+    }
+    .history-gpu {
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+    .history-date {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+    .history-link {
+      font-size: 1.2rem;
+      color: var(--brand);
+      text-align: right;
+    }
+  </style>
+</BaseLayout>

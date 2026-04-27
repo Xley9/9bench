@@ -1,0 +1,154 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="About — 9bench"
+  description="Why 9bench exists, who built it, and what 'Truth Series' means. The honest browser-based hardware benchmark."
+  keywords="about 9bench, atilla kurik, truth series, browser benchmark history, why 9bench"
+>
+  <main class="max-w-3xl mx-auto px-5 py-12">
+    <header class="text-center mb-10">
+      <a href="/" class="inline-block px-3 py-1 bg-brand-light/10 text-brand rounded-full text-xs font-bold tracking-wider uppercase mb-4">
+        ← back to 9bench
+      </a>
+      <h1 class="text-4xl md:text-5xl font-extrabold mb-3">About</h1>
+      <p class="text-lg text-slate-400">Why 9bench exists. Who built it. What "Truth Series" means.</p>
+    </header>
+
+    <article class="prose-content">
+      <section>
+        <h2>The frustration that started this</h2>
+        <p>
+          In April 2026, I (Atilla) wanted to test a friend's laptop quickly to see if it was worth upgrading.
+          The honest options:
+        </p>
+        <ul>
+          <li><strong>UserBenchmark.com</strong> — community-banned for documented bias toward Intel single-core. r/hardware and r/pcmasterrace filter it out as untrustworthy.</li>
+          <li><strong>Geekbench</strong> — 500 MB download, requires admin rights, $9.99 for the Pro version with detailed reports.</li>
+          <li><strong>Cinebench</strong> — 800 MB download, Maxon account required.</li>
+          <li><strong>3DMark</strong> — 8 GB download (yes, GB), Steam account, paid for full features.</li>
+          <li><strong>PassMark</strong> — Windows-only .exe download.</li>
+        </ul>
+        <p>
+          On my friend's locked-down corporate laptop, none of those would install. There was no quick,
+          honest, browser-based alternative. So I built one in 6 hours over a weekend.
+        </p>
+      </section>
+
+      <section>
+        <h2>What 9bench is</h2>
+        <p>
+          9bench is a browser-based hardware benchmark that measures CPU, GPU, and RAM in 15 seconds.
+          The entire test runs locally in your browser using:
+        </p>
+        <ul>
+          <li><strong>WebGPU compute shaders</strong> for real GPU compute performance</li>
+          <li><strong>Web Crypto API</strong> for SHA-256 chains (CPU-bound, hardware-accelerated)</li>
+          <li><strong>Web Workers</strong> for multi-core parallelism</li>
+          <li><strong>TypedArrays</strong> for RAM bandwidth measurement</li>
+        </ul>
+        <p>
+          No download. No installation. No account. No upload. Read the
+          <a href="/methodology" class="text-brand hover:underline font-semibold">full methodology</a>
+          for every formula and bracket.
+        </p>
+      </section>
+
+      <section>
+        <h2>What "Truth Series" means</h2>
+        <p>
+          9bench is part of the <a href="https://toololis.com" rel="external" class="text-brand hover:underline">Toololis Truth Series</a> —
+          utility tools that surface honest numbers. The series rules:
+        </p>
+        <ul>
+          <li><strong>Show your work.</strong> Methodology is public. Formulas are documented. Sources are cited.</li>
+          <li><strong>Cite real research.</strong> Lancet meta-analyses, peer-reviewed papers, official guidelines — not Twitter wisdom.</li>
+          <li><strong>Sarcastic where useful, helpful where needed.</strong> The voice should be friendly, not patronizing.</li>
+          <li><strong>No upsells, no fluff.</strong> Free where it can be free. Premium only when there's a real cost we have to recover.</li>
+          <li><strong>Honest about limits.</strong> If a measurement is approximate or constrained by browser APIs, we say so.</li>
+        </ul>
+        <p>
+          Toololis has 668+ Truth Series tools (lifetime calculators, decision matrices, identity tests,
+          attachment style assessments). 9bench is the dedicated hardware-benchmark spinoff.
+        </p>
+      </section>
+
+      <section>
+        <h2>Who built this</h2>
+        <p>
+          <strong>Atilla Kürük</strong> — solo software builder, based in Antalya, Turkey.
+        </p>
+        <p>
+          I build small, useful, honest tools. Past projects include:
+        </p>
+        <ul>
+          <li><a href="https://toololis.com" rel="external" class="text-brand hover:underline">Toololis</a> — 668 honest browser tools (Truth Series, calculators, decisions, identity tests)</li>
+          <li><a href="https://promptolis.com" rel="external" class="text-brand hover:underline">Promptolis</a> — curated prompt library for AI tools</li>
+          <li><a href="https://seoscore.tools" rel="external" class="text-brand hover:underline">seoscore.tools</a> — 260-check SEO/AEO/GEO audit scanner</li>
+          <li>9bench (this site) — browser hardware benchmark</li>
+        </ul>
+        <p>
+          Find me at:
+        </p>
+        <ul>
+          <li><a href="https://www.linkedin.com/in/atilla-k-2b28b32a3/" rel="external" class="text-brand hover:underline">LinkedIn</a></li>
+          <li><a href="https://github.com/atillakuruk" rel="external" class="text-brand hover:underline">GitHub</a></li>
+          <li><a href="https://toololis.com/atilla/" rel="external" class="text-brand hover:underline">Public author page (toololis.com/atilla)</a></li>
+          <li>Email: <a href="mailto:atillakrk@gmail.com">atillakrk@gmail.com</a></li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>How 9bench is funded</h2>
+        <p>
+          Currently: <strong>self-funded by me</strong>, runs on Cloudflare's free tier (Pages + D1 + Workers).
+          Operating cost is roughly $0 at the current scale (under 100K monthly visits).
+        </p>
+        <p>
+          Future plans (not yet active):
+        </p>
+        <ul>
+          <li>Optional B2B API for tech reviewers / IT helpdesks (whitelabel embed for Notebookcheck, Tom's Hardware, etc.)</li>
+          <li>Lead-gen partnerships with refurbished-hardware shops (only when relevant; transparent disclosure)</li>
+          <li>Possibly a Pro tier with deeper analysis (disk speed, network test, AI inference benchmark) — never pay-walling the core 15-second test</li>
+        </ul>
+        <p>
+          The core benchmark will remain free forever. That's the deal.
+        </p>
+      </section>
+
+      <section>
+        <h2>Open source</h2>
+        <p>
+          Source code at <a href="https://github.com/atillakuruk/9bench" rel="external" class="text-brand hover:underline">github.com/atillakuruk/9bench</a>
+          (link active once published). MIT license. Pull requests welcome — especially for additional benchmark methodologies
+          (disk speed via File System Access API, network latency, in-browser ML inference) that are practical to run client-side.
+        </p>
+      </section>
+
+      <section>
+        <h2>Built with</h2>
+        <ul>
+          <li><strong>Astro 4</strong> — static site generator</li>
+          <li><strong>Tailwind CSS</strong> — utility-first styling</li>
+          <li><strong>Cloudflare Pages</strong> — hosting + edge functions</li>
+          <li><strong>Cloudflare D1</strong> — SQLite at the edge for global score storage</li>
+          <li><strong>workers-og</strong> — dynamic OG image generation (satori + resvg-wasm)</li>
+          <li><strong>WebGPU + WebAssembly + Web Workers + Web Crypto API</strong> — the actual benchmark stack</li>
+          <li><strong>Claude (Anthropic)</strong> — AI-assisted code generation, paired with my judgment</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Get in touch</h2>
+        <p>
+          Bug reports, calibration feedback, partnership ideas, just saying hi — all welcome.
+        </p>
+        <p>
+          Email <a href="mailto:atillakrk@gmail.com">atillakrk@gmail.com</a> or open an issue on GitHub.
+        </p>
+      </section>
+    </article>
+  </main>
+</BaseLayout>
