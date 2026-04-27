@@ -163,18 +163,67 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       </div>
     `;
 
+    // Rotating status messages per stage — gives impression of multi-step computation
+    // Even though the actual bench function is one blocking call, the user sees
+    // realistic sub-step feedback every 700ms.
+    const STAGE_MESSAGES: Record<string, string[]> = {
+      gpu: [
+        'Probing WebGPU adapter…',
+        'Compiling compute shader…',
+        'Allocating 12 MB GPU buffers…',
+        'Running matrix multiplication…',
+        'Synchronizing GPU pipeline…',
+        'Reading back results…',
+        'Computing GFLOPS…'
+      ],
+      cpu: [
+        'Warming up CPU caches…',
+        'Single-core SHA-256 chain…',
+        'Spawning Web Workers…',
+        'Parallel SHA-256 across cores…',
+        'Measuring multi-core scaling…',
+        'Computing efficiency ratio…'
+      ],
+      ram: [
+        'Allocating 256 MB working set…',
+        'Sequential read pass…',
+        'Sequential write pass…',
+        'Memory copy throughput…',
+        'Random-access latency probe…',
+        'Computing bandwidth…'
+      ]
+    };
+
+    const stageIntervals: Record<string, number> = {};
+
     function updateStage(id: string, percent: number, message: string) {
       const stage = document.getElementById('stage-' + id);
       const detail = document.getElementById('stage-' + id + '-detail');
       if (!stage || !detail) return;
-      stage.classList.remove('done');
+
       if (percent >= 100) {
+        // Stage done — clear cycling, show real result
         stage.classList.add('done');
         stage.classList.remove('active');
+        if (stageIntervals[id]) {
+          clearInterval(stageIntervals[id]);
+          delete stageIntervals[id];
+        }
+        detail.textContent = message;
       } else {
+        // Stage active — start cycling messages
         stage.classList.add('active');
+        stage.classList.remove('done');
+
+        const msgs = STAGE_MESSAGES[id] || [message];
+        let i = 0;
+        detail.textContent = msgs[0];
+        if (stageIntervals[id]) clearInterval(stageIntervals[id]);
+        stageIntervals[id] = window.setInterval(() => {
+          i = (i + 1) % msgs.length;
+          if (detail) detail.textContent = msgs[i];
+        }, 700);
       }
-      detail.textContent = message;
     }
 
     // Wake Lock — keep screen on during test (mobile especially)
@@ -192,11 +241,14 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
     runBtn.addEventListener('click', async () => {
       runBtn.disabled = true;
-      runBtnIcon.textContent = '⏳';
-      runBtnText.textContent = 'Running…';
+      runBtnIcon.textContent = '⟳';
+      runBtnText.textContent = 'Scanning…';
       progress.hidden = false;
       result.hidden = true;
       result.innerHTML = '';
+
+      // Activate global scanning state (scanlines + top status bar)
+      document.body.classList.add('scanning');
 
       await requestWakeLock();
 
@@ -421,6 +473,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         result.innerHTML = `<div class="result-card"><div class="result-snark" style="border-color:#DC2626">Benchmark failed: ${e?.message || e}</div></div>`;
         result.hidden = false;
       } finally {
+        document.body.classList.remove('scanning');
         await releaseWakeLock();
         runBtn.disabled = false;
         runBtnIcon.textContent = '↻';

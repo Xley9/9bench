@@ -76,19 +76,138 @@ body {
   background: var(--bg-card);
   margin-bottom: 0.65rem;
   transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
 }
+
+/* ─── ACTIVE STATE: AI-era radar sweep ─── */
 .progress-stage.active {
-  border-color: var(--brand);
   background: var(--bg-elevated);
+  border-color: transparent;
+  box-shadow:
+    0 0 0 1px var(--brand),
+    0 0 24px -4px rgba(16, 185, 129, 0.45),
+    inset 0 0 32px -8px rgba(16, 185, 129, 0.18);
 }
+
+/* Layer 1 — Conic-gradient sweeping ring (radar/sonar effect) */
+.progress-stage.active::before {
+  content: '';
+  position: absolute;
+  inset: -50%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 270deg,
+    rgba(16, 185, 129, 0.0) 280deg,
+    rgba(16, 185, 129, 0.55) 320deg,
+    rgba(79, 70, 229, 0.85) 355deg,
+    rgba(16, 185, 129, 0.0) 360deg
+  );
+  animation: stage-radar 2.4s linear infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Layer 2 — Inner cover with data-flow gradient (hides ring except 1.5px edge) */
+.progress-stage.active::after {
+  content: '';
+  position: absolute;
+  inset: 1.5px;
+  border-radius: 0.7rem;
+  background:
+    linear-gradient(90deg,
+      transparent 0%,
+      rgba(16, 185, 129, 0.06) 25%,
+      transparent 50%,
+      rgba(79, 70, 229, 0.06) 75%,
+      transparent 100%
+    ),
+    var(--bg-elevated);
+  background-size: 200% 100%, 100% 100%;
+  animation: stage-flow 2s linear infinite;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Lift content above pseudo elements */
+.progress-stage.active > * {
+  position: relative;
+  z-index: 2;
+}
+
+@keyframes stage-radar {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes stage-flow {
+  0% { background-position: 200% 0, 0 0; }
+  100% { background-position: -200% 0, 0 0; }
+}
+
+/* Pulsing icon during active scan */
+.progress-stage.active .progress-icon {
+  animation: stage-icon-pulse 1.4s ease-in-out infinite;
+  filter: drop-shadow(0 0 6px rgba(16, 185, 129, 0.6));
+}
+
+@keyframes stage-icon-pulse {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 4px rgba(16, 185, 129, 0.4));
+  }
+  50% {
+    transform: scale(1.15);
+    filter: drop-shadow(0 0 16px rgba(16, 185, 129, 1)) drop-shadow(0 0 4px rgba(79, 70, 229, 0.6));
+  }
+}
+
+/* Animated dot before detail text — "live data" pulse */
+.progress-stage.active .progress-detail {
+  color: var(--brand);
+  font-weight: 600;
+  position: relative;
+  padding-left: 14px;
+}
+.progress-stage.active .progress-detail::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  margin-top: -3.5px;
+  border-radius: 50%;
+  background: var(--brand);
+  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  animation: stage-dot-pulse 1.2s ease-out infinite;
+}
+
+@keyframes stage-dot-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+  70% { box-shadow: 0 0 0 12px rgba(16, 185, 129, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+/* DONE state — quiet success */
 .progress-stage.done {
   border-color: var(--brand-dark);
-  opacity: 0.85;
+  opacity: 0.78;
 }
+.progress-stage.done .progress-icon {
+  filter: drop-shadow(0 0 4px rgba(16, 185, 129, 0.4));
+}
+
+/* PENDING state — subtle */
+.progress-stage:not(.active):not(.done) .progress-icon {
+  opacity: 0.4;
+}
+
 .progress-icon {
   font-size: 1.5rem;
   width: 2.5rem;
   text-align: center;
+  transition: all 0.2s;
 }
 .progress-label {
   flex: 1;
@@ -97,6 +216,124 @@ body {
 .progress-detail {
   font-size: 0.85rem;
   color: var(--text-muted);
+}
+
+/* ─── BODY SCANNING STATE ─── */
+/* Subtle scanline overlay across whole page during active scan */
+body.scanning::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent 0px,
+      transparent 3px,
+      rgba(16, 185, 129, 0.025) 3px,
+      rgba(16, 185, 129, 0.025) 4px
+    );
+  animation: scanlines-drift 8s linear infinite;
+  mix-blend-mode: screen;
+}
+
+/* Top "ANALYZING" status bar during scan */
+body.scanning::after {
+  content: '◉ SCANNING HARDWARE';
+  position: fixed;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 110;
+  padding: 6px 16px;
+  background: linear-gradient(90deg, var(--brand) 0%, var(--truth) 100%);
+  background-size: 200% 100%;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  border-radius: 0 0 8px 8px;
+  box-shadow: 0 4px 20px -4px rgba(16, 185, 129, 0.6);
+  animation: scan-bar-flow 1.6s linear infinite, scan-bar-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes scanlines-drift {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 100vh; }
+}
+
+@keyframes scan-bar-flow {
+  0% { background-position: 0% 50%; }
+  100% { background-position: -200% 50%; }
+}
+
+@keyframes scan-bar-pulse {
+  0%, 100% { opacity: 0.95; }
+  50% { opacity: 0.7; }
+}
+
+/* ─── RUN BUTTON RUNNING STATE ─── */
+.run-btn:disabled {
+  opacity: 1;
+  cursor: progress;
+  background: linear-gradient(90deg,
+    var(--brand) 0%,
+    var(--truth) 25%,
+    var(--brand) 50%,
+    var(--truth) 75%,
+    var(--brand) 100%);
+  background-size: 300% 100%;
+  animation: run-btn-flow 2s linear infinite;
+  position: relative;
+  overflow: hidden;
+}
+.run-btn:disabled::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.25) 50%,
+    transparent 100%
+  );
+  animation: run-btn-shine 1.6s linear infinite;
+}
+
+@keyframes run-btn-flow {
+  0% { background-position: 0% 50%; }
+  100% { background-position: -300% 50%; }
+}
+
+@keyframes run-btn-shine {
+  0% { left: -100%; }
+  100% { left: 200%; }
+}
+
+/* Button text during running gets a subtle pulse */
+.run-btn:disabled #run-btn-icon,
+.run-btn:disabled #run-btn-text {
+  animation: run-text-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes run-text-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* Make the icon spin/pulse */
+.run-btn:disabled #run-btn-icon {
+  display: inline-block;
+  animation: run-icon-spin 1.6s linear infinite, run-text-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes run-icon-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 /* Result card — same Truth-Series DNA as Toololis */
