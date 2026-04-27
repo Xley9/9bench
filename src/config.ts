@@ -13,7 +13,7 @@ export const BING_META_VERIFICATION = '';
 
 // ─── Yandex Webmaster (optional, useful for AI/Yandex AI training) ─
 // Get from: https://webmaster.yandex.com
-export const YANDEX_META_VERIFICATION = '';
+export const YANDEX_META_VERIFICATION = 'fd56f469b0ccc4ee';
 
 // ─── Google Analytics 4 ───────────────────────────────────────────
 // Get from: https://analytics.google.com
