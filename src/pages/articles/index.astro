@@ -1,0 +1,207 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+const articles = [
+  {
+    slug: 'userbenchmark-alternatives-2026',
+    title: 'UserBenchmark Alternatives 2026: Why It\'s Banned + What to Use',
+    description: 'r/hardware and r/pcmasterrace banned UserBenchmark for documented anti-AMD bias. Here\'s the honest 2026 list of alternatives — what each does well, what they cost.',
+    category: 'Comparisons',
+    emoji: '🚫',
+    date: '2026-04-27',
+    readMins: 12,
+    from: '#DC2626', to: '#7F1D1D'
+  },
+  {
+    slug: 'how-to-test-cpu-gpu-ram-online-no-download',
+    title: 'How to Test Your CPU, GPU, and RAM Online (No Download)',
+    description: 'Browser-based hardware tests in 2026 — how WebGPU, WebAssembly, and Web Workers let you benchmark without installing anything. Step-by-step guide.',
+    category: 'How-To',
+    emoji: '🛠️',
+    date: '2026-04-27',
+    readMins: 11,
+    from: '#10B981', to: '#065F46'
+  },
+  {
+    slug: 'geekbench-vs-cinebench-vs-9bench',
+    title: 'Geekbench vs Cinebench vs 9bench: Which Hardware Benchmark to Use?',
+    description: 'Honest comparison of the top 3 PC benchmark tools. When to use Geekbench, when Cinebench, when a free browser-based 9bench is enough.',
+    category: 'Comparisons',
+    emoji: '⚖️',
+    date: '2026-04-27',
+    readMins: 13,
+    from: '#0EA5E9', to: '#075985'
+  },
+  {
+    slug: 'what-is-gflops-gpu-performance-explained',
+    title: 'What Is GFLOPS? GPU Performance Explained for 2026',
+    description: 'Giga-floating-point-operations-per-second — what it actually measures, how it relates to gaming/ML/video, and what counts as "fast" in 2026.',
+    category: 'Education',
+    emoji: '🎮',
+    date: '2026-04-27',
+    readMins: 10,
+    from: '#7C3AED', to: '#4C1D95'
+  },
+  {
+    slug: 'how-many-cpu-cores-do-you-need-2026',
+    title: 'How Many CPU Cores Do You Actually Need in 2026?',
+    description: 'Honest answer for gamers, creators, programmers, and office users. What 4/8/16/24-core actually delivers in 2026 workloads.',
+    category: 'Education',
+    emoji: '⚙️',
+    date: '2026-04-27',
+    readMins: 11,
+    from: '#F59E0B', to: '#78350F'
+  },
+  {
+    slug: 'why-browser-benchmarks-score-lower-than-native',
+    title: 'Why Browser Benchmarks Score Lower Than Native (And Why That\'s Fine)',
+    description: 'Web Crypto serialization, V8 vectorization limits, Worker thread pools — the structural reasons your browser benchmark differs from Geekbench.',
+    category: 'Technical',
+    emoji: '🔬',
+    date: '2026-04-27',
+    readMins: 9,
+    from: '#0891B2', to: '#155E75'
+  },
+  {
+    slug: 'complete-guide-online-hardware-benchmarking-2026',
+    title: 'The Complete Guide to Online Hardware Benchmarking (2026)',
+    description: 'Everything to know about testing your hardware in 2026: methodologies, tools, accuracy, privacy, and how the browser-based revolution changes the game.',
+    category: 'Pillar Guide',
+    emoji: '📚',
+    date: '2026-04-27',
+    readMins: 18,
+    from: '#4F46E5', to: '#312E81'
+  }
+];
+---
+
+<BaseLayout
+  title="Articles — 9bench Hardware Benchmark Guides"
+  description="In-depth articles on hardware benchmarking, CPU/GPU/RAM performance, browser-based testing, UserBenchmark alternatives, and more."
+  keywords="hardware benchmark articles, cpu gpu ram guides, browser benchmark explained, userbenchmark alternative articles"
+>
+  <section class="articles-hero">
+    <div class="articles-hero-tag">⚡ TRUTH SERIES · ARTICLES</div>
+    <h1>Hardware benchmarking, explained</h1>
+    <p>Long-form guides on how, why, and when to test your computer. No fluff.</p>
+  </section>
+
+  <section class="articles-grid">
+    {articles.map(a => (
+      <a href={`/articles/${a.slug}/`} class="article-card">
+        <div class="article-card-banner" style={`background: linear-gradient(135deg, ${a.from} 0%, ${a.to} 100%);`}>
+          <div class="article-card-emoji">{a.emoji}</div>
+          <div class="article-card-cat">{a.category}</div>
+        </div>
+        <div class="article-card-body">
+          <h2 class="article-card-title">{a.title}</h2>
+          <p class="article-card-desc">{a.description}</p>
+          <div class="article-card-meta">
+            <span>{a.readMins} min read</span>
+            <span>{new Date(a.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+          </div>
+        </div>
+      </a>
+    ))}
+  </section>
+</BaseLayout>
+
+<style>
+  .articles-hero {
+    text-align: center;
+    padding: 3.5rem 1.25rem 2rem;
+    max-width: 720px;
+    margin: 0 auto;
+  }
+  .articles-hero-tag {
+    display: inline-block;
+    padding: .35rem .8rem;
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--brand);
+    border-radius: 999px;
+    font-size: .75rem;
+    font-weight: 700;
+    letter-spacing: .5px;
+    margin-bottom: 1rem;
+  }
+  .articles-hero h1 {
+    font-size: 2.25rem;
+    font-weight: 800;
+    margin-bottom: .9rem;
+  }
+  @media (min-width: 768px) {
+    .articles-hero h1 { font-size: 2.85rem; }
+  }
+  .articles-hero p { font-size: 1.05rem; color: var(--text-muted); }
+
+  .articles-grid {
+    max-width: 1080px;
+    margin: 0 auto 4rem;
+    padding: 0 1.25rem;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+  @media (min-width: 640px) {
+    .articles-grid { grid-template-columns: 1fr 1fr; }
+  }
+  @media (min-width: 1024px) {
+    .articles-grid { grid-template-columns: 1fr 1fr 1fr; }
+  }
+
+  .article-card {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    overflow: hidden;
+    background: var(--bg-card);
+    color: var(--text);
+    text-decoration: none;
+    transition: all .2s;
+  }
+  .article-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 30px -10px rgba(0,0,0,.4);
+    border-color: var(--brand);
+  }
+  .article-card-banner {
+    padding: 1.5rem 1.25rem;
+    color: #fff;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .article-card-emoji { font-size: 2.5rem; }
+  .article-card-cat {
+    font-size: .72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    background: rgba(255,255,255,.2);
+    padding: .3rem .65rem;
+    border-radius: 999px;
+  }
+  .article-card-body { padding: 1.25rem; flex: 1; display: flex; flex-direction: column; }
+  .article-card-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    line-height: 1.3;
+    margin-bottom: .55rem;
+  }
+  .article-card-desc {
+    font-size: .88rem;
+    color: var(--text-muted);
+    line-height: 1.55;
+    flex: 1;
+    margin-bottom: 1rem;
+  }
+  .article-card-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: .76rem;
+    color: var(--text-muted);
+    border-top: 1px solid var(--border);
+    padding-top: .65rem;
+  }
+</style>

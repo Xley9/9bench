@@ -1,0 +1,397 @@
+---
+import BaseLayout from './BaseLayout.astro';
+
+export interface Props {
+  title: string;
+  description: string;
+  slug: string;
+  publishedDate: string;
+  updatedDate?: string;
+  readingMinutes: number;
+  category: string;
+  primaryKeyword: string;
+  secondaryKeywords?: string[];
+  heroEmoji?: string;
+  heroGradientFrom?: string;
+  heroGradientTo?: string;
+  faqs?: { q: string; a: string }[];
+  howToSteps?: { name: string; text: string }[];
+}
+
+const {
+  title, description, slug, publishedDate, updatedDate, readingMinutes,
+  category, primaryKeyword, secondaryKeywords = [],
+  heroEmoji = '📜',
+  heroGradientFrom = '#10B981',
+  heroGradientTo = '#4F46E5',
+  faqs = [],
+  howToSteps = []
+} = Astro.props;
+
+const SITE = 'https://9bench.com';
+const canonical = `${SITE}/articles/${slug}/`;
+const allKeywords = [primaryKeyword, ...secondaryKeywords].join(', ');
+const updated = updatedDate || publishedDate;
+
+const articleSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'Article',
+  headline: title,
+  description,
+  datePublished: publishedDate,
+  dateModified: updated,
+  wordCount: readingMinutes * 250,
+  keywords: allKeywords,
+  articleSection: category,
+  inLanguage: 'en-US',
+  author: {
+    '@type': 'Person',
+    name: 'Atilla Kürük',
+    url: 'https://toololis.com/atilla/',
+    sameAs: [
+      'https://www.linkedin.com/in/atilla-k-2b28b32a3/',
+      'https://github.com/atillakuruk'
+    ]
+  },
+  publisher: {
+    '@type': 'Organization',
+    name: '9bench',
+    url: SITE,
+    logo: { '@type': 'ImageObject', url: `${SITE}/icon-512.png` }
+  },
+  mainEntityOfPage: { '@type': 'WebPage', '@id': canonical }
+};
+
+const faqSchema = faqs.length ? {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: faqs.map(f => ({
+    '@type': 'Question',
+    name: f.q,
+    acceptedAnswer: { '@type': 'Answer', text: f.a }
+  }))
+} : null;
+
+const howToSchema = howToSteps.length ? {
+  '@context': 'https://schema.org',
+  '@type': 'HowTo',
+  name: title,
+  step: howToSteps.map((s, i) => ({
+    '@type': 'HowToStep',
+    position: i + 1,
+    name: s.name,
+    text: s.text
+  }))
+} : null;
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  keywords={allKeywords}
+  schemaType="Article"
+>
+  <script slot="head" type="application/ld+json" set:html={JSON.stringify(articleSchema)} />
+  {faqSchema && <script slot="head" type="application/ld+json" set:html={JSON.stringify(faqSchema)} />}
+  {howToSchema && <script slot="head" type="application/ld+json" set:html={JSON.stringify(howToSchema)} />}
+
+  <header class="article-hero" style={`background: linear-gradient(135deg, ${heroGradientFrom} 0%, ${heroGradientTo} 100%);`}>
+    <div class="article-hero-inner">
+      <div class="article-meta">
+        <span class="article-category">⚡ {category}</span>
+        <span class="article-readtime">{readingMinutes} min read</span>
+      </div>
+      <div class="article-hero-emoji">{heroEmoji}</div>
+      <h1 class="article-title">{title}</h1>
+      <p class="article-deck">{description}</p>
+      <div class="article-byline">
+        <span>By <a href="https://toololis.com/atilla/" rel="external">Atilla Kürük</a></span>
+        <span class="article-divider">·</span>
+        <time datetime={publishedDate}>{new Date(publishedDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</time>
+        {updatedDate && updatedDate !== publishedDate && (
+          <>
+            <span class="article-divider">·</span>
+            <span>Updated {new Date(updatedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+          </>
+        )}
+      </div>
+    </div>
+  </header>
+
+  <article class="article-body">
+    <slot />
+  </article>
+
+  <div class="article-cta-block">
+    <h2>Test your hardware in 15 seconds</h2>
+    <p>9bench measures CPU, GPU, and RAM in your browser. No download. No account.</p>
+    <a href="/" class="article-cta-btn">Run benchmark →</a>
+  </div>
+
+  {faqs.length > 0 && (
+    <section class="article-faqs">
+      <h2>Frequently asked</h2>
+      {faqs.map(f => (
+        <details class="article-faq">
+          <summary>{f.q}</summary>
+          <p>{f.a}</p>
+        </details>
+      ))}
+    </section>
+  )}
+
+  <div class="article-back">
+    <a href="/articles">← All articles</a>
+  </div>
+
+  <style is:global>
+    .article-hero {
+      color: #fff;
+      padding: 4rem 1.25rem 3rem;
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    .article-hero-inner { max-width: 760px; margin: 0 auto; }
+    .article-meta {
+      display: flex;
+      justify-content: center;
+      gap: .75rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.25rem;
+      font-size: .8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      opacity: .92;
+    }
+    .article-category, .article-readtime {
+      background: rgba(255,255,255,.18);
+      padding: .35rem .8rem;
+      border-radius: 999px;
+    }
+    .article-hero-emoji {
+      font-size: 3.5rem;
+      line-height: 1;
+      margin-bottom: 1rem;
+    }
+    .article-title {
+      font-size: 2rem;
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 1rem;
+      text-wrap: balance;
+    }
+    @media (min-width: 768px) {
+      .article-title { font-size: 2.85rem; }
+    }
+    .article-deck {
+      font-size: 1.1rem;
+      line-height: 1.5;
+      opacity: .92;
+      max-width: 640px;
+      margin: 0 auto 1.5rem;
+    }
+    .article-byline {
+      display: flex;
+      justify-content: center;
+      gap: .5rem;
+      flex-wrap: wrap;
+      font-size: .9rem;
+      opacity: .9;
+    }
+    .article-byline a { color: #fff; text-decoration: underline; }
+    .article-divider { opacity: .5; }
+
+    .article-body {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 0 1.25rem;
+      font-size: 1.05rem;
+      line-height: 1.75;
+      color: var(--text);
+    }
+    .article-body h2 {
+      font-size: 1.7rem;
+      font-weight: 800;
+      margin: 2.5rem 0 1rem;
+      line-height: 1.25;
+      color: var(--brand);
+    }
+    .article-body h3 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin: 2rem 0 .75rem;
+      color: var(--text);
+    }
+    .article-body p { margin-bottom: 1.25rem; }
+    .article-body ul, .article-body ol {
+      margin: 1rem 0 1.5rem 1.25rem;
+      padding-left: 1rem;
+    }
+    .article-body li { margin-bottom: .55rem; }
+    .article-body strong { font-weight: 700; color: var(--text); }
+    .article-body em { font-style: italic; color: var(--text-muted); }
+    .article-body a {
+      color: var(--brand);
+      font-weight: 600;
+      text-decoration: underline;
+      text-decoration-thickness: 1.5px;
+      text-underline-offset: 3px;
+    }
+    .article-body a:hover { color: var(--brand-dark); }
+    .article-body blockquote {
+      margin: 1.5rem 0;
+      padding: .85rem 1.25rem;
+      border-left: 4px solid var(--brand);
+      background: var(--bg-elevated);
+      font-style: italic;
+      border-radius: 0 .5rem .5rem 0;
+    }
+    .article-body table {
+      width: 100%;
+      margin: 1.5rem 0;
+      border-collapse: collapse;
+      font-size: .92rem;
+    }
+    .article-body th, .article-body td {
+      padding: .55rem .85rem;
+      border: 1px solid var(--border);
+      text-align: left;
+    }
+    .article-body th { background: var(--bg-elevated); font-weight: 700; }
+    .article-body code {
+      background: var(--bg-elevated);
+      padding: .15rem .4rem;
+      border-radius: .3rem;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      font-size: .9em;
+      color: var(--brand);
+    }
+    .article-body pre {
+      background: var(--bg-elevated);
+      padding: 1rem;
+      border-radius: .5rem;
+      overflow-x: auto;
+      font-size: .9em;
+      margin: 1rem 0;
+    }
+    .article-body pre code { background: none; padding: 0; color: var(--text); }
+    .article-body .tldr {
+      margin: 1.5rem 0;
+      padding: 1.25rem 1.5rem;
+      background: var(--bg-elevated);
+      border-left: 4px solid var(--brand);
+      border-radius: 0 .65rem .65rem 0;
+    }
+    .article-body .tldr-title {
+      font-size: .8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      color: var(--brand);
+      margin-bottom: .55rem;
+    }
+    .article-body .callout {
+      margin: 1.5rem 0;
+      padding: 1rem 1.25rem;
+      border-radius: .65rem;
+      background: rgba(79, 70, 229, 0.1);
+      border-left: 4px solid var(--truth);
+    }
+    .article-body .callout-title {
+      font-weight: 700;
+      margin-bottom: .35rem;
+      color: var(--truth);
+    }
+
+    .article-cta-block {
+      max-width: 720px;
+      margin: 3rem auto;
+      padding: 2rem;
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(79, 70, 229, 0.1));
+      border: 1px solid var(--border);
+      border-radius: 1rem;
+      text-align: center;
+    }
+    .article-cta-block h2 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      margin-bottom: 0.5rem;
+      color: var(--brand);
+    }
+    .article-cta-block p {
+      color: var(--text-muted);
+      margin-bottom: 1.25rem;
+    }
+    .article-cta-btn {
+      display: inline-block;
+      padding: 0.85rem 2rem;
+      background: linear-gradient(135deg, var(--brand), var(--brand-dark));
+      color: #fff;
+      border-radius: 0.65rem;
+      font-weight: 700;
+      text-decoration: none;
+      transition: transform 0.15s;
+    }
+    .article-cta-btn:hover { transform: translateY(-2px); }
+
+    .article-faqs {
+      max-width: 720px;
+      margin: 3rem auto;
+      padding: 0 1.25rem;
+    }
+    .article-faqs h2 {
+      font-size: 1.55rem;
+      font-weight: 800;
+      margin-bottom: 1rem;
+      color: var(--brand);
+    }
+    .article-faq {
+      border: 1px solid var(--border);
+      border-radius: .65rem;
+      margin-bottom: .55rem;
+      background: var(--bg-card);
+    }
+    .article-faq summary {
+      padding: .9rem 1.15rem;
+      font-weight: 700;
+      cursor: pointer;
+      list-style: none;
+      position: relative;
+    }
+    .article-faq summary::after {
+      content: '+';
+      position: absolute;
+      right: 1.15rem;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 1.3rem;
+      color: var(--text-muted);
+    }
+    .article-faq[open] summary::after { content: '−'; }
+    .article-faq p {
+      padding: 0 1.15rem 1rem;
+      margin: 0;
+      color: var(--text-muted);
+    }
+
+    .article-back {
+      max-width: 720px;
+      margin: 2rem auto 3rem;
+      padding: 0 1.25rem;
+    }
+    .article-back a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: .9rem;
+    }
+    .article-back a:hover { color: var(--brand); }
+
+    @media (max-width: 480px) {
+      .article-hero { padding: 2.5rem 1rem 2rem; }
+      .article-title { font-size: 1.6rem; }
+      .article-deck { font-size: 1rem; }
+      .article-body table { display: block; overflow-x: auto; max-width: 100%; }
+    }
+  </style>
+</BaseLayout>

@@ -1,0 +1,463 @@
+---
+import ArticleLayout from '../../layouts/ArticleLayout.astro';
+
+const props = {
+  title: 'The Complete Guide to Online Hardware Benchmarking (2026)',
+  description: 'Everything to know about testing your computer in 2026: methodologies, tools, accuracy, privacy, and how the browser-based revolution changes the game.',
+  slug: 'complete-guide-online-hardware-benchmarking-2026',
+  publishedDate: '2026-04-27',
+  readingMinutes: 18,
+  category: 'Pillar Guide',
+  primaryKeyword: 'online hardware benchmark',
+  secondaryKeywords: [
+    'hardware benchmarking guide', 'how to benchmark pc 2026',
+    'best benchmark tools 2026', 'pc speed test online',
+    'cpu gpu ram benchmark guide', 'browser benchmark guide',
+    'benchmark methodology', 'how benchmarks work'
+  ],
+  heroEmoji: '📚',
+  heroGradientFrom: '#4F46E5',
+  heroGradientTo: '#312E81',
+  faqs: [
+    { q: 'What\'s the best benchmark tool for 2026?', a: 'Depends on your goal. For instant browser-based testing: 9bench. For absolute peak measurement: Geekbench 6. For CPU rendering: Cinebench 2024. For gaming GPU: 3DMark Time Spy. Don\'t use UserBenchmark composite scores — methodology is documented as biased.' },
+    { q: 'How often should I benchmark my PC?', a: 'Right after a build/upgrade to verify expected performance. After driver updates to confirm no regression. If you suspect throttling/instability. Otherwise, once a year or so to check for performance degradation. Don\'t over-benchmark — variance between runs is normal.' },
+    { q: 'Can browser-based benchmarks replace native ones?', a: 'For most people, yes. The 80% of benchmark use cases (quick triage, sharing scores, casual comparison) don\'t need native-tool precision. For the 20% (review-grade testing, overclocking validation, sustained-load thermal testing), native tools still win.' },
+    { q: 'Is benchmarking actually useful?', a: 'Yes, when used correctly. Validates that your hardware works as expected. Confirms upgrade decisions. Identifies bottlenecks. The wrong way to use benchmarks: chasing higher scores for their own sake, or comparing different-generation hardware where the architecture changes invalidate raw numbers.' },
+    { q: 'How do I trust benchmark results?', a: 'Three principles: (1) Use multiple tools to cross-validate, (2) Look at the published methodology before trusting a score, (3) Compare results within the same architecture/generation. Reviewer-grade trust: Geekbench 6 + Cinebench 2024 + game benchmarks. Quick trust: 9bench (open methodology, fast, free).' }
+  ]
+};
+---
+
+<ArticleLayout {...props}>
+  <div class="tldr">
+    <div class="tldr-title">TL;DR</div>
+    Benchmarking computers in 2026 has split into two paths: <strong>browser-based</strong> (instant,
+    free, no install — but 5-50% lower than native peaks) and <strong>native</strong> (Geekbench /
+    Cinebench / 3DMark — accurate, slower, often paid). Most casual users should use browser tools
+    (9bench is open + free). Reviewers + content creators need native. Avoid UserBenchmark composite
+    scoring (community-banned for bias). This guide covers all of it.
+  </div>
+
+  <p>
+    Benchmarking — measuring your computer's performance — has changed more in 2024-2026 than in
+    the previous 15 years combined. WebGPU, WebAssembly, and Web Workers made browser-based
+    hardware testing genuinely viable. UserBenchmark's documented bias killed trust in one of the
+    biggest names. Apple's M-series shifted what "fast" means at consumer price points. AMD's
+    Ryzen 9000 and Intel's Arrow Lake refresh brought 16-32 core mainstream desktops.
+  </p>
+  <p>
+    This pillar guide covers everything: what benchmarks measure, which tools to trust, how to
+    interpret scores, when to ignore them, and how to actually answer the question you care about.
+  </p>
+
+  <h2>1. What benchmarks actually measure</h2>
+
+  <p>
+    A benchmark is a standardized workload run on hardware to produce a comparable number. Three
+    main categories:
+  </p>
+
+  <h3>Synthetic benchmarks</h3>
+  <p>
+    Designed to stress a specific component — pure CPU math, pure GPU compute, pure memory bandwidth.
+    Examples: Geekbench, Cinebench, AIDA64, 9bench. Pros: precise, repeatable, isolated. Cons: don't
+    always reflect real-world performance because real workloads mix many subsystems.
+  </p>
+
+  <h3>Real-world benchmarks</h3>
+  <p>
+    Actual applications run with timed tasks. Examples: Premiere Pro export speed, Blender BMW
+    render, game frame rate at known scenes, code compilation time. Pros: directly relevant to
+    your actual use. Cons: harder to standardize, every reviewer measures slightly differently.
+  </p>
+
+  <h3>Gaming benchmarks</h3>
+  <p>
+    Hybrid: in-game benchmark scenes that produce frame rate numbers. Examples: 3DMark Time Spy,
+    in-game benchmark scenes (Cyberpunk 2077, Total War, F1 series). Pros: real game-engine work.
+    Cons: scene-specific, doesn't predict performance in other games perfectly.
+  </p>
+
+  <h2>2. The big benchmarks of 2026 — when to use what</h2>
+
+  <h3>Geekbench 6 — industry standard</h3>
+  <p>
+    Primate Labs' Geekbench is what review sites use. Synthetic workloads simulating realistic tasks
+    (compression, photo edit, ML inference). Cross-platform (Windows / Mac / Linux / iOS / Android).
+    Free version + $9.99 Pro. Time: ~7 minutes. Install required (~80 MB).
+  </p>
+  <p>
+    <strong>Best for:</strong> reviewer-grade comparisons, looking up specific hardware in their
+    public database (browser.geekbench.com), absolute peak measurement.
+  </p>
+
+  <h3>Cinebench 2024 — CPU rendering</h3>
+  <p>
+    Maxon's Cinema 4D rendering benchmark. Real Cinema 4D engine, real 3D scene. Free + Maxon
+    account. Time: 10-30 minutes. Install required (~700 MB).
+  </p>
+  <p>
+    <strong>Best for:</strong> content creators (3D, video, animation), sustained-load testing
+    (reveals thermal throttling), overclocking validation.
+  </p>
+
+  <h3>3DMark — GPU gaming</h3>
+  <p>
+    UL Solutions' GPU benchmark with multiple test suites: Time Spy (DirectX 12), Steel Nomad
+    (modern), Wild Life (mobile). Basic on Steam free; full version $34.99. Install required (~8 GB).
+  </p>
+  <p>
+    <strong>Best for:</strong> comparing GPUs for gaming performance, overclock stability testing,
+    GPU stress testing.
+  </p>
+
+  <h3>9bench — instant browser</h3>
+  <p>
+    Browser-based CPU + GPU + RAM benchmark. WebGPU compute shaders + Web Crypto + Web Workers +
+    TypedArrays. Free, no account, no install. Time: ~15 seconds. Open methodology + open source
+    (MIT license).
+  </p>
+  <p>
+    <strong>Best for:</strong> instant triage, sharing scores, locked-down corporate/school computers,
+    helping non-technical users, comparing two systems quickly. <a href="/">Try it now</a>.
+  </p>
+
+  <h3>UserBenchmark — community-banned, use with caution</h3>
+  <p>
+    Documented bias toward Intel single-core in their composite scoring. Banned by r/hardware and
+    r/pcmasterrace. <strong>Their composite scores are not trustworthy for purchase decisions.</strong>
+    Their database of raw user-submitted GFLOPS / hash rates can still be useful as one data point
+    among many, but treat with skepticism. See <a href="/articles/userbenchmark-alternatives-2026">our
+    detailed analysis</a>.
+  </p>
+
+  <h3>Specialized tools</h3>
+  <ul>
+    <li><strong>AIDA64:</strong> deepest system info + memory benchmark suite. Paid.</li>
+    <li><strong>HWiNFO64:</strong> free monitoring + light benchmarks. Windows.</li>
+    <li><strong>CrystalDiskMark:</strong> storage benchmark. Free.</li>
+    <li><strong>Speedometer 3.1 + JetStream 3:</strong> browser engine benchmarks (NOT hardware). Free.</li>
+    <li><strong>Basemark Web 3.0:</strong> GPU-only browser benchmark. Free.</li>
+  </ul>
+
+  <h2>3. The browser-based revolution</h2>
+
+  <p>
+    Until 2024, all serious hardware benchmarking required native software downloads. The
+    browser was too slow, too sandboxed, too limited to measure real performance. Three changes
+    flipped this:
+  </p>
+
+  <h3>WebGPU stable (Chrome 113, Safari 26, Firefox 147)</h3>
+  <p>
+    The successor to WebGL. Adds compute shaders — meaning a web page can run general-purpose GPU
+    calculations, not just rendering. Performance: 85-95% of native Metal/Vulkan/DirectX.
+  </p>
+
+  <h3>Web Crypto API hardware acceleration</h3>
+  <p>
+    Modern CPUs have dedicated SHA-256 hardware (SHA-NI on x86, native ARM). Browsers expose this
+    via <code>crypto.subtle.digest()</code> — making real CPU benchmarking via cryptographic
+    workloads possible.
+  </p>
+
+  <h3>Web Workers + SharedArrayBuffer</h3>
+  <p>
+    Multi-threading for browsers. Workers allow CPU-bound JS to run in parallel across cores.
+    SharedArrayBuffer (re-enabled in 2022) allows zero-copy data sharing between Workers.
+  </p>
+
+  <p>
+    Together: a browser benchmark in 2026 measures real GPU compute, real CPU multi-core, and real
+    RAM bandwidth — not perfectly (see below), but honestly. <a href="/articles/how-to-test-cpu-gpu-ram-online-no-download">Step-by-step
+    guide here</a>.
+  </p>
+
+  <h2>4. Why browser benchmarks score lower than native</h2>
+
+  <p>
+    Three structural reasons your browser score will be lower than Geekbench:
+  </p>
+
+  <h3>Web Crypto serialization</h3>
+  <p>
+    Browsers serialize crypto.subtle calls internally for security. Multi-core SHA-256 in browser
+    typically saturates at 3-5× speedup vs native 12-16×. This caps your multi-core CPU score
+    significantly.
+  </p>
+
+  <h3>V8 vectorization gaps</h3>
+  <p>
+    JavaScript Float32Array operations don't always vectorize via SIMD instructions the way native
+    C/C++ memcpy does. Browser RAM bandwidth typically measures 30-50% of native.
+  </p>
+
+  <h3>WebGPU validation overhead</h3>
+  <p>
+    WebGPU adds 5-15% overhead vs native APIs. This is the smallest gap — WebGPU is the closest
+    browser API to native parity.
+  </p>
+
+  <p>
+    Full deep-dive on this in <a href="/articles/why-browser-benchmarks-score-lower-than-native">why
+    browser benchmarks score lower than native</a>. The takeaway: this is platform, not hardware.
+    Your CPU/GPU/RAM is fine.
+  </p>
+
+  <h2>5. How to benchmark correctly (the procedure)</h2>
+
+  <h3>Before the test</h3>
+  <ol>
+    <li><strong>Plug in laptop.</strong> Battery throttling drops scores 30%+.</li>
+    <li><strong>Close background apps.</strong> Especially Chrome tabs with media (YouTube, Spotify),
+    Discord, video calls, OBS, screen recorders.</li>
+    <li><strong>Disable performance modes you didn't intend.</strong> Some laptops have "Battery
+    saver" mode that throttles. Switch to "Best performance" in OS power settings.</li>
+    <li><strong>Wait for thermal idle.</strong> If you've been gaming/rendering, let the system
+    cool 5 minutes before benchmarking.</li>
+    <li><strong>Update drivers.</strong> Outdated GPU drivers can drop performance 20-40%.</li>
+  </ol>
+
+  <h3>During the test</h3>
+  <ol>
+    <li><strong>Don't touch the keyboard.</strong> Even mouse movement can affect timing on edge cases.</li>
+    <li><strong>Run multiple times</strong>, especially first few — initial JIT compilation, GPU
+    driver warm-up, OS scheduling adjustments stabilize after 2-3 runs.</li>
+    <li><strong>Note environmental factors.</strong> Room temperature affects sustained scores.
+    Heavy AC/heat changes thermal headroom.</li>
+  </ol>
+
+  <h3>After the test</h3>
+  <ol>
+    <li><strong>Compare apples to apples.</strong> 9bench score to 9bench score, Geekbench to
+    Geekbench. Don't cross-compare different scoring systems.</li>
+    <li><strong>Look at variance.</strong> If 3 runs vary by &lt;5%, you got a clean measurement.
+    If &gt;15% variance, something's contending for resources.</li>
+    <li><strong>Investigate outliers.</strong> Score significantly lower than expected? Check for:
+    background processes, throttling, driver issues, broken hardware (worst case).</li>
+  </ol>
+
+  <h2>6. Interpreting scores — what counts as fast in 2026</h2>
+
+  <h3>9bench brackets</h3>
+  <table>
+    <thead>
+      <tr><th>Bracket</th><th>Range</th><th>Hardware tier</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>🏆 Elite</td><td>4000+</td><td>M5 Max, Ryzen 9950X3D + RTX 5090</td></tr>
+      <tr><td>✓ High-end</td><td>2500-4000</td><td>M4 Pro, 7950X + RTX 4080</td></tr>
+      <tr><td>◯ Strong mainstream</td><td>1700-2500</td><td>M3 Pro, 7800X3D + RTX 4070</td></tr>
+      <tr><td>~ Mid-range</td><td>1000-1700</td><td>Mid-tier 2024 laptops, 5800X</td></tr>
+      <tr><td>⚠ Older / budget</td><td>500-1000</td><td>Older laptops, integrated GPU</td></tr>
+      <tr><td>🚨 Office tier</td><td>&lt;500</td><td>Chromebook, old office laptop</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Geekbench 6 multi-core ranges</h3>
+  <table>
+    <thead>
+      <tr><th>Score</th><th>Tier</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>20000+</td><td>Top-tier desktop / Apple Max chips</td></tr>
+      <tr><td>15000-20000</td><td>High-end desktop / Pro laptops</td></tr>
+      <tr><td>10000-15000</td><td>Mainstream gaming / mid-range Macs</td></tr>
+      <tr><td>6000-10000</td><td>Mainstream laptops</td></tr>
+      <tr><td>3000-6000</td><td>Budget laptops, older PCs</td></tr>
+      <tr><td>&lt;3000</td><td>Office tier, very old or basic hardware</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Cinebench 2024 multi-core</h3>
+  <p>
+    Score = pts. Modern flagship 16-core CPUs hit ~2000+. Mid-range 8-core ~1100-1300. Older 4-core
+    ~400-600. Used by content creators as a render-time predictor.
+  </p>
+
+  <h2>7. Use-case-driven decisions</h2>
+
+  <h3>"Should I upgrade my laptop?"</h3>
+  <ol>
+    <li>Run <a href="/">9bench</a> first.</li>
+    <li>If "Mid-range" or higher: hardware is fine, upgrade what's actually slow (RAM amount, SSD).</li>
+    <li>If "Older / budget": consider upgrade in 6-12 months.</li>
+    <li>If "Office tier": upgrade now — your hardware is bottlenecking your daily work.</li>
+  </ol>
+
+  <h3>"My friend says their PC is faster"</h3>
+  <ol>
+    <li>Both run <a href="/">9bench</a>.</li>
+    <li>Share permalinks via <a href="/compare">/compare</a> for side-by-side analysis.</li>
+    <li>Done in 2 minutes.</li>
+  </ol>
+
+  <h3>"I'm building a new PC, what should I buy?"</h3>
+  <ol>
+    <li>Define use case: gaming, content creation, programming, office?</li>
+    <li>Cross-reference Tom's Hardware CPU + GPU hierarchies for current rankings.</li>
+    <li>For specific hardware, look up Geekbench 6 + Cinebench 2024 + 3DMark scores in their public
+    databases.</li>
+    <li>Read 2-3 reviews from credible sites (Tom's, AnandTech, Hardware Unboxed, Gamers Nexus).</li>
+    <li>Avoid UserBenchmark for purchase decisions.</li>
+  </ol>
+
+  <h3>"I'm reviewing this hardware for my YouTube channel"</h3>
+  <ol>
+    <li>Geekbench 6 (CPU + GPU compute baseline)</li>
+    <li>Cinebench 2024 (CPU sustained workload)</li>
+    <li>3DMark Time Spy + Steel Nomad (GPU gaming)</li>
+    <li>Real game benchmarks (3+ titles, captured at standardized scenes)</li>
+    <li>Real productivity tests (Premiere export, Blender render, code compile)</li>
+    <li>Cross-reference with publish review-site scores</li>
+  </ol>
+
+  <h2>8. The benchmarks you should ignore</h2>
+
+  <h3>UserBenchmark composite scoring</h3>
+  <p>
+    Documented anti-AMD bias since 2019. Banned by r/hardware + r/pcmasterrace. Their database
+    can be useful for raw user-submitted numbers, but never trust their "Faster CPU" / "Faster GPU"
+    rankings for buying decisions.
+  </p>
+
+  <h3>Random benchmarks from blogspam sites</h3>
+  <p>
+    "Top 10 free benchmark tools 2026!" articles from low-effort SEO sites usually just rehash
+    affiliate links. Look for benchmarks from named reviewers (Tom's, AnandTech, GamerNexus,
+    Hardware Unboxed) or from primary tool publishers (Primate Labs, Maxon, UL Solutions).
+  </p>
+
+  <h3>"Score!!!" claims without methodology</h3>
+  <p>
+    "I got 9000!!" means nothing without context: which benchmark, which version, what hardware,
+    what conditions. Always look for published methodology + hardware specs.
+  </p>
+
+  <h2>9. Privacy considerations</h2>
+
+  <p>
+    Benchmarking sometimes involves uploading your hardware fingerprint (CPU model, GPU model,
+    RAM amount) to a public database. Different tools handle this differently:
+  </p>
+
+  <ul>
+    <li><strong>Geekbench:</strong> Uploads to browser.geekbench.com with your machine name.
+    Public by default, can be made private. Includes detailed system info.</li>
+    <li><strong>9bench:</strong> Optional submission. Stores anonymous benchmark numbers + GPU
+    adapter name (if browser exposes it). No name, no IP, no location. <a href="/privacy">Full
+    privacy policy</a>.</li>
+    <li><strong>UserBenchmark:</strong> Uploads + creates a public page with your hardware. Can
+    be removed by request.</li>
+    <li><strong>Cinebench:</strong> Uploads to Maxon. Account-linked.</li>
+  </ul>
+
+  <p>
+    For GDPR-aware users: 9bench's anonymous-by-default approach is the most privacy-respecting.
+    Result URLs are not search-indexed, so only people you share the link with can see your score.
+  </p>
+
+  <h2>10. Future of benchmarking (2027-2028)</h2>
+
+  <h3>WebGPU compute parity with native</h3>
+  <p>
+    Currently 85-95% of native. By 2028, expect 95-98% as browsers optimize WebGPU implementations
+    further. This will narrow the browser-vs-native gap for GPU benchmarks specifically.
+  </p>
+
+  <h3>AI inference benchmarks</h3>
+  <p>
+    Local LLM and image-generation models are mainstream by 2026. Expect benchmarks to add:
+    "tokens/sec for Llama 3 8B", "images/min for Stable Diffusion 1.5", etc. Hardware vendors
+    are racing to add NPUs (Neural Processing Units) — expect benchmark suites to incorporate
+    these by 2027.
+  </p>
+
+  <h3>Browser-only competitive benchmarks</h3>
+  <p>
+    9bench is part of an emerging category: instant cross-platform browser benchmarks with
+    leaderboards. Expect more competition + better tools by 2027 — eventually likely
+    rivaling Geekbench for casual use.
+  </p>
+
+  <h3>Privacy-first by default</h3>
+  <p>
+    GDPR and similar regulations + general user awareness are pushing benchmark tools toward
+    anonymous-by-default. Tools that require accounts (UserBenchmark, Cinebench) face increasing
+    friction; anonymous-first tools (9bench) gain share.
+  </p>
+
+  <h2>11. Quick reference: which tool for which question</h2>
+
+  <table>
+    <thead>
+      <tr><th>You want to know</th><th>Use this tool</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>"Is this PC fast or slow?"</td><td><a href="/">9bench</a> (15 sec)</td></tr>
+      <tr><td>"What's the absolute peak?"</td><td>Geekbench 6 (free)</td></tr>
+      <tr><td>"How does it render 3D?"</td><td>Cinebench 2024</td></tr>
+      <tr><td>"How does it game?"</td><td>3DMark Time Spy / Steel Nomad</td></tr>
+      <tr><td>"Compare to specific GPU model"</td><td>Tom's Hardware GPU hierarchy</td></tr>
+      <tr><td>"Compare to specific CPU model"</td><td>Tom's Hardware CPU hierarchy + Geekbench DB</td></tr>
+      <tr><td>"How fast is my browser?"</td><td>Speedometer 3.1 / JetStream 3</td></tr>
+      <tr><td>"How fast is my SSD?"</td><td>CrystalDiskMark / AmorphousDiskMark</td></tr>
+      <tr><td>"Compare two of my own PCs"</td><td>9bench + <a href="/compare">/compare</a></td></tr>
+      <tr><td>"Reviewing this for publication"</td><td>Geekbench 6 + Cinebench 2024 + 3DMark + game tests</td></tr>
+      <tr><td>"Browser benchmark on Chromebook"</td><td><a href="/">9bench</a> (only option)</td></tr>
+    </tbody>
+  </table>
+
+  <h2>12. The honest closing</h2>
+
+  <p>
+    Benchmarking should answer questions, not generate them. The best benchmark for you is the
+    fastest one that answers your specific question. For most casual users in 2026, that's a
+    browser-based test (9bench takes 15 seconds). For reviewers and overclockers, native tools
+    (Geekbench + Cinebench + 3DMark) are still the standard.
+  </p>
+
+  <p>
+    The bigger shift: <strong>benchmarking became democratized in 2024-2026</strong>. Instant browser
+    tools mean anyone with a phone can test any device they encounter. UserBenchmark's bias scandal
+    + community pushback created space for transparent alternatives. WebGPU stabilization means web
+    pages can do what only native apps could before.
+  </p>
+
+  <p>
+    The result: <a href="/">9bench</a> at 9bench.com is genuinely useful for a category of users
+    who couldn't easily benchmark before. Office workers, students with school computers, IT helpdesks
+    diagnosing employee laptops, parents trying to figure out if a kid's gaming PC is actually
+    fast — all served by a 15-second browser test where Geekbench would be friction.
+  </p>
+
+  <p>
+    The 80% case is now solved. The 20% (review-grade, sustained-load, specialized) still needs
+    native tools. Use the right tool for the question. Stop comparing scores across systems. Run
+    multiple times. Update drivers. Plug in laptops.
+  </p>
+
+  <p>
+    That's the complete guide.
+  </p>
+
+  <h2>Related articles in this guide</h2>
+  <ul>
+    <li><a href="/articles/userbenchmark-alternatives-2026">UserBenchmark Alternatives 2026: Why It's Banned + What to Use</a></li>
+    <li><a href="/articles/how-to-test-cpu-gpu-ram-online-no-download">How to Test Your CPU, GPU, and RAM Online (No Download)</a></li>
+    <li><a href="/articles/geekbench-vs-cinebench-vs-9bench">Geekbench vs Cinebench vs 9bench: Which to Use</a></li>
+    <li><a href="/articles/what-is-gflops-gpu-performance-explained">What Is GFLOPS? GPU Performance Explained</a></li>
+    <li><a href="/articles/how-many-cpu-cores-do-you-need-2026">How Many CPU Cores Do You Actually Need in 2026?</a></li>
+    <li><a href="/articles/why-browser-benchmarks-score-lower-than-native">Why Browser Benchmarks Score Lower Than Native</a></li>
+  </ul>
+
+  <h2>Sources + further reading</h2>
+  <ul>
+    <li><a href="/methodology">9bench methodology — formulas + brackets</a></li>
+    <li><a href="https://www.tomshardware.com/reviews/cpu-hierarchy,4312.html" rel="external">Tom's Hardware CPU hierarchy 2026</a></li>
+    <li><a href="https://www.tomshardware.com/reviews/gpu-hierarchy,4388.html" rel="external">Tom's Hardware GPU hierarchy 2026</a></li>
+    <li><a href="https://browser.geekbench.com/processor-benchmarks" rel="external">Geekbench 6 processor database</a></li>
+    <li><a href="https://browserbench.org/Speedometer3.1/" rel="external">Speedometer 3.1 (browser perf)</a></li>
+    <li><a href="https://web.dev/blog/webgpu-supported-major-browsers" rel="external">WebGPU browser support guide</a></li>
+  </ul>
+</ArticleLayout>

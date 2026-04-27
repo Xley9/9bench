@@ -1,0 +1,241 @@
+---
+import ArticleLayout from '../../layouts/ArticleLayout.astro';
+
+const props = {
+  title: 'How to Test Your CPU, GPU, and RAM Online (No Download Required)',
+  description: 'Browser-based hardware tests in 2026 — how WebGPU, WebAssembly, and Web Workers let you benchmark without installing anything. Step-by-step guide for any device.',
+  slug: 'how-to-test-cpu-gpu-ram-online-no-download',
+  publishedDate: '2026-04-27',
+  readingMinutes: 11,
+  category: 'How-To',
+  primaryKeyword: 'test pc speed online',
+  secondaryKeywords: [
+    'online cpu test', 'browser gpu benchmark', 'ram speed test online',
+    'free pc benchmark no download', 'instant computer benchmark',
+    'how to check pc speed without software', 'webgpu benchmark', 'webassembly benchmark'
+  ],
+  heroEmoji: '🛠️',
+  heroGradientFrom: '#10B981',
+  heroGradientTo: '#065F46',
+  howToSteps: [
+    { name: 'Open the benchmark in your browser', text: 'Visit 9bench.com in any modern browser (Chrome 113+, Firefox 147+, Safari 26+, Edge 113+).' },
+    { name: 'Plug in your laptop (recommended)', text: 'Battery-saving mode throttles CPU and GPU significantly. For accurate results, plug in laptops before testing.' },
+    { name: 'Close background apps', text: 'Close other tabs and heavy applications (Slack, Discord, video calls) so the benchmark gets the full hardware to itself.' },
+    { name: 'Click "Test my hardware"', text: 'The benchmark runs CPU (single + multi-core), GPU (compute), and RAM (bandwidth) automatically in about 15 seconds.' },
+    { name: 'Read your score + percentile', text: 'Score is composite of GPU + CPU + RAM. Percentile shows where you rank globally among submitted tests.' },
+    { name: 'Optionally share or compare', text: 'Use the permalink to share your result. Run on multiple devices and use the /compare tool to see them side-by-side.' }
+  ],
+  faqs: [
+    { q: 'Can I really test my PC in a browser without installing anything?', a: 'Yes. WebGPU (stable in all major browsers since 2024-2025) lets web pages run real GPU compute shaders. WebAssembly + Web Workers handle parallel CPU work. The Web Crypto API provides hardware-accelerated SHA-256 for CPU testing. TypedArray operations in V8 measure RAM bandwidth. Combined, these APIs give you a real hardware benchmark — not perfect peak measurement, but honest relative numbers.' },
+    { q: 'What browsers support online hardware benchmarks?', a: 'Chrome 113+, Edge 113+, Firefox 147+ (Windows + macOS Tahoe), Safari 26+ (macOS Tahoe / iOS 26 / iPadOS 26 / visionOS 26). Older browsers may run CPU + RAM tests but can\'t do GPU compute via WebGPU. About 70% of all browsers as of April 2026 support full benchmarking.' },
+    { q: 'Are online tests as accurate as Geekbench or Cinebench?', a: 'No, but close. Browser APIs add 5-15% overhead vs native code. The relative comparison between two browsers/machines is reliable. Absolute peak measurement requires native tools. For deciding "is this PC fast or slow", browser tests are accurate enough. For reviewing hardware to publication standards, use Geekbench 6.' },
+    { q: 'Does the test send my data anywhere?', a: 'During the test: nothing leaves your browser. All measurements happen locally. After the test, 9bench (and similar tools) optionally submit anonymous benchmark numbers (no personal data, no IP, no location) to a global ranking database for percentile calculation. This is opt-out by closing the tab before completion. See our privacy policy for details.' },
+    { q: 'Why is my multi-core CPU score lower than expected?', a: 'Browsers limit true multi-core parallelism for security and stability. Web Crypto operations are often serialized internally. Web Workers compete for a shared thread pool. Real-world browser multi-core efficiency is typically 30-60% of native. This is a Web platform limitation, not your hardware.' },
+    { q: 'Can I test my phone or tablet?', a: 'Yes. iOS 26 and Android 12+ Chrome support full WebGPU. iPad with iPadOS 26 works perfectly. Tests on mobile take slightly longer (~20s) and may show lower scores due to mobile thermal throttling. Plug in if testing on battery.' }
+  ]
+};
+---
+
+<ArticleLayout {...props}>
+  <div class="tldr">
+    <div class="tldr-title">TL;DR</div>
+    Modern browsers (Chrome 113+, Safari 26+, Firefox 147+) can test your computer's CPU, GPU, and RAM
+    in about 15 seconds with no download. The trick: <strong>WebGPU compute shaders</strong> for GPU,
+    <strong>Web Crypto API</strong> for CPU, <strong>TypedArrays</strong> for RAM. Best free tool:
+    <a href="/">9bench.com</a>. Best for absolute scores: Geekbench 6 (requires download). The browser
+    method is faster + works on locked-down corporate computers and Chromebooks.
+  </div>
+
+  <p>
+    Until 2024, testing your computer's hardware required downloading 80MB-8GB of native software,
+    granting admin rights, and sometimes paying for a license. In 2026, you can do it in your browser
+    in 15 seconds. This article walks through how it works and which tools to use.
+  </p>
+
+  <h2>Why browser-based hardware tests became possible</h2>
+  <p>
+    Three technologies that were not stable until 2024-2025 made instant browser benchmarks practical:
+  </p>
+
+  <h3>1. WebGPU (Chrome 113, Safari 26, Firefox 147)</h3>
+  <p>
+    The successor to WebGL. Unlike WebGL, WebGPU exposes <strong>compute shaders</strong> — meaning
+    a web page can run general-purpose GPU calculations, not just rendering. You can multiply 1024×1024
+    matrices on the GPU directly, the same operation that powers ML inference, scientific computing,
+    and graphics. This makes a real GPU compute benchmark possible for the first time on the web.
+  </p>
+  <p>
+    WebGPU performs at <strong>85-95% of native</strong> Metal/Vulkan/DirectX speed in most workloads
+    (Q2 2026 Chrome benchmarks). Close enough for honest measurement.
+  </p>
+
+  <h3>2. Web Workers + Web Crypto API</h3>
+  <p>
+    Web Workers (since 2010) allow parallel JavaScript execution across CPU cores. Web Crypto API
+    (stable since 2017) provides hardware-accelerated SHA-256 hashing — modern CPUs have dedicated
+    SHA instructions (SHA-NI on x86, native ARM) that the browser uses. Combine the two and you can
+    measure single-core + multi-core CPU performance honestly.
+  </p>
+  <p>
+    The catch: browsers serialize crypto.subtle calls internally for security, so multi-core
+    efficiency in browser is typically 30-60% of native. This is a known limit, not a bug.
+  </p>
+
+  <h3>3. TypedArrays + WebAssembly memory</h3>
+  <p>
+    Float32Array operations in V8 (Chrome's JS engine) translate directly to memcpy/memset
+    instructions on real hardware. Allocate a 256MB array (larger than L3 cache), measure how fast
+    sequential and random access happens — that's RAM bandwidth and latency.
+  </p>
+  <p>
+    The catch: V8 doesn't fully vectorize these operations, so RAM bandwidth measurements in browser
+    are typically 30-50% of what native memcpy benchmarks show. Still useful for relative comparison.
+  </p>
+
+  <h2>Step-by-step: how to test your hardware online</h2>
+
+  <h3>Prerequisites</h3>
+  <ul>
+    <li>A modern browser: <strong>Chrome 113+, Edge 113+, Firefox 147+, or Safari 26+</strong></li>
+    <li>Internet connection (only to load the page; the test itself is offline)</li>
+    <li>Recommended: laptop plugged in (battery throttling drops scores ~30%)</li>
+    <li>Recommended: close background apps + other tabs for clean measurement</li>
+  </ul>
+
+  <h3>Step 1: Open <a href="/">9bench.com</a> in your browser</h3>
+  <p>
+    The page loads in under 1 second. You'll see a capability check showing whether your browser
+    supports <strong>✓ WebGPU</strong>, <strong>✓ Workers</strong>, <strong>✓ Web Crypto</strong>,
+    plus your reported core count. If any of these are <code>✗</code>, the test will skip that
+    component (e.g., older Firefox might miss WebGPU, in which case GPU score will be 0).
+  </p>
+
+  <h3>Step 2: Click "Test my hardware"</h3>
+  <p>
+    The benchmark runs three stages automatically:
+  </p>
+  <ol>
+    <li>
+      <strong>GPU compute (~3 seconds):</strong> A 1024×1024 matrix multiplication compute shader runs
+      5 times. Result is reported in GFLOPS (giga-floating-point-operations per second).
+    </li>
+    <li>
+      <strong>CPU single + multi-core (~3 seconds):</strong> 200K SHA-256 hashes serially (single core),
+      then 500K hashes per worker across all cores in parallel. Result is hashes-per-second.
+    </li>
+    <li>
+      <strong>RAM bandwidth (~6 seconds):</strong> 256 MB working set tested for sequential read,
+      sequential write, copy throughput, and random-access latency.
+    </li>
+  </ol>
+  <p>
+    Total time: typically 12-18 seconds depending on hardware.
+  </p>
+
+  <h3>Step 3: Read your composite score</h3>
+  <p>
+    The result card shows your overall <strong>9bench score</strong> and a verdict:
+  </p>
+  <ul>
+    <li><strong>4000+:</strong> Elite tier (top 5%)</li>
+    <li><strong>2500-4000:</strong> High-end performer</li>
+    <li><strong>1700-2500:</strong> Strong mainstream</li>
+    <li><strong>1000-1700:</strong> Mid-range standard</li>
+    <li><strong>500-1000:</strong> Mainstream / older hardware</li>
+    <li><strong>&lt;500:</strong> Office / Chromebook tier</li>
+  </ul>
+  <p>
+    Plus component breakdown (GPU / CPU·1 / CPU·M / RAM separately), raw measurements (GFLOPS, h/s, GB/s),
+    and your global percentile rank.
+  </p>
+
+  <h3>Step 4: Share or save</h3>
+  <p>
+    Each completed test gets a permalink (<code>9bench.com/r/&lt;id&gt;</code>) you can share. Built-in
+    buttons for Copy Link, Tweet, and native mobile Share. The link unfurls on social media with a
+    personalized OG image showing your score.
+  </p>
+  <p>
+    Want to compare two systems? Run the test on both, paste both result IDs into
+    <a href="/compare">/compare</a> for side-by-side analysis with percentage differences.
+  </p>
+
+  <h2>Best browser-based hardware test tools (2026)</h2>
+
+  <h3>9bench.com</h3>
+  <p>
+    The site you're reading. CPU + GPU + RAM in 15 seconds. Free, no account, transparent
+    methodology, open source planned. <a href="/">Try it now</a>.
+  </p>
+
+  <h3>Basemark Web 3.0</h3>
+  <p>
+    Older, GPU-focused browser benchmark. Tests graphics rendering performance only — no CPU or RAM.
+    Useful as a complementary GPU-only test. Free at web.basemark.com.
+  </p>
+
+  <h3>Speedometer 3.1 + JetStream 3</h3>
+  <p>
+    These are <em>browser performance</em> benchmarks, not hardware. They test how fast your browser
+    runs JavaScript and renders DOM, which is more about Chrome vs Firefox vs Safari than your
+    underlying CPU. Useful for browser comparison; not for hardware testing. browserbench.org.
+  </p>
+
+  <h3>Octane 2.0 (deprecated but still online)</h3>
+  <p>
+    Old Google benchmark, retired but still available. Doesn't measure 2026-relevant workloads;
+    skip unless you have specific need.
+  </p>
+
+  <h2>What browser benchmarks can't tell you</h2>
+  <p>
+    Browser tests are honest but limited. Things they don't measure well:
+  </p>
+  <ul>
+    <li><strong>Disk speed:</strong> Browsers can't access raw disk performance. Use CrystalDiskMark (Windows) or AmorphousDiskMark (Mac) for storage tests.</li>
+    <li><strong>Real gaming performance:</strong> A game's frame rate depends on engine optimization, driver versions, and game-specific factors that no benchmark predicts perfectly. Use 3DMark Time Spy + actual game tests.</li>
+    <li><strong>Sustained load behavior:</strong> A 15-second benchmark won't reveal thermal throttling that appears after 5-10 minutes. For sustained-load testing, use Cinebench's 30-minute multi-core run.</li>
+    <li><strong>Power consumption:</strong> No browser API exposes power draw. Use HWiNFO64 (Windows) or powermetrics (Mac).</li>
+  </ul>
+
+  <h2>When browser benchmarks beat native tools</h2>
+  <ul>
+    <li><strong>Locked-down systems:</strong> Corporate laptops, school computers, Chromebooks — anywhere admin rights are blocked</li>
+    <li><strong>Quick triage:</strong> "Is this PC slow or normal?" — answered in 15 seconds</li>
+    <li><strong>Cross-platform comparison:</strong> Same test runs identically on Windows, Mac, Linux, ChromeOS, iOS, Android</li>
+    <li><strong>Sharing scores:</strong> Permalink + OG image works seamlessly on social media</li>
+    <li><strong>Helping non-technical users:</strong> "Open this URL, click the button" is easier than "download Geekbench"</li>
+  </ul>
+
+  <h2>Honest answer: which to pick</h2>
+  <table>
+    <thead>
+      <tr><th>Need</th><th>Use</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Quick check — is my PC fast?</td><td><a href="/">9bench.com</a></td></tr>
+      <tr><td>Reviewer-grade absolute numbers</td><td>Geekbench 6 (download)</td></tr>
+      <tr><td>CPU rendering (3D / video)</td><td>Cinebench 2024 (download)</td></tr>
+      <tr><td>Gaming performance ranking</td><td>3DMark Time Spy (Steam)</td></tr>
+      <tr><td>Browser performance only</td><td>Speedometer 3.1</td></tr>
+      <tr><td>Disk speed</td><td>CrystalDiskMark / AmorphousDiskMark</td></tr>
+      <tr><td>Avoid because of bias</td><td>UserBenchmark composite scoring</td></tr>
+    </tbody>
+  </table>
+
+  <p>
+    For 90% of users, <a href="/">9bench</a> answers the question "is my PC fast enough?" in
+    a fraction of the time of native tools. For the remaining 10% with specific needs (review
+    benchmarking, sustained-load testing, disk performance), the native tools above are still
+    the right choice.
+  </p>
+
+  <h2>Sources + further reading</h2>
+  <ul>
+    <li><a href="/methodology">9bench methodology — full formulas + brackets</a></li>
+    <li><a href="/articles/userbenchmark-alternatives-2026">UserBenchmark alternatives 2026</a></li>
+    <li><a href="/articles/why-browser-benchmarks-score-lower-than-native">Why browser benchmarks score lower than native</a></li>
+    <li><a href="https://web.dev/blog/webgpu-supported-major-browsers" rel="external">WebGPU browser support status</a></li>
+    <li><a href="https://browser.geekbench.com/" rel="external">Geekbench Browser (results database)</a></li>
+  </ul>
+</ArticleLayout>

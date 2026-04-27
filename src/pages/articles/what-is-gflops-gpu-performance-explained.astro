@@ -1,0 +1,275 @@
+---
+import ArticleLayout from '../../layouts/ArticleLayout.astro';
+
+const props = {
+  title: 'What Is GFLOPS? GPU Performance Explained for 2026',
+  description: 'Giga-floating-point-operations-per-second — what it actually measures, how it relates to gaming/ML/video editing, and what counts as fast in 2026 GPUs.',
+  slug: 'what-is-gflops-gpu-performance-explained',
+  publishedDate: '2026-04-27',
+  readingMinutes: 10,
+  category: 'Education',
+  primaryKeyword: 'what is gflops',
+  secondaryKeywords: [
+    'gflops meaning', 'gpu gflops explained', 'how many gflops is good',
+    'gflops vs tflops', 'gpu performance metric', 'compute shader gflops',
+    'rtx 4080 gflops', 'is 500 gflops good'
+  ],
+  heroEmoji: '🎮',
+  heroGradientFrom: '#7C3AED',
+  heroGradientTo: '#4C1D95',
+  faqs: [
+    { q: 'What does GFLOPS actually mean?', a: 'GFLOPS = Giga-FLoating-point Operations Per Second. One GFLOP = 1 billion floating-point math operations per second. A GPU rated at 500 GFLOPS can do 500 billion math operations per second on real numbers. It\'s a measure of raw compute throughput — more is faster, all else equal.' },
+    { q: 'How many GFLOPS is "good" in 2026?', a: 'Depends on use case: integrated laptop GPUs are 200-800 GFLOPS, mid-range gaming laptop GPUs (RTX 4060) are 1500-2500 GFLOPS, high-end gaming desktops (RTX 4080) are 4000-7000 GFLOPS, top-tier (RTX 5090) reaches 10000+ GFLOPS, Apple M5 Max GPU hits ~5000 GFLOPS. Browser benchmarks measure ~85-95% of these native numbers.' },
+    { q: 'GFLOPS vs TFLOPS — what\'s the difference?', a: '1 TFLOPS (TeraFLOPS) = 1000 GFLOPS = 1 trillion operations/sec. Marketing teams use TFLOPS for big numbers (RTX 4090 = ~83 TFLOPS native). Browser benchmarks typically report GFLOPS because numbers are smaller and easier to compare. Same units, different prefix.' },
+    { q: 'Does higher GFLOPS mean better gaming?', a: 'Mostly yes, but not always. GFLOPS measures peak compute throughput; real games depend on memory bandwidth, ray-tracing units, driver optimization, game-specific factors. A higher-GFLOPS GPU usually wins in compute-bound games, but a slightly lower-GFLOPS card with better memory subsystem can beat it in some titles.' },
+    { q: 'Why does my browser GFLOPS measurement differ from manufacturer spec?', a: 'Manufacturer specs report theoretical peak (math: cores × clock × ops-per-cycle). Real-world performance depends on memory access, instruction mix, thermal throttling, driver overhead. Browser WebGPU measurements typically achieve 60-85% of theoretical peak — same as native applications often get. The real-world peak achievable matters more than the spec.' }
+  ]
+};
+---
+
+<ArticleLayout {...props}>
+  <div class="tldr">
+    <div class="tldr-title">TL;DR</div>
+    <strong>GFLOPS</strong> = Giga-FLoating-point Operations Per Second. 1 GFLOP = 1 billion math
+    ops/sec on real numbers. Modern 2026 hardware: integrated laptop GPUs ~200-800 GFLOPS, mid-range
+    desktop ~3000-5000, high-end ~6000-10000+. Browser benchmarks measure 85-95% of native.
+    More GFLOPS usually = better gaming, ML, video editing — but memory bandwidth + driver
+    optimization matter too. <a href="/">Test your GPU's GFLOPS</a> in 15 seconds.
+  </div>
+
+  <p>
+    "590 GFLOPS" appears at the top of your 9bench result. So does "this RTX 4080 hits 48 TFLOPS"
+    in tech reviews. What does it actually mean, and how should you compare it across hardware?
+  </p>
+
+  <h2>The simple definition</h2>
+  <p>
+    <strong>GFLOPS = Giga-FLoating-point Operations Per Second.</strong>
+  </p>
+  <p>
+    Breaking it down:
+  </p>
+  <ul>
+    <li><strong>Giga</strong> = billion (10⁹). Like gigabyte but for operations.</li>
+    <li><strong>FLoating-point</strong> = math on real numbers (3.14, -0.5, 1.0e-7) — distinct from
+    integer math (1, 2, 3).</li>
+    <li><strong>Operations Per Second</strong> = math operations completed in a second. Operations
+    are usually multiply-add (a × b + c) which is fundamental in graphics + ML.</li>
+  </ul>
+  <p>
+    So a GPU rated at <strong>500 GFLOPS</strong> can do 500 billion floating-point math operations
+    every second. A laptop CPU at 50 GFLOPS does 50 billion. The difference is 10×, which is why
+    GPUs are so much faster than CPUs at math-heavy work like graphics, machine learning, and
+    physics simulation.
+  </p>
+
+  <h2>The unit ladder</h2>
+  <table>
+    <thead>
+      <tr><th>Unit</th><th>Operations/sec</th><th>Typical hardware</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>FLOPS</td><td>1</td><td>(too small to be useful)</td></tr>
+      <tr><td>KFLOPS</td><td>1,000</td><td>1980s pocket calculator</td></tr>
+      <tr><td>MFLOPS</td><td>1,000,000</td><td>1990s desktop CPU</td></tr>
+      <tr><td><strong>GFLOPS</strong></td><td>10⁹ (1 billion)</td><td>2010s GPUs, modern CPUs</td></tr>
+      <tr><td><strong>TFLOPS</strong></td><td>10¹² (1 trillion)</td><td>Modern gaming GPUs (RTX 4080 = 48 TFLOPS)</td></tr>
+      <tr><td>PFLOPS</td><td>10¹⁵ (1 quadrillion)</td><td>Top-500 supercomputers</td></tr>
+      <tr><td>EFLOPS</td><td>10¹⁸ (1 quintillion)</td><td>Frontier supercomputer (1.7 EFLOPS, 2023)</td></tr>
+    </tbody>
+  </table>
+  <p>
+    <strong>1 TFLOPS = 1000 GFLOPS</strong>. Manufacturers like to use TFLOPS for marketing because
+    bigger numbers sound better ("our card is 48 TFLOPS!"). Browser benchmarks like 9bench typically
+    report GFLOPS because the numbers fit better in result cards (a 5000 GFLOPS GPU = 5 TFLOPS).
+    Same measurement, different prefix.
+  </p>
+
+  <h2>What "good" GFLOPS looks like in 2026</h2>
+  <p>
+    These are real-world WebGPU compute benchmark numbers (lower than manufacturer theoretical peaks
+    by 5-15% browser-API overhead):
+  </p>
+
+  <h3>Integrated GPUs (laptops + entry-level)</h3>
+  <ul>
+    <li>Apple M3 base GPU: 800-1200 GFLOPS</li>
+    <li>Apple M4 base GPU: 1100-1500 GFLOPS</li>
+    <li>Intel Xe Iris (laptop): 300-700 GFLOPS</li>
+    <li>AMD Radeon 780M (laptop): 600-900 GFLOPS</li>
+    <li>Older Intel UHD: 100-300 GFLOPS</li>
+  </ul>
+
+  <h3>Mid-range gaming GPUs</h3>
+  <ul>
+    <li>RTX 4060 (laptop): 1800-2400 GFLOPS</li>
+    <li>RTX 4060 Ti (desktop): 2500-3500 GFLOPS</li>
+    <li>RTX 4070: 4000-5500 GFLOPS</li>
+    <li>RX 7800 XT: 3500-4500 GFLOPS</li>
+    <li>Apple M3 Pro GPU: 2500-3500 GFLOPS</li>
+  </ul>
+
+  <h3>High-end gaming GPUs</h3>
+  <ul>
+    <li>RTX 4080: 5500-7500 GFLOPS</li>
+    <li>RTX 4090: 7500-10000 GFLOPS</li>
+    <li>RTX 5090: 9000-12000 GFLOPS</li>
+    <li>RX 7900 XTX: 6500-8500 GFLOPS</li>
+    <li>Apple M5 Max GPU: 4500-6000 GFLOPS</li>
+  </ul>
+
+  <p>
+    These are <em>browser WebGPU compute</em> measurements via 9bench's matrix multiplication test.
+    Manufacturer-quoted "TFLOPS" specs are higher because they measure theoretical peak — real
+    workloads (browser or native) achieve 60-85% of theoretical.
+  </p>
+
+  <h2>Why GFLOPS isn't the only thing that matters</h2>
+  <p>
+    GFLOPS measures <strong>compute throughput</strong> — how fast the GPU can do math. But real
+    GPU performance also depends on:
+  </p>
+
+  <h3>1. Memory bandwidth (GB/s)</h3>
+  <p>
+    GPUs need to feed data to compute units. If memory can't deliver fast enough, compute units sit
+    idle. Modern GPUs have 200-1000 GB/s memory bandwidth (Apple M5 Max unified memory: 800 GB/s,
+    RTX 4090: 1008 GB/s, mid-range RTX 4070: 504 GB/s).
+  </p>
+  <p>
+    A high-GFLOPS GPU with low memory bandwidth gets bottlenecked. Real-world performance is often
+    bandwidth-limited rather than compute-limited, especially for large texture work or big ML models.
+  </p>
+
+  <h3>2. Special-purpose units</h3>
+  <p>
+    Modern GPUs have dedicated hardware for specific tasks:
+  </p>
+  <ul>
+    <li><strong>Ray-tracing cores</strong> (NVIDIA RT cores, AMD Ray Accelerators): hardware-accelerated
+    ray-triangle intersection for realistic lighting</li>
+    <li><strong>Tensor cores / Matrix engines:</strong> dedicated mixed-precision math for AI inference</li>
+    <li><strong>Video encode/decode</strong> (NVENC, AMF, QuickSync): hardware H.264/H.265/AV1</li>
+  </ul>
+  <p>
+    These don't show up in GFLOPS measurements but matter enormously for specific workloads. A
+    GPU with weaker raw GFLOPS but stronger ray-tracing units beats a higher-GFLOPS rival in ray-traced
+    games.
+  </p>
+
+  <h3>3. Driver + software optimization</h3>
+  <p>
+    Real game frame rates depend on driver maturity, game-engine optimization, and platform-specific
+    quirks. Two GPUs with identical GFLOPS can have 30%+ different frame rates in a specific game
+    based on driver work.
+  </p>
+
+  <h3>4. Thermal headroom</h3>
+  <p>
+    Sustained workloads (long games, ML inference, video encoding) hit thermal limits. A laptop GPU
+    with 4000 GFLOPS peak might sustain only 2500 GFLOPS after 10 minutes due to thermal throttling.
+    Desktop GPUs with better cooling sustain closer to peak.
+  </p>
+
+  <h2>How GFLOPS translates to real workloads</h2>
+
+  <h3>Gaming</h3>
+  <p>
+    Roughly: every 1000 GFLOPS adds 10-30 fps in mid-settings 1080p gaming, depending on game.
+    Modern AAA games at 4K Ultra need 5000+ GFLOPS for 60fps. Esports titles at 1080p run on
+    500-1000 GFLOPS easily.
+  </p>
+
+  <h3>Machine learning inference</h3>
+  <p>
+    Local LLM inference (Llama 3 8B, Mistral 7B): 1500+ GFLOPS gets you ~10 tokens/sec.
+    Stable Diffusion 1.5 at 512×512: 2000+ GFLOPS for ~30 sec/image.
+    Larger models scale linearly with GFLOPS up to memory limits.
+  </p>
+
+  <h3>Video editing + encoding</h3>
+  <p>
+    1080p editing: 1000+ GFLOPS handles real-time preview.
+    4K editing: 3000+ GFLOPS for smooth scrub.
+    H.265 hardware encode: GFLOPS less relevant — dedicated NVENC/QuickSync units do this.
+  </p>
+
+  <h3>3D rendering (Blender, Cinema 4D)</h3>
+  <p>
+    GPU rendering scales linearly with GFLOPS. A 5000-GFLOPS GPU renders ~3× faster than 1500-GFLOPS.
+    For big scenes, RAM matters too — large scenes need 12GB+ VRAM.
+  </p>
+
+  <h3>Browser tasks</h3>
+  <p>
+    Most everyday browser use needs &lt;100 GFLOPS. WebGL games (browser-based 3D games), WebGPU
+    apps, and AI in browser (Transformers.js) benefit from more — 1000-2000 GFLOPS is a sweet spot
+    for browser-AI workloads.
+  </p>
+
+  <h2>Why your GFLOPS might be lower than expected</h2>
+
+  <h3>1. Browser overhead</h3>
+  <p>
+    WebGPU adds 5-15% overhead vs native Metal/Vulkan/DirectX. Expect 9bench to show 85-95% of
+    Geekbench Compute or native benchmarks.
+  </p>
+
+  <h3>2. Power / battery throttling</h3>
+  <p>
+    Laptop on battery: GPU clocks drop 30-50%. Plug in for accurate measurement.
+  </p>
+
+  <h3>3. Other GPU work in progress</h3>
+  <p>
+    YouTube playing in another tab, Discord running, screen recording active — all consume GPU.
+    Close them for clean measurement.
+  </p>
+
+  <h3>4. Browser GPU acceleration disabled</h3>
+  <p>
+    Chrome, Firefox, and Edge have flags that can disable hardware acceleration. Check
+    <code>chrome://gpu</code> (Chrome) or <code>about:support</code> (Firefox) — should show
+    "Hardware accelerated" for graphics features.
+  </p>
+
+  <h3>5. Driver issues</h3>
+  <p>
+    Outdated GPU drivers can drop performance 20-40%. Update via NVIDIA GeForce Experience, AMD
+    Adrenalin, Intel Driver Updater, or your laptop manufacturer's update tool.
+  </p>
+
+  <h2>Test your GFLOPS in 15 seconds</h2>
+  <p>
+    Run <a href="/">9bench</a> — it measures your GPU compute throughput via WebGPU matrix
+    multiplication and reports GFLOPS in the result card. Compare to the brackets above to see
+    where your hardware sits.
+  </p>
+  <p>
+    Want absolute-accurate GFLOPS? Use Geekbench 6's GPU Compute test (Metal/OpenCL/Vulkan native)
+    — it'll be 5-15% higher than 9bench's WebGPU number, which is the true peak your hardware can
+    achieve.
+  </p>
+
+  <h2>The honest closing</h2>
+  <p>
+    GFLOPS is a useful first-order GPU performance metric. It tells you compute throughput. It
+    does <em>not</em> tell you the full story — memory bandwidth, special-purpose units, drivers,
+    and thermals all matter for real-world workloads.
+  </p>
+  <p>
+    Best use: <strong>compare GFLOPS within the same generation/architecture</strong>. RTX 4070 vs
+    RTX 4080: GFLOPS comparison is meaningful. RTX 4070 vs RX 7800 XT: GFLOPS gives a rough idea
+    but architecture differences make comparisons less precise. Always cross-reference with real
+    review benchmarks for the workload you care about.
+  </p>
+
+  <h2>Sources + further reading</h2>
+  <ul>
+    <li><a href="/">9bench — measure your GPU GFLOPS in 15 seconds</a></li>
+    <li><a href="/articles/geekbench-vs-cinebench-vs-9bench">Geekbench vs Cinebench vs 9bench</a></li>
+    <li><a href="https://www.tomshardware.com/reviews/gpu-hierarchy,4388.html" rel="external">Tom's Hardware GPU hierarchy 2026</a></li>
+    <li><a href="https://en.wikipedia.org/wiki/FLOPS" rel="external">Wikipedia: FLOPS (full background)</a></li>
+    <li><a href="https://browser.geekbench.com/opencl-benchmarks" rel="external">Geekbench OpenCL benchmarks (native GPU compute scores)</a></li>
+  </ul>
+</ArticleLayout>
