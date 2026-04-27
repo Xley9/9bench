@@ -76,8 +76,8 @@ function spawnWorker(iterations: number): Promise<{ elapsed: number }> {
 }
 
 export async function runCPUBench(
-  singleCoreIterations = 100_000,
-  multiCoreIterationsPerWorker = 100_000
+  singleCoreIterations = 200_000,
+  multiCoreIterationsPerWorker = 500_000
 ): Promise<CPUResult> {
   const cores = navigator.hardwareConcurrency || 4;
   const result: CPUResult = {

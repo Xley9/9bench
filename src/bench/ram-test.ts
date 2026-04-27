@@ -18,7 +18,7 @@ export interface RAMResult {
   error?: string;
 }
 
-export async function runRAMBench(workingSetMB = 64): Promise<RAMResult> {
+export async function runRAMBench(workingSetMB = 256): Promise<RAMResult> {
   const result: RAMResult = {
     workingSetMB,
     copyBandwidthGBs: 0,

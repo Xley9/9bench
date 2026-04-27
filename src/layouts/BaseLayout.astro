@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import { GSC_META_VERIFICATION, BING_META_VERIFICATION, YANDEX_META_VERIFICATION, GA4_ID } from '../config';
 
 export interface Props {
   title: string;
@@ -39,6 +40,24 @@ const fullTitle = title.includes('9bench') ? title : `${title} — 9bench`;
 
     <!-- Robots / AI -->
     <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large" />
+
+    <!-- Search Console Verifications -->
+    {GSC_META_VERIFICATION && <meta name="google-site-verification" content={GSC_META_VERIFICATION} />}
+    {BING_META_VERIFICATION && <meta name="msvalidate.01" content={BING_META_VERIFICATION} />}
+    {YANDEX_META_VERIFICATION && <meta name="yandex-verification" content={YANDEX_META_VERIFICATION} />}
+
+    <!-- Google Analytics 4 -->
+    {GA4_ID && (
+      <>
+        <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA4_ID}`}></script>
+        <script set:html={`
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', '${GA4_ID}', { anonymize_ip: true });
+        `}></script>
+      </>
+    )}
 
     <!-- Schema.org -->
     <script type="application/ld+json" set:html={JSON.stringify({

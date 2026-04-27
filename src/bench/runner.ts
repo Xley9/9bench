@@ -56,13 +56,18 @@ export async function runFullBench(onProgress?: ProgressCallback): Promise<Bench
   onProgress?.('cpu', 100, `CPU ${Math.round(cpu.hashesPerSecondSingle)} h/s`);
 
   onProgress?.('ram', 0, 'Pumping memory…');
-  const ram = await runRAMBench(64);
+  const ram = await runRAMBench(256);
   onProgress?.('ram', 100, `RAM ${ram.readBandwidthGBs.toFixed(1)} GB/s read`);
 
-  const scoreGpu = gpu.supported ? Math.round(gpu.gflops * 1.5) : 0;
-  const scoreCpuS = Math.round(cpu.singleCoreScore);
-  const scoreCpuM = Math.round(cpu.multiCoreScore);
-  const scoreRam = ram.score;
+  // ── Calibrated scoring (v3, browser-API-aware) ───────────────────────
+  // Browser APIs cap real measurable performance (Web Crypto serialization,
+  // Worker pool limits, JIT inconsistency). Score formulas adjusted for what's
+  // achievable in browser, not native ceiling.
+  // Target: typical 2024 laptop ≈ 1200, mainstream ≈ 1800, high-end ≈ 3000+
+  const scoreGpu = gpu.supported ? Math.round(gpu.gflops * 3) : 0;       // 500 GFLOPS → 1500
+  const scoreCpuS = Math.round(cpu.hashesPerSecondSingle / 300);           // 400K h/s → 1333
+  const scoreCpuM = Math.round(cpu.hashesPerSecondMulti / 600);            // 1.2M h/s → 2000
+  const scoreRam = Math.round(((ram.readBandwidthGBs + ram.writeBandwidthGBs) / 2) * 60);
 
   // Geometric mean weighted: GPU 35%, CPU-multi 45%, RAM 20%
   // Use max(score, 1) to avoid log(0)
@@ -100,40 +105,40 @@ export async function runFullBench(onProgress?: ProgressCallback): Promise<Bench
 }
 
 function computeVerdict(overall: number, gpu: number, cpuM: number, ram: number) {
-  // Score brackets calibrated to typical 2026 hardware:
-  //   M5 Max 18-core ≈ 4500-5500
-  //   Ryzen 9 9950X3D ≈ 3500-4500
-  //   M3 Pro / Ryzen 7 7800X3D ≈ 2500-3500
-  //   Mid-range 2024 laptop ≈ 1500-2500
-  //   Budget / older ≈ 800-1500
-  //   Office laptop / Chromebook ≈ <800
+  // Score brackets calibrated to REAL browser-API output:
+  //   Elite (M5 Max, 9950X3D + RTX 5090) ≈ 4000+
+  //   High-end (M4 Pro, 7950X + RTX 4080) ≈ 2500-4000
+  //   Strong mainstream (M3 Pro, 7800X3D + RTX 4060) ≈ 1700-2500
+  //   Mid-range standard (16-core laptop, mid-GPU) ≈ 1000-1700
+  //   Budget / older ≈ 500-1000
+  //   Office laptop / Chromebook ≈ <500
 
   let label: string, color: string, snark: string;
 
-  if (overall >= 4500) {
-    label = '🏆 Elite tier — top 5% globally';
+  if (overall >= 4000) {
+    label = '🏆 Elite tier — top 5%';
     color = '#10B981';
-    snark = `Your hardware doesn\'t need motivation. It needs an audience. Whatever job you\'re doing on this machine, the bottleneck is no longer silicon.`;
-  } else if (overall >= 3500) {
+    snark = `Your hardware doesn't need motivation. It needs an audience. The bottleneck on this machine is no longer silicon — it's how fast you can think of things to make it do.`;
+  } else if (overall >= 2500) {
     label = '✓ High-end performer';
     color = '#10B981';
-    snark = `Solid configuration. You\'re paying enough that you should expect this. Anything you do badly here is a you problem, not a hardware problem.`;
-  } else if (overall >= 2500) {
+    snark = `Strong configuration. You're paying enough that this should be expected. Anything you do badly here is a you problem, not a hardware problem.`;
+  } else if (overall >= 1700) {
     label = '◯ Strong mainstream';
     color = '#0EA5E9';
-    snark = `Capable of nearly anything you throw at it. Gaming at high settings, video editing, 4K work — all fine. The hardware isn\'t what\'s slowing you down.`;
-  } else if (overall >= 1500) {
+    snark = `Capable of nearly anything. Gaming at high settings, video editing, 4K work, ML inference — all fine. Most of what slows you down isn't the hardware.`;
+  } else if (overall >= 1000) {
     label = '~ Mid-range standard';
+    color = '#0EA5E9';
+    snark = `Solid working machine. Office work, light gaming, browser-everything, normal 2024-era loads — totally fine. Demanding 2026 tasks (local LLMs, 4K video editing) will feel the squeeze.`;
+  } else if (overall >= 500) {
+    label = '~ Mainstream / older';
     color = '#F59E0B';
-    snark = `Standard 2024-era machine. Office work, light gaming, browser-everything — totally fine. Will start feeling slow on demanding 2026 tasks. Two more years before upgrade pressure.`;
-  } else if (overall >= 800) {
-    label = '⚠ Budget / older hardware';
-    color = '#F59E0B';
-    snark = `Functional. Not exciting. Your machine is doing its best, but anything CPU- or GPU-intensive is going to hurt. Replacement cycle approaching.`;
+    snark = `Functional everyday machine. CPU- or GPU-heavy tasks are going to feel slow, but everything normal works. Replacement cycle approaching if you do creative or technical work.`;
   } else {
-    label = '🚨 Office / Chromebook tier';
+    label = '⚠ Office / Chromebook tier';
     color = '#DC2626';
-    snark = `This benchmark probably took longer than it should have. Your machine is built for spreadsheets, not silicon-flexing. That\'s totally fine — just don\'t expect gaming miracles.`;
+    snark = `Your machine is built for spreadsheets, not silicon-flexing. That's totally fine — just calibrate expectations. Don't expect 4K video editing or modern gaming.`;
   }
 
   // Detect imbalances
@@ -146,14 +151,13 @@ function computeVerdict(overall: number, gpu: number, cpuM: number, ram: number)
   }
 
   // Local percentile estimate (before backend ranking exists)
-  // Rough mapping of overall → percentile based on expected 2026 distribution:
+  // v3 brackets:
   let percentileEstimate: number;
-  if (overall >= 5000) percentileEstimate = 99;
-  else if (overall >= 4000) percentileEstimate = 95;
-  else if (overall >= 3000) percentileEstimate = 85;
-  else if (overall >= 2000) percentileEstimate = 65;
-  else if (overall >= 1200) percentileEstimate = 40;
-  else if (overall >= 700) percentileEstimate = 20;
+  if (overall >= 4000) percentileEstimate = 95;
+  else if (overall >= 2500) percentileEstimate = 80;
+  else if (overall >= 1700) percentileEstimate = 60;
+  else if (overall >= 1000) percentileEstimate = 40;
+  else if (overall >= 500) percentileEstimate = 18;
   else percentileEstimate = 5;
 
   return { label, color, snark, percentileEstimate };
