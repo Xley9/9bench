@@ -1,0 +1,261 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #0B1120;
+  --bg-card: #111827;
+  --bg-elevated: #1E293B;
+  --text: #F1F5F9;
+  --text-muted: #94A3B8;
+  --border: #1E293B;
+  --brand: #10B981;
+  --brand-dark: #065F46;
+  --brand-light: #D1FAE5;
+  --truth: #4F46E5;
+  --truth-dark: #312E81;
+}
+
+* { box-sizing: border-box; }
+
+html {
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  scroll-behavior: smooth;
+  background: var(--bg);
+  color: var(--text);
+  color-scheme: dark;
+}
+
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+/* Big primary action button */
+.run-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem 2.5rem;
+  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%);
+  color: #fff;
+  border: none;
+  border-radius: 0.75rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  min-height: 56px;
+  box-shadow: 0 10px 30px -10px rgba(16, 185, 129, 0.5);
+}
+.run-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 15px 40px -10px rgba(16, 185, 129, 0.7);
+}
+.run-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Progress visualization */
+.progress-stage {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--bg-card);
+  margin-bottom: 0.65rem;
+  transition: all 0.2s;
+}
+.progress-stage.active {
+  border-color: var(--brand);
+  background: var(--bg-elevated);
+}
+.progress-stage.done {
+  border-color: var(--brand-dark);
+  opacity: 0.85;
+}
+.progress-icon {
+  font-size: 1.5rem;
+  width: 2.5rem;
+  text-align: center;
+}
+.progress-label {
+  flex: 1;
+  font-weight: 600;
+}
+.progress-detail {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+/* Result card — same Truth-Series DNA as Toololis */
+.result-card {
+  position: relative;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  padding: 2.5rem 1.5rem 3rem;
+  overflow: hidden;
+  margin-top: 1.5rem;
+}
+.result-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 5px;
+  background: linear-gradient(90deg, var(--brand) 0%, var(--truth) 100%);
+}
+.result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--brand);
+  letter-spacing: 0.5px;
+  margin-bottom: 1.5rem;
+  text-transform: uppercase;
+}
+.result-statement {
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+}
+.result-big {
+  text-align: center;
+  font-size: clamp(3rem, 10vw, 5rem);
+  font-weight: 800;
+  line-height: 1;
+  color: var(--text);
+  letter-spacing: -0.02em;
+  margin-bottom: 0.5rem;
+}
+.result-verdict {
+  text-align: center;
+  font-weight: 700;
+  font-size: 1rem;
+  margin-bottom: 1.5rem;
+}
+.result-snark {
+  background: rgba(79, 70, 229, 0.1);
+  border-left: 4px solid var(--truth);
+  border-radius: 0 0.5rem 0.5rem 0;
+  padding: 0.85rem 1.1rem;
+  font-style: italic;
+  color: var(--text);
+  font-size: 0.95rem;
+  margin-bottom: 1.5rem;
+  line-height: 1.55;
+}
+.result-rows {
+  border: 1px solid var(--border);
+  border-radius: 0.65rem;
+  overflow: hidden;
+}
+.result-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.92rem;
+}
+.result-row:last-child {
+  border-bottom: none;
+  font-weight: 700;
+}
+.result-row-label {
+  color: var(--text-muted);
+}
+.result-row-value {
+  font-family: ui-monospace, SFMono-Regular, monospace;
+}
+
+/* Score component bars */
+.score-component {
+  display: grid;
+  grid-template-columns: 80px 1fr 60px;
+  gap: 0.85rem;
+  align-items: center;
+  margin-bottom: 0.55rem;
+}
+.score-component-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+.score-component-bar {
+  height: 8px;
+  background: var(--bg-elevated);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.score-component-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--brand) 0%, var(--truth) 100%);
+  transition: width 0.5s ease;
+}
+.score-component-value {
+  text-align: right;
+  font-family: ui-monospace, monospace;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+/* Reaction bar (the ❤️ feature for cross-product reuse) */
+.reaction-bar {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+.reaction-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 1rem;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.15s;
+}
+.reaction-btn:hover {
+  border-color: var(--brand);
+  transform: translateY(-1px);
+}
+.reaction-btn.active {
+  background: var(--brand);
+  border-color: var(--brand);
+  color: #fff;
+}
+.reaction-btn .icon {
+  font-size: 1.05rem;
+}
+
+/* Disclaimer text */
+.disclaimer {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--bg-elevated);
+  border-radius: 0.5rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}

@@ -1,0 +1,50 @@
+# 9bench
+
+> Honest browser-based hardware benchmark. Tests CPU, GPU, and RAM in 15 seconds with no download, no account, and no upload of personal data. Built by Atilla Kürük (creator of Toololis) as part of the Truth Series — utility tools that tell the truth, with sources and transparent methodology.
+
+## What it does
+
+9bench measures your computer's CPU, GPU, and RAM performance by running real workloads directly in your browser:
+
+- **GPU benchmark**: WebGPU compute shader executes a 1024×1024 floating-point matrix multiplication 5 times. Output is GFLOPS (giga-floating-point-operations-per-second), the standard measure of GPU compute throughput.
+- **CPU single-core benchmark**: SHA-256 hash chain (100,000 iterations on one thread). Output is hashes-per-second, normalized to a logarithmic score.
+- **CPU multi-core benchmark**: Same workload run in parallel across all available cores via Web Workers. Output measures multi-core throughput + speedup efficiency.
+- **RAM benchmark**: Memory bandwidth via TypedArray copy + read + write patterns on a 64MB working set (exceeds L3 cache to force main-memory access). Output is GB/s read + write + random-access latency in nanoseconds.
+
+## How the score is calculated
+
+Overall 9bench Score = weighted geometric mean of:
+- GPU score (35% weight): GFLOPS × 1.5
+- CPU multi-core score (45% weight): log10(hashes-per-second / 1000) × 100
+- RAM score (20% weight): average(read+write GB/s) × 20
+
+Geometric mean prevents a single weak component from being masked by strong ones.
+
+## Score brackets (calibrated to 2026 hardware)
+
+- 4500+: Elite tier (top 5% globally) — Apple M5 Max, Ryzen 9 9950X3D, RTX 4090
+- 3500-4500: High-end performer — flagship desktops, top-tier laptops
+- 2500-3500: Strong mainstream — Apple M3 Pro, Ryzen 7 7800X3D, RTX 4070
+- 1500-2500: Mid-range standard — typical 2024-era laptops
+- 800-1500: Budget / older hardware
+- <800: Office laptop / Chromebook tier
+
+## Why it exists
+
+Existing benchmark tools (Geekbench, Cinebench, 3DMark, PassMark) require 500MB-8GB downloads, admin rights, and often paid licenses. UserBenchmark is community-banned for documented bias toward Intel single-core. Native installs are blocked in corporate networks. There has been no honest, instant, browser-native benchmark with cross-platform comparable scores.
+
+9bench fills this gap. The entire test runs in the browser via WebGPU + WebAssembly + Web Workers + Web Crypto APIs — no server-side compute, no data upload required.
+
+## Privacy
+
+No personal data is sent to any server during the test. All measurements happen locally in your browser. If you opt to submit your score to the public ranking database, only the anonymous benchmark numbers (GFLOPS, hashes-per-second, GB/s) and a hashed device fingerprint (NOT user-identifiable) are sent.
+
+## Methodology transparency
+
+Full methodology + score formulas at https://9bench.com/methodology
+Open source benchmark code at https://github.com/atillakuruk/9bench (planned)
+
+## Author
+
+Atilla Kürük — solo builder, also creator of Toololis (668 honest tools, also Truth Series).
+LinkedIn: https://www.linkedin.com/in/atilla-k-2b28b32a3/

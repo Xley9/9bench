@@ -1,0 +1,228 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="9bench — Honest browser-based hardware benchmark"
+  description="Test your CPU, GPU, and RAM in 15 seconds. No download. No account. No bias. WebGPU + WebAssembly + Web Workers — runs entirely in your browser."
+>
+  <main class="max-w-3xl mx-auto px-5 py-12">
+    <!-- Hero -->
+    <header class="text-center mb-12">
+      <div class="inline-block px-3 py-1 bg-brand-light/10 text-brand rounded-full text-xs font-bold tracking-wider uppercase mb-4">
+        ⚡ Truth Series · Hardware
+      </div>
+      <h1 class="text-5xl md:text-6xl font-extrabold tracking-tight mb-4">9bench</h1>
+      <p class="text-xl text-slate-400 mb-2">The honest browser benchmark.</p>
+      <p class="text-base text-slate-500 max-w-xl mx-auto">
+        Test your CPU + GPU + RAM in 15 seconds. No download. No bias.
+        Runs entirely in your browser via WebGPU + WebAssembly.
+      </p>
+    </header>
+
+    <!-- Run Button -->
+    <div class="text-center mb-12">
+      <button id="run-btn" class="run-btn">
+        <span id="run-btn-icon">▶</span>
+        <span id="run-btn-text">Test my hardware</span>
+      </button>
+      <p class="text-xs text-slate-500 mt-3">~15 seconds · No login · Privacy-first</p>
+    </div>
+
+    <!-- Progress Stages (hidden until test starts) -->
+    <div id="progress" hidden>
+      <div class="progress-stage" id="stage-gpu">
+        <div class="progress-icon">🎮</div>
+        <div class="progress-label">GPU compute</div>
+        <div class="progress-detail" id="stage-gpu-detail">waiting…</div>
+      </div>
+      <div class="progress-stage" id="stage-cpu">
+        <div class="progress-icon">⚙️</div>
+        <div class="progress-label">CPU single + multi-core</div>
+        <div class="progress-detail" id="stage-cpu-detail">waiting…</div>
+      </div>
+      <div class="progress-stage" id="stage-ram">
+        <div class="progress-icon">💾</div>
+        <div class="progress-label">RAM bandwidth</div>
+        <div class="progress-detail" id="stage-ram-detail">waiting…</div>
+      </div>
+    </div>
+
+    <!-- Result Card -->
+    <div id="result" hidden></div>
+
+    <!-- Capability check -->
+    <div id="caps" class="mt-12 text-center text-xs text-slate-500"></div>
+
+    <!-- Trust footer -->
+    <footer class="mt-20 pt-8 border-t border-slate-800 text-center text-xs text-slate-500">
+      <p class="mb-2">
+        9bench is built by <a href="https://toololis.com/atilla/" class="text-brand hover:underline">Atilla Kürük</a> · sister-product of
+        <a href="https://toololis.com" class="text-brand hover:underline">Toololis</a>
+      </p>
+      <p>
+        Open methodology · No data leaves your browser unless you submit a result · No account · No ads (yet)
+      </p>
+    </footer>
+  </main>
+
+  <script>
+    import { runFullBench, type Stage } from '../bench/runner.ts';
+
+    const runBtn = document.getElementById('run-btn') as HTMLButtonElement;
+    const runBtnIcon = document.getElementById('run-btn-icon')!;
+    const runBtnText = document.getElementById('run-btn-text')!;
+    const progress = document.getElementById('progress')!;
+    const result = document.getElementById('result')!;
+    const caps = document.getElementById('caps')!;
+
+    // Capability check
+    const hasWebGPU = 'gpu' in navigator;
+    const hasWebWorkers = 'Worker' in window;
+    const hasCrypto = 'crypto' in window && 'subtle' in crypto;
+    const cores = navigator.hardwareConcurrency || '?';
+    caps.innerHTML = `
+      <div class="inline-flex gap-3 flex-wrap justify-center">
+        <span>${hasWebGPU ? '✓' : '✗'} WebGPU</span>
+        <span>${hasWebWorkers ? '✓' : '✗'} Workers</span>
+        <span>${hasCrypto ? '✓' : '✗'} Web Crypto</span>
+        <span>${cores} cores reported</span>
+      </div>
+    `;
+
+    function updateStage(id: string, percent: number, message: string) {
+      const stage = document.getElementById('stage-' + id);
+      const detail = document.getElementById('stage-' + id + '-detail');
+      if (!stage || !detail) return;
+      stage.classList.remove('done');
+      if (percent >= 100) {
+        stage.classList.add('done');
+        stage.classList.remove('active');
+      } else {
+        stage.classList.add('active');
+      }
+      detail.textContent = message;
+    }
+
+    runBtn.addEventListener('click', async () => {
+      runBtn.disabled = true;
+      runBtnIcon.textContent = '⏳';
+      runBtnText.textContent = 'Running…';
+      progress.hidden = false;
+      result.hidden = true;
+      result.innerHTML = '';
+
+      try {
+        const r = await runFullBench((stage, percent, message) => {
+          if (stage === 'done') return;
+          updateStage(stage, percent, message);
+        });
+
+        // Render result card
+        const fmt = (n: number) => n.toLocaleString();
+        const pct = (n: number, max: number) => Math.min(100, Math.round((n / max) * 100));
+
+        result.innerHTML = `
+          <div class="result-card">
+            <div class="result-header">
+              <span>⚡ TRUTH SERIES · HARDWARE</span>
+              <span>9bench.com</span>
+            </div>
+            <div class="result-statement">your 9bench score</div>
+            <div class="result-big">${fmt(r.scores.overall)}</div>
+            <div class="result-verdict" style="color: ${r.verdict.color}">
+              ${r.verdict.label}
+            </div>
+            <div class="result-snark">${r.verdict.snark}</div>
+
+            <h3 class="text-sm font-bold tracking-wider uppercase text-slate-400 mb-3">Component breakdown</h3>
+            <div class="mb-5">
+              <div class="score-component">
+                <div class="score-component-label">🎮 GPU</div>
+                <div class="score-component-bar"><div class="score-component-fill" style="width:${pct(r.scores.gpu, 5000)}%"></div></div>
+                <div class="score-component-value">${fmt(r.scores.gpu)}</div>
+              </div>
+              <div class="score-component">
+                <div class="score-component-label">⚙️ CPU·1</div>
+                <div class="score-component-bar"><div class="score-component-fill" style="width:${pct(r.scores.cpuSingle, 1500)}%"></div></div>
+                <div class="score-component-value">${fmt(r.scores.cpuSingle)}</div>
+              </div>
+              <div class="score-component">
+                <div class="score-component-label">⚙️ CPU·M</div>
+                <div class="score-component-bar"><div class="score-component-fill" style="width:${pct(r.scores.cpuMulti, 2500)}%"></div></div>
+                <div class="score-component-value">${fmt(r.scores.cpuMulti)}</div>
+              </div>
+              <div class="score-component">
+                <div class="score-component-label">💾 RAM</div>
+                <div class="score-component-bar"><div class="score-component-fill" style="width:${pct(r.scores.ram, 1500)}%"></div></div>
+                <div class="score-component-value">${fmt(r.scores.ram)}</div>
+              </div>
+            </div>
+
+            <h3 class="text-sm font-bold tracking-wider uppercase text-slate-400 mb-3">Raw measurements</h3>
+            <div class="result-rows">
+              <div class="result-row"><span class="result-row-label">GPU</span><span class="result-row-value">${r.hardware.gpu}</span></div>
+              <div class="result-row"><span class="result-row-label">GPU compute</span><span class="result-row-value">${r.gpu.gflops.toFixed(1)} GFLOPS</span></div>
+              <div class="result-row"><span class="result-row-label">CPU cores</span><span class="result-row-value">${r.cpu.cores}</span></div>
+              <div class="result-row"><span class="result-row-label">SHA-256 single</span><span class="result-row-value">${fmt(Math.round(r.cpu.hashesPerSecondSingle))} h/s</span></div>
+              <div class="result-row"><span class="result-row-label">SHA-256 multi</span><span class="result-row-value">${fmt(Math.round(r.cpu.hashesPerSecondMulti))} h/s</span></div>
+              <div class="result-row"><span class="result-row-label">Multi-core speedup</span><span class="result-row-value">${r.cpu.speedup.toFixed(2)}× (${(r.cpu.efficiency * 100).toFixed(0)}% eff)</span></div>
+              <div class="result-row"><span class="result-row-label">RAM read</span><span class="result-row-value">${r.ram.readBandwidthGBs.toFixed(1)} GB/s</span></div>
+              <div class="result-row"><span class="result-row-label">RAM write</span><span class="result-row-value">${r.ram.writeBandwidthGBs.toFixed(1)} GB/s</span></div>
+              <div class="result-row"><span class="result-row-label">RAM random latency</span><span class="result-row-value">${r.ram.randomAccessLatencyNs.toFixed(1)} ns</span></div>
+              <div class="result-row"><span class="result-row-label">Total test time</span><span class="result-row-value">${(r.durationMs / 1000).toFixed(1)} s</span></div>
+              <div class="result-row"><span class="result-row-label">Estimated percentile</span><span class="result-row-value">~${r.verdict.percentileEstimate}th</span></div>
+            </div>
+
+            <div class="reaction-bar">
+              <button class="reaction-btn" data-reaction="match">
+                <span class="icon">❤️</span><span>Matches my experience</span>
+              </button>
+              <button class="reaction-btn" data-reaction="off">
+                <span class="icon">🤔</span><span>Felt off</span>
+              </button>
+              <button class="reaction-btn" data-reaction="surprised">
+                <span class="icon">😮</span><span>Surprised me</span>
+              </button>
+            </div>
+
+            <div class="disclaimer">
+              <strong>Methodology:</strong> Score = geometric mean of GPU·CPU-multi·RAM weighted 35·45·20%.
+              Measurements are real but bound by browser overhead (typically 5-15% slower than native).
+              Cross-platform comparable. Not a replacement for Geekbench/Cinebench for absolute peak measurement —
+              optimized for instant, install-free, honest relative ranking.
+            </div>
+          </div>
+        `;
+
+        // Wire up reaction buttons (LocalStorage-only for now)
+        result.querySelectorAll('.reaction-btn').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const reaction = (btn as HTMLElement).dataset.reaction!;
+            try {
+              const stored = JSON.parse(localStorage.getItem('9bench:reactions') || '[]');
+              stored.push({
+                reaction,
+                score: r.scores.overall,
+                gpu: r.hardware.gpu,
+                timestamp: Date.now()
+              });
+              localStorage.setItem('9bench:reactions', JSON.stringify(stored.slice(-50)));
+              btn.classList.add('active');
+            } catch {}
+          });
+        });
+
+        result.hidden = false;
+        result.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } catch (e: any) {
+        result.innerHTML = `<div class="result-card"><div class="result-snark" style="border-color:#DC2626">Benchmark failed: ${e?.message || e}</div></div>`;
+        result.hidden = false;
+      } finally {
+        runBtn.disabled = false;
+        runBtnIcon.textContent = '↻';
+        runBtnText.textContent = 'Run again';
+      }
+    });
+  </script>
+</BaseLayout>
