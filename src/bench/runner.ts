@@ -141,13 +141,19 @@ function computeVerdict(overall: number, gpu: number, cpuM: number, ram: number)
     snark = `Your machine is built for spreadsheets, not silicon-flexing. That's totally fine — just calibrate expectations. Don't expect 4K video editing or modern gaming.`;
   }
 
-  // Detect imbalances
+  // Detect imbalances — but be honest about RAM browser-API limits
   const components = [gpu, cpuM, ram];
   const max = Math.max(...components);
   const min = Math.min(...components);
   if (max > 0 && min / max < 0.4) {
-    const weakest = gpu === min ? 'GPU' : cpuM === min ? 'CPU' : 'RAM';
-    snark += ` Imbalance detected: ${weakest} is significantly behind the rest. Upgrade target is obvious.`;
+    if (ram === min) {
+      // RAM scoring is structurally lower in browsers (V8 doesn't vectorize Float32Array
+      // operations fully). Be honest about this rather than blame the user's hardware.
+      snark += ` Heads up: RAM scores low in all browser benchmarks (typically 30-50% of native) — not necessarily your hardware.`;
+    } else {
+      const weakest = gpu === min ? 'GPU' : 'CPU';
+      snark += ` Imbalance detected: ${weakest} is significantly behind the other components — likely the upgrade target.`;
+    }
   }
 
   // Local percentile estimate (before backend ranking exists)
