@@ -9,7 +9,7 @@ export const GSC_META_VERIFICATION = '';
 
 // ─── Bing Webmaster Tools (optional, but free 1-min setup) ────────
 // Get from: https://www.bing.com/webmasters
-export const BING_META_VERIFICATION = '';
+export const BING_META_VERIFICATION = '462CF586AFC168C3EA971B9476EA008C';
 
 // ─── Yandex Webmaster (optional, useful for AI/Yandex AI training) ─
 // Get from: https://webmaster.yandex.com
