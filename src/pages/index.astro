@@ -226,6 +226,13 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       }
     }
 
+    // English ordinal: 1→1st, 2→2nd, 3→3rd, 4→4th, 11→11th, 21→21st, 33→33rd
+    function ordinal(n: number): string {
+      const s = ['th', 'st', 'nd', 'rd'];
+      const v = n % 100;
+      return n + (s[(v - 20) % 10] || s[v] || s[0]);
+    }
+
     // Wake Lock — keep screen on during test (mobile especially)
     let wakeLock: any = null;
     async function requestWakeLock() {
@@ -352,7 +359,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
               <div class="result-row"><span class="result-row-label">RAM write</span><span class="result-row-value">${r.ram.writeBandwidthGBs.toFixed(1)} GB/s</span></div>
               <div class="result-row"><span class="result-row-label">RAM random latency</span><span class="result-row-value">${r.ram.randomAccessLatencyNs.toFixed(1)} ns</span></div>
               <div class="result-row"><span class="result-row-label">Total test time</span><span class="result-row-value">${(r.durationMs / 1000).toFixed(1)} s</span></div>
-              <div class="result-row"><span class="result-row-label">${submitted.id ? 'Global percentile' : 'Estimated percentile'}</span><span class="result-row-value">${submitted.id ? `<strong>${submitted.percentile}th</strong> of ${submitted.total!.toLocaleString()} tests` : `~${r.verdict.percentileEstimate}th (estimated)`}</span></div>
+              <div class="result-row"><span class="result-row-label">${submitted.id ? 'Global percentile' : 'Estimated percentile'}</span><span class="result-row-value">${submitted.id ? `<strong>${ordinal(submitted.percentile!)}</strong> of ${submitted.total!.toLocaleString()} tests` : `~${ordinal(r.verdict.percentileEstimate)} (estimated)`}</span></div>
               ${submitted.id ? `<div class="result-row"><span class="result-row-label">Permalink</span><span class="result-row-value"><a href="/r/${submitted.id}/" class="text-brand underline">9bench.com/r/${submitted.id}</a></span></div>` : ''}
             </div>
 

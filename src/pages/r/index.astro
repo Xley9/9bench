@@ -40,6 +40,11 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 
     function fmt(n: number) { return Number(n).toLocaleString(); }
     function pct(n: number, max: number) { return Math.min(100, Math.round((n / max) * 100)); }
+    function ordinal(n: number): string {
+      const s = ['th','st','nd','rd'];
+      const v = n % 100;
+      return n + (s[(v - 20) % 10] || s[v] || s[0]);
+    }
 
     function verdict(score: number) {
       if (score >= 4000) return { label: '🏆 Elite tier — top 5%', color: '#10B981',
@@ -128,7 +133,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
               <div class="result-row"><span class="result-row-label">SHA-256 multi</span><span class="result-row-value">${fmt(r.cpu.hashesMulti)} h/s</span></div>
               <div class="result-row"><span class="result-row-label">RAM read</span><span class="result-row-value">${r.ram.readGBs.toFixed(1)} GB/s</span></div>
               <div class="result-row"><span class="result-row-label">RAM write</span><span class="result-row-value">${r.ram.writeGBs.toFixed(1)} GB/s</span></div>
-              <div class="result-row"><span class="result-row-label">Global percentile</span><span class="result-row-value"><strong>${data.percentile}th</strong> of ${fmt(data.total)} tests</span></div>
+              <div class="result-row"><span class="result-row-label">Global percentile</span><span class="result-row-value"><strong>${ordinal(data.percentile)}</strong> of ${fmt(data.total)} tests</span></div>
             </div>
 
             <div class="reaction-bar">
