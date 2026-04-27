@@ -249,6 +249,29 @@ body {
   font-size: 1.05rem;
 }
 
+/* SEO content section */
+.prose-content h2 {
+  color: var(--brand);
+  font-weight: 800;
+  margin-bottom: 0.75rem;
+}
+.prose-content h3 {
+  color: var(--text);
+  font-weight: 700;
+}
+.prose-content a {
+  color: var(--brand);
+  text-decoration: underline;
+}
+.prose-content strong {
+  color: var(--text);
+  font-weight: 700;
+}
+.prose-content em {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
 /* Disclaimer text */
 .disclaimer {
   margin-top: 1rem;

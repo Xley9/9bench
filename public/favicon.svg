@@ -1,0 +1,17 @@
+<svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#10B981"/>
+      <stop offset="100%" stop-color="#4F46E5"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#bg)"/>
+  <!-- Stylized "9" -->
+  <text x="32" y="46" text-anchor="middle"
+        font-family="ui-rounded, system-ui, sans-serif"
+        font-size="44" font-weight="900"
+        fill="#FFFFFF">9</text>
+  <!-- speed/lightning accent in lower-right -->
+  <path d="M 50 42 L 56 42 L 52 49 L 56 49 L 48 60 L 51 51 L 47 51 Z"
+        fill="#FFFFFF" opacity="0.85"/>
+</svg>

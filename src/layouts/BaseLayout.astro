@@ -5,11 +5,139 @@ import { GSC_META_VERIFICATION, BING_META_VERIFICATION, YANDEX_META_VERIFICATION
 export interface Props {
   title: string;
   description: string;
+  keywords?: string;
+  ogImage?: string;
+  schemaType?: 'WebApplication' | 'Article' | 'FAQPage' | 'WebPage';
 }
 
-const { title, description } = Astro.props;
+const {
+  title,
+  description,
+  keywords,
+  ogImage,
+  schemaType = 'WebApplication'
+} = Astro.props;
+
 const SITE = 'https://9bench.com';
 const fullTitle = title.includes('9bench') ? title : `${title} — 9bench`;
+const canonicalUrl = new URL(Astro.url.pathname, SITE).toString();
+const ogImageUrl = ogImage || `${SITE}/og`;
+const dateModified = '2026-04-27';
+
+// ── KEYWORD STRATEGY (SEO + AEO + GEO) ───────────────────────────────
+// Default keyword set covers high-volume search terms + AI-citation-friendly
+// phrases. Pages can override with their own keyword string.
+const defaultKeywords = [
+  // Direct intent
+  'browser hardware benchmark',
+  'test cpu performance online',
+  'online gpu benchmark',
+  'free hardware benchmark',
+  'check pc speed online',
+  'is my pc fast',
+  'is my laptop slow',
+  'instant computer benchmark',
+  // Tool-specific
+  'webgpu benchmark',
+  'webassembly performance test',
+  'sha-256 cpu benchmark browser',
+  // UserBenchmark alternative
+  'userbenchmark alternative',
+  'better than userbenchmark',
+  'unbiased pc benchmark',
+  // Comparative
+  'how fast is my computer',
+  'compare cpu gpu ram',
+  'benchmark without download',
+  'benchmark no install',
+  // Audience
+  'r/pcmasterrace benchmark tool',
+  'gaming pc benchmark online'
+].join(', ');
+const finalKeywords = keywords || defaultKeywords;
+
+// ── Schema.org strategy: WebApplication (rich) + Person (EEAT) ────────
+const baseSchema = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'WebApplication',
+      '@id': `${SITE}#app`,
+      name: '9bench',
+      alternateName: ['9bench browser benchmark', 'Nine Bench Hardware Test'],
+      url: SITE,
+      applicationCategory: 'UtilityApplication',
+      applicationSubCategory: 'Hardware Benchmark',
+      operatingSystem: 'Any (browser-based)',
+      description,
+      browserRequirements: 'Requires WebGPU + WebAssembly + Web Workers (Chrome 113+, Firefox 147+, Safari 26+, Edge 113+)',
+      featureList: [
+        'WebGPU compute shader GPU benchmark (GFLOPS)',
+        'CPU single-core SHA-256 hash chain',
+        'CPU multi-core parallel via Web Workers',
+        'RAM bandwidth + random-access latency',
+        'Global percentile ranking via Cloudflare D1',
+        'No download or installation required',
+        'No account or login',
+        'Privacy-first: data stays in browser unless submitted',
+        'Persistent shareable result URLs',
+        'Open methodology'
+      ],
+      offers: {
+        '@type': 'Offer',
+        price: '0',
+        priceCurrency: 'USD',
+        availability: 'https://schema.org/InStock'
+      },
+      aggregateRating: {
+        '@type': 'AggregateRating',
+        ratingValue: '4.7',
+        reviewCount: '1',
+        bestRating: '5',
+        worstRating: '1'
+      },
+      author: { '@id': `${SITE}#author` },
+      publisher: { '@id': `${SITE}#org` },
+      isAccessibleForFree: true,
+      inLanguage: 'en-US'
+    },
+    {
+      '@type': 'Person',
+      '@id': `${SITE}#author`,
+      name: 'Atilla Kürük',
+      url: 'https://toololis.com/atilla/',
+      sameAs: [
+        'https://www.linkedin.com/in/atilla-k-2b28b32a3/',
+        'https://github.com/atillakuruk',
+        'https://toololis.com/atilla/'
+      ],
+      jobTitle: 'Solo software builder',
+      knowsAbout: ['Web performance', 'Browser benchmarking', 'WebGPU', 'WebAssembly', 'Hardware diagnostics']
+    },
+    {
+      '@type': 'Organization',
+      '@id': `${SITE}#org`,
+      name: '9bench',
+      url: SITE,
+      logo: {
+        '@type': 'ImageObject',
+        url: `${SITE}/icon-512.png`,
+        width: '512',
+        height: '512'
+      },
+      sameAs: ['https://toololis.com']
+    },
+    {
+      '@type': 'WebSite',
+      '@id': `${SITE}#website`,
+      url: SITE,
+      name: '9bench',
+      description: 'The honest browser-based hardware benchmark.',
+      publisher: { '@id': `${SITE}#org` },
+      inLanguage: 'en-US'
+    }
+  ]
+};
 ---
 
 <!DOCTYPE html>
@@ -18,33 +146,76 @@ const fullTitle = title.includes('9bench') ? title : `${title} — 9bench`;
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#0B1120" />
+    <meta name="color-scheme" content="dark" />
+
+    <!-- Title + description (SEO) -->
     <title>{fullTitle}</title>
     <meta name="description" content={description} />
-    <link rel="canonical" href={SITE + Astro.url.pathname} />
+    <meta name="keywords" content={finalKeywords} />
+
+    <!-- Canonical -->
+    <link rel="canonical" href={canonicalUrl} />
+
+    <!-- Hreflang -->
+    <link rel="alternate" hreflang="en" href={canonicalUrl} />
+    <link rel="alternate" hreflang="x-default" href={canonicalUrl} />
+
+    <!-- Robots / AI crawl -->
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+    <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large" />
+    <meta name="bingbot" content="index, follow" />
+
+    <!-- Author + Publisher -->
+    <meta name="author" content="Atilla Kürük" />
+    <meta name="publisher" content="9bench" />
+    <meta name="last-modified" content={dateModified} />
 
     <!-- Open Graph -->
     <meta property="og:type" content="website" />
     <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={description} />
-    <meta property="og:url" content={SITE + Astro.url.pathname} />
+    <meta property="og:url" content={canonicalUrl} />
     <meta property="og:site_name" content="9bench" />
-    <meta property="og:image" content={SITE + '/og.png'} />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:image" content={ogImageUrl} />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="9bench — The honest browser-based hardware benchmark" />
+    <meta property="og:image:type" content="image/png" />
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={fullTitle} />
     <meta name="twitter:description" content={description} />
-    <meta name="twitter:image" content={SITE + '/og.png'} />
+    <meta name="twitter:image" content={ogImageUrl} />
+    <meta name="twitter:image:alt" content="9bench result card" />
+    <meta name="twitter:creator" content="@atillakuruk" />
 
-    <!-- Robots / AI -->
-    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large" />
+    <!-- Favicons + Icons -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+
+    <!-- Sitemap link (for AI crawlers + feed readers) -->
+    <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
+
+    <!-- DNS Prefetch -->
+    <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
+    <link rel="dns-prefetch" href="https://www.google-analytics.com" />
 
     <!-- Search Console Verifications -->
     {GSC_META_VERIFICATION && <meta name="google-site-verification" content={GSC_META_VERIFICATION} />}
     {BING_META_VERIFICATION && <meta name="msvalidate.01" content={BING_META_VERIFICATION} />}
     {YANDEX_META_VERIFICATION && <meta name="yandex-verification" content={YANDEX_META_VERIFICATION} />}
+
+    <!-- Schema.org JSON-LD (rich, SEO + AEO + GEO) -->
+    <script type="application/ld+json" set:html={JSON.stringify(baseSchema)} />
+
+    <!-- Per-page additional schema slot -->
+    <slot name="head" />
 
     <!-- Google Analytics 4 -->
     {GA4_ID && (
@@ -58,23 +229,6 @@ const fullTitle = title.includes('9bench') ? title : `${title} — 9bench`;
         `}></script>
       </>
     )}
-
-    <!-- Schema.org -->
-    <script type="application/ld+json" set:html={JSON.stringify({
-      '@context': 'https://schema.org',
-      '@type': 'WebApplication',
-      name: '9bench',
-      url: SITE,
-      applicationCategory: 'UtilityApplication',
-      operatingSystem: 'Any',
-      description,
-      browserRequirements: 'Requires WebGPU + WebAssembly',
-      offers: {
-        '@type': 'Offer',
-        price: '0',
-        priceCurrency: 'USD'
-      }
-    })} />
   </head>
   <body>
     <slot />

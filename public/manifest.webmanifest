@@ -1,0 +1,19 @@
+{
+  "name": "9bench — Honest browser hardware benchmark",
+  "short_name": "9bench",
+  "description": "Test your CPU, GPU, and RAM in 15 seconds. No download. No account. WebGPU + WebAssembly powered.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#0B1120",
+  "background_color": "#0B1120",
+  "categories": ["utilities", "productivity", "developer"],
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-256.png", "sizes": "256x256", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-384.png", "sizes": "384x384", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

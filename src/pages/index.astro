@@ -3,8 +3,9 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 ---
 
 <BaseLayout
-  title="9bench — Honest browser-based hardware benchmark"
-  description="Test your CPU, GPU, and RAM in 15 seconds. No download. No account. No bias. WebGPU + WebAssembly + Web Workers — runs entirely in your browser."
+  title="9bench — Free Browser CPU GPU RAM Benchmark, No Download"
+  description="Test your computer's CPU, GPU, and RAM speed in 15 seconds — directly in your browser. WebGPU + WebAssembly powered. No download, no account, no bias. Free alternative to UserBenchmark."
+  keywords="browser hardware benchmark, online cpu gpu ram test, free pc benchmark no download, webgpu benchmark, userbenchmark alternative, instant pc speed test, is my computer fast, online geekbench alternative, browser-based benchmark, sha-256 cpu test"
 >
   <main class="max-w-3xl mx-auto px-5 py-12">
     <!-- Hero -->
@@ -53,6 +54,73 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
     <!-- Capability check -->
     <div id="caps" class="mt-12 text-center text-xs text-slate-500"></div>
+
+    <!-- SEO content section — keyword-rich, AI-citable -->
+    <section class="mt-20 prose-content max-w-none">
+      <h2 class="text-2xl font-bold text-brand mb-4">What 9bench measures</h2>
+      <p class="text-slate-300 leading-relaxed mb-4">
+        9bench is a free, open browser-based hardware benchmark that tests your
+        <strong>CPU</strong>, <strong>GPU</strong>, and <strong>RAM</strong> speed in about 15 seconds — no download,
+        no installation, no account required. The entire benchmark runs locally in your browser using
+        <strong>WebGPU compute shaders</strong>, <strong>WebAssembly</strong>, <strong>Web Workers</strong>,
+        and the <strong>Web Crypto API</strong>.
+      </p>
+
+      <h3 class="text-lg font-bold mt-6 mb-2">How it differs from UserBenchmark and Geekbench</h3>
+      <p class="text-slate-300 leading-relaxed mb-4">
+        <a href="https://www.reddit.com/r/pcmasterrace/" rel="external" class="text-brand hover:underline">r/pcmasterrace</a> and
+        <a href="https://www.reddit.com/r/hardware/" rel="external" class="text-brand hover:underline">r/hardware</a> have banned
+        <em>UserBenchmark.com</em> due to documented anti-AMD bias. <em>Geekbench</em>, <em>Cinebench</em>, <em>3DMark</em>, and
+        <em>PassMark</em> all require 500MB–8GB downloads and admin rights — unusable in corporate networks, schools, and
+        on shared computers. 9bench fills the gap: instant, transparent, no install, fair scoring.
+      </p>
+
+      <h3 class="text-lg font-bold mt-6 mb-2">What gets tested</h3>
+      <ul class="text-slate-300 list-disc list-inside leading-relaxed mb-4 space-y-1">
+        <li><strong>GPU compute</strong> — 1024×1024 floating-point matrix multiplication via WebGPU compute shader. Output: GFLOPS.</li>
+        <li><strong>CPU single-core</strong> — 200,000 SHA-256 hashes computed serially. Output: hashes/sec + score.</li>
+        <li><strong>CPU multi-core</strong> — Same workload across all cores via Web Workers. Output: hashes/sec + speedup efficiency.</li>
+        <li><strong>RAM bandwidth</strong> — 256 MB working set tested for sequential read, write, copy, plus random-access latency.</li>
+      </ul>
+
+      <h3 class="text-lg font-bold mt-6 mb-2">How to use 9bench</h3>
+      <ol class="text-slate-300 list-decimal list-inside leading-relaxed mb-4 space-y-1">
+        <li>Open <a href="https://9bench.com/" class="text-brand hover:underline">9bench.com</a> in any modern browser (Chrome 113+, Firefox 147+, Safari 26+, Edge 113+).</li>
+        <li>Click <em>"Test my hardware"</em>. The benchmark runs automatically in ~15 seconds.</li>
+        <li>Your score, percentile ranking, and detailed component breakdown appear instantly.</li>
+        <li>Optionally share your result via permalink, copy link, or tweet.</li>
+      </ol>
+
+      <h3 class="text-lg font-bold mt-6 mb-2">Browser compatibility (April 2026)</h3>
+      <ul class="text-slate-300 list-disc list-inside leading-relaxed mb-4 space-y-1">
+        <li>✅ <strong>Chrome 113+</strong> on Windows, macOS, Linux, Android — full support since 2023</li>
+        <li>✅ <strong>Edge 113+</strong> — full support</li>
+        <li>✅ <strong>Safari 26+</strong> on macOS Tahoe, iOS 26, iPadOS 26, visionOS 26 — full WebGPU support</li>
+        <li>✅ <strong>Firefox 147+</strong> on Windows + macOS Tahoe (ARM64)</li>
+      </ul>
+
+      <p class="text-slate-300 leading-relaxed mt-6">
+        Read the full <a href="/methodology" class="text-brand hover:underline font-semibold">scoring methodology</a> for every formula and bracket,
+        or check the <a href="/faq" class="text-brand hover:underline font-semibold">FAQ</a> for common questions.
+        Source code on <a href="https://github.com/atillakuruk/9bench" class="text-brand hover:underline" rel="external">GitHub</a>.
+      </p>
+    </section>
+
+    <!-- HowTo schema for AEO/GEO -->
+    <script slot="head" type="application/ld+json" set:html={JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'HowTo',
+      name: 'How to test your computer\'s CPU, GPU, and RAM speed in 15 seconds',
+      description: 'Use 9bench, a free browser-based hardware benchmark, to measure your CPU, GPU, and RAM performance with no download.',
+      totalTime: 'PT15S',
+      tool: [{ '@type': 'HowToTool', name: 'Modern web browser (Chrome 113+, Firefox 147+, Safari 26+, Edge 113+)' }],
+      step: [
+        { '@type': 'HowToStep', position: 1, name: 'Open 9bench.com', text: 'Open https://9bench.com in any modern web browser.' },
+        { '@type': 'HowToStep', position: 2, name: 'Click "Test my hardware"', text: 'Click the green "Test my hardware" button to start the benchmark.' },
+        { '@type': 'HowToStep', position: 3, name: 'Wait 15 seconds', text: 'The benchmark runs CPU, GPU, and RAM tests automatically in about 15 seconds.' },
+        { '@type': 'HowToStep', position: 4, name: 'View your score', text: 'Your overall 9bench score, component breakdown, percentile ranking, and shareable permalink appear instantly.' }
+      ]
+    })} />
 
     <!-- Trust footer -->
     <footer class="mt-20 pt-8 border-t border-slate-800 text-center text-xs text-slate-500">
