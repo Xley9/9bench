@@ -1,0 +1,3 @@
+# Cloudflare Pages routing — redirect /r/<id> to /r/index.html (handled client-side)
+/r/:id /r/ 200
+/r/:id/ /r/ 200

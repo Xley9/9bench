@@ -1,0 +1,140 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+
+const faqs = [
+  {
+    q: 'What is 9bench?',
+    a: 'A free, browser-based hardware benchmark. Tests your CPU, GPU, and RAM in 15 seconds with no download, no account, no upload of personal data. Built by Atilla Kürük as part of the Truth Series — utility tools that tell the truth.'
+  },
+  {
+    q: 'How accurate are the scores?',
+    a: 'Browser benchmarks measure real performance but with browser-API overhead (5-15% lower than native). The scores are great for relative comparison between machines and quick triage, but not a replacement for Geekbench or Cinebench when you need absolute peak measurements.'
+  },
+  {
+    q: 'How is 9bench different from UserBenchmark?',
+    a: 'UserBenchmark is community-banned (r/hardware, r/pcmasterrace) for documented bias toward Intel single-core. 9bench has transparent, openly-published scoring formulas. Every weight is on the methodology page. No vendor preference.'
+  },
+  {
+    q: 'How does 9bench compare to Geekbench?',
+    a: 'Geekbench is more accurate for absolute peak measurement and is the industry standard for review sites. 9bench is faster (15 seconds vs Geekbench\'s 5+ minutes), needs no install, runs anywhere with a browser, and is free. Use Geekbench for absolute scores, 9bench for instant relative comparison.'
+  },
+  {
+    q: 'Why is my multi-core score so low compared to Geekbench?',
+    a: 'Browsers limit true parallel computation. Web Workers compete for a shared thread pool, and crypto.subtle (used for SHA-256) may serialize internally. Real-world multi-core efficiency in browser is typically 30-60% of native. 9bench measures browser capability, not native peak.'
+  },
+  {
+    q: 'Why is my RAM bandwidth so low compared to native tools?',
+    a: 'Same browser limitations — JavaScript Float32Array operations don\'t always vectorize as efficiently as native memcpy. The number is most useful for relative comparison. If you want absolute RAM bandwidth, use AIDA64 or Intel Memory Latency Checker.'
+  },
+  {
+    q: 'Does 9bench work on iPhone / iPad?',
+    a: 'Yes — iOS 26+ supports WebGPU compute shaders fully. iOS 25 and earlier have partial support (CPU + RAM tests work, GPU may show "0"). Both Safari and Chrome on iOS work.'
+  },
+  {
+    q: 'Does 9bench work in Firefox?',
+    a: 'Yes — Firefox 147+ has stable WebGPU support on Windows, macOS, and Linux. Older Firefox versions can run CPU + RAM tests but may not run GPU compute.'
+  },
+  {
+    q: 'Why does it say "GPU: Unknown"?',
+    a: 'Some browsers (especially privacy-focused setups) restrict GPU adapter info to prevent fingerprinting. The benchmark still runs correctly — the score reflects real GPU performance, just without showing the brand/model.'
+  },
+  {
+    q: 'What data does 9bench collect?',
+    a: 'During the test: nothing leaves your browser. When you submit a score: anonymous benchmark numbers (scores, GFLOPS, hash rates, GB/s), GPU adapter name if visible, CPU core count, anonymous user-agent fragment. We never store IP, location, or identifying information. Reactions are stored anonymously linked to the result ID.'
+  },
+  {
+    q: 'Is 9bench open source?',
+    a: 'Source code at github.com/atillakuruk/9bench (link active once published). MIT license. Pull requests welcome.'
+  },
+  {
+    q: 'Can I use 9bench for IT support / company hardware audits?',
+    a: 'Yes. Send employees the URL, they click, you see the result. Faster than installing diagnostic software on dozens of machines. A whitelabel / custom-branded tier is planned for organizations.'
+  },
+  {
+    q: 'Why does the test use ~7-10% of my battery?',
+    a: 'WebGPU compute shaders + Web Workers running at full speed = real CPU/GPU usage = battery drain. The test is designed to push your hardware briefly to measure it. Recommended to plug in laptops before testing.'
+  },
+  {
+    q: 'My score changed between runs. Why?',
+    a: 'Background processes, thermal throttling, and browser variance all affect scores. Run 2-3 times when laptop is idle + plugged in for the most consistent measurement. Variance of ±5-10% between runs is normal; ±30%+ indicates background CPU contention.'
+  },
+  {
+    q: 'Is the percentile real?',
+    a: 'Yes. Each submitted score is stored in our global ranking database (anonymized). Your percentile is computed against ALL submissions, not estimated. Early users may see imprecise percentiles until enough data accumulates (~10K+ submissions).'
+  },
+  {
+    q: 'Can I delete my submitted result?',
+    a: 'Yes. Email atillakrk@gmail.com with the result ID (visible in URL: /r/abc12345) and we\'ll delete it. We don\'t store anything that identifies you, but we respect deletion requests.'
+  }
+];
+---
+
+<BaseLayout
+  title="FAQ — 9bench"
+  description="Common questions about 9bench: how it works, accuracy, privacy, comparing to Geekbench, browser support."
+>
+  <main class="max-w-3xl mx-auto px-5 py-12">
+    <header class="text-center mb-10">
+      <a href="/" class="inline-block px-3 py-1 bg-brand-light/10 text-brand rounded-full text-xs font-bold tracking-wider uppercase mb-4">
+        ← back to 9bench
+      </a>
+      <h1 class="text-4xl md:text-5xl font-extrabold mb-3">Frequently asked</h1>
+      <p class="text-lg text-slate-400">Real questions, real answers.</p>
+    </header>
+
+    <div class="space-y-3">
+      {faqs.map(f => (
+        <details class="faq-item">
+          <summary>{f.q}</summary>
+          <p>{f.a}</p>
+        </details>
+      ))}
+    </div>
+
+    <div class="text-center mt-12">
+      <a href="/methodology" class="text-brand underline">Read the full methodology →</a>
+    </div>
+
+    <script type="application/ld+json" set:html={JSON.stringify({
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: faqs.map(f => ({
+        '@type': 'Question',
+        name: f.q,
+        acceptedAnswer: { '@type': 'Answer', text: f.a }
+      }))
+    })} />
+  </main>
+
+  <style is:global>
+    .faq-item {
+      border: 1px solid var(--border);
+      border-radius: 0.65rem;
+      background: var(--bg-card);
+    }
+    .faq-item summary {
+      padding: 1rem 1.25rem;
+      font-weight: 700;
+      cursor: pointer;
+      list-style: none;
+      position: relative;
+      color: var(--text);
+    }
+    .faq-item summary::after {
+      content: '+';
+      position: absolute;
+      right: 1.25rem;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 1.4rem;
+      color: var(--text-muted);
+    }
+    .faq-item[open] summary::after { content: '−'; }
+    .faq-item p {
+      padding: 0 1.25rem 1.1rem;
+      margin: 0;
+      color: var(--text-muted);
+      line-height: 1.65;
+    }
+  </style>
+</BaseLayout>

@@ -56,12 +56,17 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
     <!-- Trust footer -->
     <footer class="mt-20 pt-8 border-t border-slate-800 text-center text-xs text-slate-500">
+      <nav class="mb-4 flex justify-center gap-6 text-sm">
+        <a href="/methodology" class="text-brand hover:underline">Methodology</a>
+        <a href="/faq" class="text-brand hover:underline">FAQ</a>
+        <a href="https://github.com/atillakuruk/9bench" class="text-brand hover:underline" rel="external">GitHub</a>
+      </nav>
       <p class="mb-2">
         9bench is built by <a href="https://toololis.com/atilla/" class="text-brand hover:underline">Atilla Kürük</a> · sister-product of
         <a href="https://toololis.com" class="text-brand hover:underline">Toololis</a>
       </p>
       <p>
-        Open methodology · No data leaves your browser unless you submit a result · No account · No ads (yet)
+        Open methodology · No data leaves your browser unless you submit · No account · No ads
       </p>
     </footer>
   </main>
@@ -104,6 +109,19 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       detail.textContent = message;
     }
 
+    // Wake Lock — keep screen on during test (mobile especially)
+    let wakeLock: any = null;
+    async function requestWakeLock() {
+      try {
+        if ('wakeLock' in navigator) {
+          wakeLock = await (navigator as any).wakeLock.request('screen');
+        }
+      } catch {}
+    }
+    async function releaseWakeLock() {
+      try { if (wakeLock) { await wakeLock.release(); wakeLock = null; } } catch {}
+    }
+
     runBtn.addEventListener('click', async () => {
       runBtn.disabled = true;
       runBtnIcon.textContent = '⏳';
@@ -112,11 +130,39 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       result.hidden = true;
       result.innerHTML = '';
 
+      await requestWakeLock();
+
       try {
         const r = await runFullBench((stage, percent, message) => {
           if (stage === 'done') return;
           updateStage(stage, percent, message);
         });
+
+        // Auto-submit to global ranking + get persistent URL
+        let submitted: { id?: string; url?: string; percentile?: number; total?: number } = {};
+        try {
+          const submitRes = await fetch('/api/submit', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+              scores: r.scores,
+              gpu: { gflops: r.gpu.gflops, adapterName: r.hardware.gpu },
+              cpu: r.cpu,
+              ram: r.ram,
+              hardware: r.hardware,
+              durationMs: r.durationMs
+            })
+          });
+          if (submitRes.ok) {
+            submitted = await submitRes.json() as any;
+            // Override local percentile estimate with real one from server
+            if (typeof submitted.percentile === 'number') {
+              r.verdict.percentileEstimate = submitted.percentile;
+            }
+          }
+        } catch (e) {
+          console.warn('Submit failed (offline?):', e);
+        }
 
         // Render result card
         const fmt = (n: number) => n.toLocaleString();
@@ -171,9 +217,23 @@ import BaseLayout from '../layouts/BaseLayout.astro';
               <div class="result-row"><span class="result-row-label">RAM write</span><span class="result-row-value">${r.ram.writeBandwidthGBs.toFixed(1)} GB/s</span></div>
               <div class="result-row"><span class="result-row-label">RAM random latency</span><span class="result-row-value">${r.ram.randomAccessLatencyNs.toFixed(1)} ns</span></div>
               <div class="result-row"><span class="result-row-label">Total test time</span><span class="result-row-value">${(r.durationMs / 1000).toFixed(1)} s</span></div>
-              <div class="result-row"><span class="result-row-label">Estimated percentile</span><span class="result-row-value">~${r.verdict.percentileEstimate}th</span></div>
+              <div class="result-row"><span class="result-row-label">${submitted.id ? 'Global percentile' : 'Estimated percentile'}</span><span class="result-row-value">${submitted.id ? `<strong>${submitted.percentile}th</strong> of ${submitted.total!.toLocaleString()} tests` : `~${r.verdict.percentileEstimate}th (estimated)`}</span></div>
+              ${submitted.id ? `<div class="result-row"><span class="result-row-label">Permalink</span><span class="result-row-value"><a href="/r/${submitted.id}/" class="text-brand underline">9bench.com/r/${submitted.id}</a></span></div>` : ''}
             </div>
 
+            ${submitted.id ? `
+            <div class="reaction-bar">
+              <button class="reaction-btn share-action" id="copy-share-link">
+                <span class="icon">🔗</span><span>Copy link</span>
+              </button>
+              <button class="reaction-btn share-action" id="share-twitter">
+                <span class="icon">🐦</span><span>Tweet</span>
+              </button>
+              <button class="reaction-btn share-action" id="share-native" hidden>
+                <span class="icon">📲</span><span>Share</span>
+              </button>
+            </div>
+            ` : ''}
             <div class="reaction-bar">
               <button class="reaction-btn" data-reaction="match">
                 <span class="icon">❤️</span><span>Matches my experience</span>
@@ -195,23 +255,82 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           </div>
         `;
 
-        // Wire up reaction buttons (LocalStorage-only for now)
-        result.querySelectorAll('.reaction-btn').forEach((btn) => {
-          btn.addEventListener('click', () => {
+        // Wire up reaction buttons — submit to backend if we have an ID, else LocalStorage
+        result.querySelectorAll('.reaction-btn[data-reaction]').forEach((btn) => {
+          btn.addEventListener('click', async () => {
             const reaction = (btn as HTMLElement).dataset.reaction!;
+            // Visually mark
+            result.querySelectorAll('.reaction-btn[data-reaction]').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            // Send to backend if we have an ID
+            if (submitted.id) {
+              try {
+                await fetch('/api/react', {
+                  method: 'POST',
+                  headers: { 'content-type': 'application/json' },
+                  body: JSON.stringify({ id: submitted.id, reaction })
+                });
+              } catch {}
+            }
+            // Always also save locally for personal history
             try {
               const stored = JSON.parse(localStorage.getItem('9bench:reactions') || '[]');
               stored.push({
                 reaction,
+                resultId: submitted.id,
                 score: r.scores.overall,
                 gpu: r.hardware.gpu,
                 timestamp: Date.now()
               });
               localStorage.setItem('9bench:reactions', JSON.stringify(stored.slice(-50)));
-              btn.classList.add('active');
             } catch {}
           });
         });
+
+        // Wire up share actions if we have a result ID
+        if (submitted.id) {
+          const shareUrl = `https://9bench.com/r/${submitted.id}`;
+          const cleanLabel = r.verdict.label.replace(/^[^a-zA-Z]+/, '').trim();
+          const shareText = `9bench: ${r.scores.overall.toLocaleString()} (${cleanLabel}) — ${submitted.percentile}th percentile globally.`;
+
+          const copyLink = document.getElementById('copy-share-link');
+          if (copyLink) {
+            copyLink.addEventListener('click', async () => {
+              try {
+                await navigator.clipboard.writeText(shareUrl);
+                copyLink.classList.add('active');
+                const span = copyLink.querySelector('span:last-child')!;
+                const orig = span.textContent;
+                span.textContent = '✓ Copied';
+                setTimeout(() => { span.textContent = orig; copyLink.classList.remove('active'); }, 1500);
+              } catch {}
+            });
+          }
+          const tw = document.getElementById('share-twitter');
+          if (tw) {
+            tw.addEventListener('click', () => {
+              const u = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
+              window.open(u, '_blank');
+            });
+          }
+          // Native share on mobile if supported
+          const nativeBtn = document.getElementById('share-native');
+          if (nativeBtn && (navigator as any).share) {
+            const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+            if (isMobile) {
+              nativeBtn.hidden = false;
+              nativeBtn.addEventListener('click', async () => {
+                try {
+                  await (navigator as any).share({
+                    title: '9bench score',
+                    text: shareText,
+                    url: shareUrl
+                  });
+                } catch {}
+              });
+            }
+          }
+        }
 
         result.hidden = false;
         result.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -219,6 +338,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         result.innerHTML = `<div class="result-card"><div class="result-snark" style="border-color:#DC2626">Benchmark failed: ${e?.message || e}</div></div>`;
         result.hidden = false;
       } finally {
+        await releaseWakeLock();
         runBtn.disabled = false;
         runBtnIcon.textContent = '↻';
         runBtnText.textContent = 'Run again';

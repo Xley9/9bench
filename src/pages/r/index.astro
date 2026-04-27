@@ -1,0 +1,197 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+---
+
+<BaseLayout
+  title="Score — 9bench"
+  description="Browser-based hardware benchmark result. Test yours at 9bench.com — no download, no account, no bias."
+>
+  <main class="max-w-3xl mx-auto px-5 py-12">
+    <header class="text-center mb-8">
+      <a href="/" class="inline-block px-3 py-1 bg-brand-light/10 text-brand rounded-full text-xs font-bold tracking-wider uppercase mb-4">
+        ← 9bench · Test yours
+      </a>
+    </header>
+
+    <div id="loading" class="text-center text-slate-400">
+      <div class="text-2xl mb-2">⏳</div>
+      Loading result…
+    </div>
+
+    <div id="error" hidden class="text-center text-red-500"></div>
+
+    <div id="result-card" hidden></div>
+
+    <div class="text-center mt-12">
+      <a href="/" class="inline-block px-6 py-3 bg-brand text-white rounded-xl font-bold hover:bg-brand-dark transition-colors">
+        Test your hardware →
+      </a>
+    </div>
+  </main>
+
+  <script>
+    const loading = document.getElementById('loading')!;
+    const errorDiv = document.getElementById('error')!;
+    const card = document.getElementById('result-card')!;
+
+    // Extract id from URL: /r/abc12345/ or /r/abc12345
+    const pathParts = window.location.pathname.split('/').filter(Boolean);
+    const resultId = pathParts[1] || '';
+
+    function fmt(n: number) { return Number(n).toLocaleString(); }
+    function pct(n: number, max: number) { return Math.min(100, Math.round((n / max) * 100)); }
+
+    function verdict(score: number) {
+      if (score >= 4000) return { label: '🏆 Elite tier — top 5%', color: '#10B981',
+        snark: "Your hardware doesn't need motivation. It needs an audience." };
+      if (score >= 2500) return { label: '✓ High-end performer', color: '#10B981',
+        snark: "Strong configuration. You're paying enough that this should be expected." };
+      if (score >= 1700) return { label: '◯ Strong mainstream', color: '#0EA5E9',
+        snark: "Capable of nearly anything. Most of what slows you down isn't the hardware." };
+      if (score >= 1000) return { label: '~ Mid-range standard', color: '#0EA5E9',
+        snark: "Solid working machine. Demanding 2026 tasks will feel the squeeze." };
+      if (score >= 500) return { label: '~ Mainstream / older', color: '#F59E0B',
+        snark: "Functional everyday machine. CPU/GPU-heavy tasks will feel slow." };
+      return { label: '⚠ Office / Chromebook tier', color: '#DC2626',
+        snark: "Built for spreadsheets, not silicon-flexing. Calibrate expectations." };
+    }
+
+    async function load() {
+      if (!/^[a-f0-9]{8}$/.test(resultId)) {
+        loading.hidden = true;
+        errorDiv.hidden = false;
+        errorDiv.innerHTML = `<div class="result-card"><div class="result-snark" style="border-color:#DC2626">Invalid result ID. Try the homepage.</div></div>`;
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/r/${resultId}`);
+        if (!res.ok) {
+          const errBody = await res.json().catch(() => ({}));
+          throw new Error((errBody as any).error || `HTTP ${res.status}`);
+        }
+        const data = await res.json() as any;
+        if (!data.ok) throw new Error(data.error || 'Unknown error');
+
+        const r = data.result;
+        const v = verdict(r.scores.overall);
+        const date = new Date(r.createdAt).toLocaleDateString('en-US', {
+          month: 'short', day: 'numeric', year: 'numeric'
+        });
+
+        // Update document title with score
+        document.title = `9bench ${fmt(r.scores.overall)} — ${v.label.replace(/^[^a-zA-Z]+/, '').trim()}`;
+
+        loading.hidden = true;
+        card.hidden = false;
+        card.innerHTML = `
+          <div class="result-card">
+            <div class="result-header">
+              <span>⚡ TRUTH SERIES · HARDWARE</span>
+              <span>9bench.com</span>
+            </div>
+            <div class="result-statement">9bench score · ${date}</div>
+            <div class="result-big">${fmt(r.scores.overall)}</div>
+            <div class="result-verdict" style="color: ${v.color}">${v.label}</div>
+            <div class="result-snark">${v.snark}</div>
+
+            <h3 class="text-sm font-bold tracking-wider uppercase text-slate-400 mb-3">Component breakdown</h3>
+            <div class="mb-5">
+              <div class="score-component">
+                <div class="score-component-label">🎮 GPU</div>
+                <div class="score-component-bar"><div class="score-component-fill" style="width:${pct(r.scores.gpu, 5000)}%"></div></div>
+                <div class="score-component-value">${fmt(r.scores.gpu)}</div>
+              </div>
+              <div class="score-component">
+                <div class="score-component-label">⚙️ CPU·1</div>
+                <div class="score-component-bar"><div class="score-component-fill" style="width:${pct(r.scores.cpuSingle, 1500)}%"></div></div>
+                <div class="score-component-value">${fmt(r.scores.cpuSingle)}</div>
+              </div>
+              <div class="score-component">
+                <div class="score-component-label">⚙️ CPU·M</div>
+                <div class="score-component-bar"><div class="score-component-fill" style="width:${pct(r.scores.cpuMulti, 5000)}%"></div></div>
+                <div class="score-component-value">${fmt(r.scores.cpuMulti)}</div>
+              </div>
+              <div class="score-component">
+                <div class="score-component-label">💾 RAM</div>
+                <div class="score-component-bar"><div class="score-component-fill" style="width:${pct(r.scores.ram, 1500)}%"></div></div>
+                <div class="score-component-value">${fmt(r.scores.ram)}</div>
+              </div>
+            </div>
+
+            <h3 class="text-sm font-bold tracking-wider uppercase text-slate-400 mb-3">Hardware</h3>
+            <div class="result-rows mb-5">
+              <div class="result-row"><span class="result-row-label">GPU</span><span class="result-row-value">${r.gpu.name || 'Unknown'}</span></div>
+              <div class="result-row"><span class="result-row-label">GPU compute</span><span class="result-row-value">${r.gpu.gflops.toFixed(1)} GFLOPS</span></div>
+              <div class="result-row"><span class="result-row-label">CPU cores</span><span class="result-row-value">${r.cpu.cores}</span></div>
+              <div class="result-row"><span class="result-row-label">SHA-256 single</span><span class="result-row-value">${fmt(r.cpu.hashesSingle)} h/s</span></div>
+              <div class="result-row"><span class="result-row-label">SHA-256 multi</span><span class="result-row-value">${fmt(r.cpu.hashesMulti)} h/s</span></div>
+              <div class="result-row"><span class="result-row-label">RAM read</span><span class="result-row-value">${r.ram.readGBs.toFixed(1)} GB/s</span></div>
+              <div class="result-row"><span class="result-row-label">RAM write</span><span class="result-row-value">${r.ram.writeGBs.toFixed(1)} GB/s</span></div>
+              <div class="result-row"><span class="result-row-label">Global percentile</span><span class="result-row-value"><strong>${data.percentile}th</strong> of ${fmt(data.total)} tests</span></div>
+            </div>
+
+            <div class="reaction-bar">
+              <button class="share-btn-action" id="copy-link">🔗 Copy link</button>
+              <button class="share-btn-action" id="share-twitter">🐦 Tweet</button>
+              <button class="share-btn-action share-btn-primary" id="run-again">↻ Test your own</button>
+            </div>
+          </div>
+        `;
+
+        // Wire up share actions
+        const shareUrl = `https://9bench.com/r/${resultId}`;
+        document.getElementById('copy-link')!.addEventListener('click', async () => {
+          try {
+            await navigator.clipboard.writeText(shareUrl);
+            const btn = document.getElementById('copy-link')!;
+            const orig = btn.textContent;
+            btn.textContent = '✓ Copied';
+            setTimeout(() => { btn.textContent = orig; }, 1500);
+          } catch {}
+        });
+        document.getElementById('share-twitter')!.addEventListener('click', () => {
+          const cleanLabel = v.label.replace(/^[^a-zA-Z]+/, '').trim();
+          const text = `9bench: ${fmt(r.scores.overall)} (${cleanLabel}) — ${data.percentile}th percentile globally.`;
+          const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`;
+          window.open(url, '_blank');
+        });
+        document.getElementById('run-again')!.addEventListener('click', () => {
+          window.location.href = '/';
+        });
+
+      } catch (e: any) {
+        loading.hidden = true;
+        errorDiv.hidden = false;
+        errorDiv.innerHTML = `<div class="result-card"><div class="result-snark" style="border-color:#DC2626">Result not found or expired: ${e.message}</div></div>`;
+      }
+    }
+
+    load();
+  </script>
+
+  <style is:global>
+    .share-btn-action {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.55rem 1rem;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      color: var(--text);
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+    .share-btn-action:hover {
+      border-color: var(--brand);
+      transform: translateY(-1px);
+    }
+    .share-btn-action.share-btn-primary {
+      background: var(--brand);
+      border-color: var(--brand);
+      color: #fff;
+    }
+  </style>
+</BaseLayout>

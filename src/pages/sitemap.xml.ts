@@ -5,7 +5,9 @@ const SITE = 'https://9bench.com';
 export const GET: APIRoute = () => {
   const today = new Date().toISOString().split('T')[0];
   const urls = [
-    { loc: `${SITE}/`, priority: '1.0', changefreq: 'weekly' }
+    { loc: `${SITE}/`, priority: '1.0', changefreq: 'weekly' },
+    { loc: `${SITE}/methodology`, priority: '0.9', changefreq: 'monthly' },
+    { loc: `${SITE}/faq`, priority: '0.9', changefreq: 'monthly' }
   ];
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
