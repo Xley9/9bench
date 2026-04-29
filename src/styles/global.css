@@ -2,19 +2,76 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ═══════════════════════════════════════════════════════════════════
+   9bench — Editorial Dark System
+   Brand-family: same atomic logic as Promptolis (cream) + Toololis
+   (cream) — but inverted to dark for the "lab/test-bench" domain.
+   Reference: 9bench Redesign drop, Apr 2026.
+   ═══════════════════════════════════════════════════════════════════ */
+
 :root {
-  --bg: #0B1120;
-  --bg-card: #111827;
-  --bg-elevated: #1E293B;
-  --text: #F1F5F9;
-  --text-muted: #94A3B8;
-  --border: #1E293B;
-  --brand: #10B981;
-  --brand-dark: #065F46;
-  --brand-light: #D1FAE5;
-  --truth: #4F46E5;
-  --truth-dark: #312E81;
+  /* ── Surfaces ─────────────────────────────────────────────────── */
+  --bg:        #0A0A0A;
+  --bg-2:      #111111;
+  --bg-3:      #161616;
+  --line:      #2A2A2A;
+  --line-2:    #1E1E1E;
+
+  /* ── Foreground (off-white descending into mute) ──────────────── */
+  --fg:        #F5F5F5;
+  --fg-2:      #B8B8B8;
+  --fg-3:      #6E6E6E;
+  --fg-4:      #3A3A3A;
+
+  /* ── Accent (Cyan default; Orange via [data-accent="orange"]) ── */
+  --accent:    #00D9FF;
+  --accent-2:  #00B8D9;
+  --warn:      #FF5722;
+  --good:      #7CFFB2;
+
+  /* ── Type stack ───────────────────────────────────────────────── */
+  --mono:  "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --sans:  "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+
+  /* ── Spacing scale (matches Promptolis/Toololis brand-family) ─── */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --sp-7: 48px;
+  --sp-8: 64px;
+  --sp-9: 96px;
+
+  /* ── Container (editorial column) ─────────────────────────────── */
+  --max-w: 1280px;
+
+  /* ── Legacy aliases — keep until per-page CSS is migrated ──────── */
+  --bg-card:     var(--bg-2);
+  --bg-elevated: var(--bg-3);
+  --text:        var(--fg);
+  --text-muted:  var(--fg-2);
+  --border:      var(--line);
+  --brand:       var(--accent);
+  --brand-dark:  var(--accent-2);
+  --brand-light: var(--accent);
+  --truth:       var(--warn);
+  --truth-dark:  var(--warn);
 }
+
+/* ── Cyan/Orange toggle (User-preference, persisted) ──────────────
+   Brand-Family Note: orange is Promptolis/Toololis home; cyan is
+   9bench default for differentiation. The toggle exists because
+   Hardware-audience preference splits hot-or-cool. */
+:root[data-accent="orange"] {
+  --accent:    #FF6B2B;
+  --accent-2:  #E55519;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Base reset + body
+   ═══════════════════════════════════════════════════════════════════ */
 
 * { box-sizing: border-box; }
 
@@ -23,148 +80,258 @@ html {
   -webkit-tap-highlight-color: transparent;
   scroll-behavior: smooth;
   background: var(--bg);
-  color: var(--text);
+  color: var(--fg);
   color-scheme: dark;
 }
 
 body {
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: var(--sans);
   background: var(--bg);
-  color: var(--text);
+  color: var(--fg);
   margin: 0;
   min-height: 100vh;
   min-height: 100dvh;
   font-size: 16px;
-  line-height: 1.5;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+  font-feature-settings: "ss01", "cv11", "tnum";
 }
 
-/* Big primary action button */
+/* Tabular numerals — critical for benchmark scores */
+.tnum { font-variant-numeric: tabular-nums; }
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+::selection {
+  background: var(--accent);
+  color: #000;
+}
+
+/* Optional scanline overlay for terminal-themed surfaces */
+.scanlines {
+  position: relative;
+}
+.scanlines::before {
+  content: "";
+  position: absolute; inset: 0;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(255,255,255,0.025) 0 1px,
+    transparent 1px 3px
+  );
+  pointer-events: none;
+  mix-blend-mode: overlay;
+  z-index: 2;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Container (editorial column)
+   ═══════════════════════════════════════════════════════════════════ */
+
+.container {
+  max-width: var(--max-w);
+  margin: 0 auto;
+  padding: 0 20px;
+}
+@media (min-width: 640px)  { .container { padding: 0 32px; } }
+@media (min-width: 1024px) { .container { padding: 0 56px; } }
+
+/* Legacy alias for existing components that use .container-app */
+.container-app {
+  max-width: var(--max-w);
+  margin: 0 auto;
+  padding: 0 20px;
+}
+@media (min-width: 640px)  { .container-app { padding: 0 32px; } }
+@media (min-width: 1024px) { .container-app { padding: 0 56px; } }
+
+/* ═══════════════════════════════════════════════════════════════════
+   Atoms (used everywhere)
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ── Pill (uppercase mono badge) ────────────────────────────────── */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-2);
+  border: 1px solid var(--line);
+  padding: 4px 8px;
+  background: transparent;
+}
+.pill--accent  { color: var(--accent); border-color: var(--accent); }
+.pill--warn    { color: var(--warn);   border-color: var(--warn); }
+.pill--good    { color: var(--good);   border-color: var(--good); }
+
+/* ── Truth disclaimer (orange-bordered, never hide) ─────────────── */
+.truth-disclaimer {
+  border: 1px solid var(--warn);
+  padding: 16px 18px;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--fg-2);
+}
+.truth-disclaimer__head {
+  color: var(--warn);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+.truth-disclaimer--compact {
+  border: 0;
+  border-left: 2px solid var(--warn);
+  padding: 0 0 0 10px;
+  font-size: 11px;
+}
+.truth-disclaimer--compact strong {
+  color: var(--warn);
+  font-weight: 700;
+}
+
+/* ── Tier badge (S/A/B big letter; descriptive label below) ─────── */
+.tier-badge {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.tier-badge__letter {
+  font-family: var(--sans);
+  font-weight: 800;
+  font-size: 96px;
+  line-height: 0.9;
+  letter-spacing: -0.02em;
+  color: var(--accent);
+}
+.tier-badge__letter--mute { color: var(--fg-2); }
+.tier-badge__label {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+.tier-badge__sub {
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--fg-2);
+}
+
+/* ── Live counter (tabular animated) ────────────────────────────── */
+.live-counter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  color: var(--fg-3);
+}
+.live-counter__dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  display: inline-block;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Big primary button (Test my hardware)
+   ═══════════════════════════════════════════════════════════════════ */
+
 .run-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  padding: 1rem 2.5rem;
-  background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%);
-  color: #fff;
-  border: none;
-  border-radius: 0.75rem;
-  font-size: 1.15rem;
+  gap: 10px;
+  padding: 14px 28px;
+  background: var(--accent);
+  color: #000;
+  border: 0;
+  border-radius: 0;                /* sharp edges — Brutalist */
+  font-family: var(--mono);
+  font-size: 13px;
   font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   cursor: pointer;
-  transition: all 0.15s;
-  min-height: 56px;
-  box-shadow: 0 10px 30px -10px rgba(16, 185, 129, 0.5);
+  transition: background 0.15s ease, color 0.15s ease;
+  min-height: 48px;
 }
 .run-btn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 15px 40px -10px rgba(16, 185, 129, 0.7);
+  background: var(--fg);
+  color: var(--bg);
 }
 .run-btn:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
-/* Progress visualization */
+/* Secondary outline button */
+.btn-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 18px;
+  background: transparent;
+  color: var(--fg);
+  border: 1px solid var(--line);
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.btn-outline:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Progress stages (existing animation, retheme to cyan)
+   ═══════════════════════════════════════════════════════════════════ */
+
 .progress-stage {
   display: flex;
   align-items: center;
-  gap: 0.85rem;
-  padding: 1rem 1.25rem;
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
-  background: var(--bg-card);
-  margin-bottom: 0.65rem;
+  gap: 14px;
+  padding: 14px 18px;
+  border: 1px solid var(--line);
+  background: var(--bg-2);
+  margin-bottom: 8px;
   transition: all 0.2s;
   position: relative;
   overflow: hidden;
 }
 
-/* ─── ACTIVE STATE: AI-era radar sweep ─── */
 .progress-stage.active {
-  background: var(--bg-elevated);
-  border-color: transparent;
+  background: var(--bg-3);
+  border-color: var(--accent);
   box-shadow:
-    0 0 0 1px var(--brand),
-    0 0 24px -4px rgba(16, 185, 129, 0.45),
-    inset 0 0 32px -8px rgba(16, 185, 129, 0.18);
+    0 0 0 1px var(--accent),
+    inset 0 0 32px -8px rgba(0, 217, 255, 0.18);
 }
 
-/* Layer 1 — Conic-gradient sweeping ring (radar/sonar effect) */
-.progress-stage.active::before {
-  content: '';
-  position: absolute;
-  inset: -50%;
-  background: conic-gradient(
-    from 0deg,
-    transparent 0deg,
-    transparent 270deg,
-    rgba(16, 185, 129, 0.0) 280deg,
-    rgba(16, 185, 129, 0.55) 320deg,
-    rgba(79, 70, 229, 0.85) 355deg,
-    rgba(16, 185, 129, 0.0) 360deg
-  );
-  animation: stage-radar 2.4s linear infinite;
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* Layer 2 — Inner cover with data-flow gradient (hides ring except 1.5px edge) */
-.progress-stage.active::after {
-  content: '';
-  position: absolute;
-  inset: 1.5px;
-  border-radius: 0.7rem;
-  background:
-    linear-gradient(90deg,
-      transparent 0%,
-      rgba(16, 185, 129, 0.06) 25%,
-      transparent 50%,
-      rgba(79, 70, 229, 0.06) 75%,
-      transparent 100%
-    ),
-    var(--bg-elevated);
-  background-size: 200% 100%, 100% 100%;
-  animation: stage-flow 2s linear infinite;
-  pointer-events: none;
-  z-index: 1;
-}
-
-/* Lift content above pseudo elements */
-.progress-stage.active > * {
-  position: relative;
-  z-index: 2;
-}
-
-@keyframes stage-radar {
-  to { transform: rotate(360deg); }
-}
-
-@keyframes stage-flow {
-  0% { background-position: 200% 0, 0 0; }
-  100% { background-position: -200% 0, 0 0; }
-}
-
-/* Pulsing icon during active scan */
 .progress-stage.active .progress-icon {
   animation: stage-icon-pulse 1.4s ease-in-out infinite;
-  filter: drop-shadow(0 0 6px rgba(16, 185, 129, 0.6));
+  filter: drop-shadow(0 0 6px rgba(0, 217, 255, 0.6));
 }
 
 @keyframes stage-icon-pulse {
-  0%, 100% {
-    transform: scale(1);
-    filter: drop-shadow(0 0 4px rgba(16, 185, 129, 0.4));
-  }
-  50% {
-    transform: scale(1.15);
-    filter: drop-shadow(0 0 16px rgba(16, 185, 129, 1)) drop-shadow(0 0 4px rgba(79, 70, 229, 0.6));
-  }
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.12); filter: drop-shadow(0 0 12px var(--accent)); }
 }
 
-/* Animated dot before detail text — "live data" pulse */
 .progress-stage.active .progress-detail {
-  color: var(--brand);
+  color: var(--accent);
   font-weight: 600;
   position: relative;
   padding-left: 14px;
@@ -178,344 +345,591 @@ body {
   height: 7px;
   margin-top: -3.5px;
   border-radius: 50%;
-  background: var(--brand);
-  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  background: var(--accent);
+  box-shadow: 0 0 0 0 rgba(0, 217, 255, 0.7);
   animation: stage-dot-pulse 1.2s ease-out infinite;
 }
 
 @keyframes stage-dot-pulse {
-  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-  70% { box-shadow: 0 0 0 12px rgba(16, 185, 129, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+  0%   { box-shadow: 0 0 0 0   rgba(0, 217, 255, 0.7); }
+  70%  { box-shadow: 0 0 0 12px rgba(0, 217, 255, 0); }
+  100% { box-shadow: 0 0 0 0   rgba(0, 217, 255, 0); }
 }
 
-/* DONE state — quiet success */
 .progress-stage.done {
-  border-color: var(--brand-dark);
-  opacity: 0.78;
+  border-color: var(--accent-2);
+  opacity: 0.7;
 }
-.progress-stage.done .progress-icon {
-  filter: drop-shadow(0 0 4px rgba(16, 185, 129, 0.4));
-}
-
-/* PENDING state — subtle */
 .progress-stage:not(.active):not(.done) .progress-icon {
   opacity: 0.4;
 }
-
 .progress-icon {
-  font-size: 1.5rem;
-  width: 2.5rem;
+  font-size: 22px;
+  width: 32px;
   text-align: center;
   transition: all 0.2s;
 }
-.progress-label {
+.progress-label  {
   flex: 1;
   font-weight: 600;
+  font-family: var(--mono);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 .progress-detail {
-  font-size: 0.85rem;
-  color: var(--text-muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--fg-3);
 }
 
-/* ─── BODY SCANNING STATE ─── */
-/* Subtle scanline overlay across whole page during active scan */
-body.scanning::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 1;
-  background:
-    repeating-linear-gradient(
-      0deg,
-      transparent 0px,
-      transparent 3px,
-      rgba(16, 185, 129, 0.025) 3px,
-      rgba(16, 185, 129, 0.025) 4px
-    );
-  animation: scanlines-drift 8s linear infinite;
-  mix-blend-mode: screen;
-}
+/* ═══════════════════════════════════════════════════════════════════
+   Result card (legacy, will be replaced by Phase D component)
+   ═══════════════════════════════════════════════════════════════════ */
 
-/* Top "ANALYZING" status bar during scan */
-body.scanning::after {
-  content: '◉ SCANNING HARDWARE';
-  position: fixed;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 110;
-  padding: 6px 16px;
-  background: linear-gradient(90deg, var(--brand) 0%, var(--truth) 100%);
-  background-size: 200% 100%;
-  color: #fff;
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 1.5px;
-  border-radius: 0 0 8px 8px;
-  box-shadow: 0 4px 20px -4px rgba(16, 185, 129, 0.6);
-  animation: scan-bar-flow 1.6s linear infinite, scan-bar-pulse 1.4s ease-in-out infinite;
-}
-
-@keyframes scanlines-drift {
-  0% { background-position: 0 0; }
-  100% { background-position: 0 100vh; }
-}
-
-@keyframes scan-bar-flow {
-  0% { background-position: 0% 50%; }
-  100% { background-position: -200% 50%; }
-}
-
-@keyframes scan-bar-pulse {
-  0%, 100% { opacity: 0.95; }
-  50% { opacity: 0.7; }
-}
-
-/* ─── RUN BUTTON RUNNING STATE ─── */
-.run-btn:disabled {
-  opacity: 1;
-  cursor: progress;
-  background: linear-gradient(90deg,
-    var(--brand) 0%,
-    var(--truth) 25%,
-    var(--brand) 50%,
-    var(--truth) 75%,
-    var(--brand) 100%);
-  background-size: 300% 100%;
-  animation: run-btn-flow 2s linear infinite;
-  position: relative;
-  overflow: hidden;
-}
-.run-btn:disabled::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 50%;
-  height: 100%;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.25) 50%,
-    transparent 100%
-  );
-  animation: run-btn-shine 1.6s linear infinite;
-}
-
-@keyframes run-btn-flow {
-  0% { background-position: 0% 50%; }
-  100% { background-position: -300% 50%; }
-}
-
-@keyframes run-btn-shine {
-  0% { left: -100%; }
-  100% { left: 200%; }
-}
-
-/* Button text during running gets a subtle pulse */
-.run-btn:disabled #run-btn-icon,
-.run-btn:disabled #run-btn-text {
-  animation: run-text-pulse 1.4s ease-in-out infinite;
-}
-
-@keyframes run-text-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
-}
-
-/* Make the icon spin/pulse */
-.run-btn:disabled #run-btn-icon {
-  display: inline-block;
-  animation: run-icon-spin 1.6s linear infinite, run-text-pulse 1.4s ease-in-out infinite;
-}
-
-@keyframes run-icon-spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-/* Result card — same Truth-Series DNA as Toololis */
 .result-card {
-  position: relative;
-  background: var(--bg-card);
-  border: 1px solid var(--border);
-  border-radius: 1rem;
-  padding: 2.5rem 1.5rem 3rem;
-  overflow: hidden;
-  margin-top: 1.5rem;
-}
-.result-card::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 5px;
-  background: linear-gradient(90deg, var(--brand) 0%, var(--truth) 100%);
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  padding: 28px;
+  margin-top: 24px;
 }
 .result-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: var(--brand);
-  letter-spacing: 0.5px;
-  margin-bottom: 1.5rem;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--fg-3);
   text-transform: uppercase;
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
 }
 .result-statement {
-  text-align: center;
-  font-size: 0.9rem;
-  color: var(--text-muted);
-  margin-bottom: 0.5rem;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+  margin-bottom: 8px;
 }
 .result-big {
-  text-align: center;
-  font-size: clamp(3rem, 10vw, 5rem);
+  font-family: var(--sans);
   font-weight: 800;
+  font-size: 96px;
   line-height: 1;
-  color: var(--text);
   letter-spacing: -0.02em;
-  margin-bottom: 0.5rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--fg);
+  margin-bottom: 12px;
 }
 .result-verdict {
-  text-align: center;
-  font-weight: 700;
-  font-size: 1rem;
-  margin-bottom: 1.5rem;
+  font-family: var(--mono);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  margin-bottom: 18px;
 }
 .result-snark {
-  background: rgba(79, 70, 229, 0.1);
-  border-left: 4px solid var(--truth);
-  border-radius: 0 0.5rem 0.5rem 0;
-  padding: 0.85rem 1.1rem;
-  font-style: italic;
-  color: var(--text);
-  font-size: 0.95rem;
-  margin-bottom: 1.5rem;
-  line-height: 1.55;
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--fg-2);
+  margin-bottom: 24px;
 }
-.result-rows {
-  border: 1px solid var(--border);
-  border-radius: 0.65rem;
+
+/* Component breakdown bars */
+.score-component {
+  display: grid;
+  grid-template-columns: 90px 1fr 80px;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line-2);
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.score-component-label  { color: var(--fg-2); }
+.score-component-bar    {
+  height: 4px;
+  background: var(--line);
+  position: relative;
   overflow: hidden;
+}
+.score-component-fill   {
+  height: 100%;
+  background: var(--accent);
+}
+.score-component-value  {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--fg);
+}
+
+/* Result rows (raw measurements) */
+.result-rows {
+  border-top: 1px solid var(--line-2);
 }
 .result-row {
   display: flex;
   justify-content: space-between;
-  padding: 0.65rem 1rem;
-  border-bottom: 1px solid var(--border);
-  font-size: 0.92rem;
-}
-.result-row:last-child {
-  border-bottom: none;
-  font-weight: 700;
+  align-items: baseline;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line-2);
+  font-family: var(--mono);
+  font-size: 12px;
 }
 .result-row-label {
-  color: var(--text-muted);
+  color: var(--fg-3);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 .result-row-value {
-  font-family: ui-monospace, SFMono-Regular, monospace;
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
 }
 
-/* Score component bars */
-.score-component {
-  display: grid;
-  grid-template-columns: 80px 1fr 60px;
-  gap: 0.85rem;
-  align-items: center;
-  margin-bottom: 0.55rem;
-}
-.score-component-label {
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: var(--text-muted);
-}
-.score-component-bar {
-  height: 8px;
-  background: var(--bg-elevated);
-  border-radius: 999px;
-  overflow: hidden;
-}
-.score-component-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--brand) 0%, var(--truth) 100%);
-  transition: width 0.5s ease;
-}
-.score-component-value {
-  text-align: right;
-  font-family: ui-monospace, monospace;
-  font-size: 0.9rem;
-  font-weight: 700;
-}
-
-/* Reaction bar (the ❤️ feature for cross-product reuse) */
+/* Reaction + share buttons */
 .reaction-bar {
   display: flex;
-  gap: 0.5rem;
-  justify-content: center;
-  margin-top: 1.5rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line-2);
 }
 .reaction-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.55rem 1rem;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  color: var(--text);
+  gap: 8px;
+  padding: 8px 14px;
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--fg-2);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   cursor: pointer;
-  font-size: 0.9rem;
-  font-weight: 600;
-  transition: all 0.15s;
+  transition: border-color 0.15s, color 0.15s;
 }
 .reaction-btn:hover {
-  border-color: var(--brand);
-  transform: translateY(-1px);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 .reaction-btn.active {
-  background: var(--brand);
-  border-color: var(--brand);
-  color: #fff;
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(0, 217, 255, 0.08);
 }
-.reaction-btn .icon {
-  font-size: 1.05rem;
-}
+.reaction-btn .icon { font-size: 14px; }
 
-/* SEO content section */
-.prose-content h2 {
-  color: var(--brand);
-  font-weight: 800;
-  margin-bottom: 0.75rem;
-}
-.prose-content h3 {
-  color: var(--text);
-  font-weight: 700;
-}
-.prose-content a {
-  color: var(--brand);
-  text-decoration: underline;
-}
-.prose-content strong {
-  color: var(--text);
-  font-weight: 700;
-}
-.prose-content em {
-  color: var(--text-muted);
-  font-style: italic;
-}
-
-/* Disclaimer text */
 .disclaimer {
-  margin-top: 1rem;
-  padding: 0.75rem 1rem;
-  background: var(--bg-elevated);
-  border-radius: 0.5rem;
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  line-height: 1.5;
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line-2);
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--fg-3);
+}
+.disclaimer strong { color: var(--fg-2); }
+
+/* ═══════════════════════════════════════════════════════════════════
+   Editorial typography (V2 Landing + Result + Methodology)
+   ═══════════════════════════════════════════════════════════════════ */
+
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+.eyebrow--accent { color: var(--accent); }
+.eyebrow--warn   { color: var(--warn);  }
+
+.hero-h1 {
+  font-family: var(--sans);
+  font-weight: 800;
+  font-size: clamp(48px, 8vw, 120px);
+  line-height: 0.92;
+  letter-spacing: -0.03em;
+  margin: 0;
+  color: var(--fg);
+}
+.hero-h1 em {
+  font-style: normal;
+  color: var(--accent);
+}
+
+.lede {
+  font-family: var(--sans);
+  font-size: clamp(15px, 1.4vw, 18px);
+  line-height: 1.55;
+  color: var(--fg-2);
+  max-width: 560px;
+}
+
+.section-h {
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: clamp(28px, 4vw, 56px);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--fg);
+  margin: 0 0 18px 0;
+}
+
+.feature-num {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+.feature-title {
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: 22px;
+  letter-spacing: -0.01em;
+  color: var(--fg);
+  margin: 0 0 10px 0;
+}
+.feature-body {
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--fg-2);
+  margin: 0 0 8px 0;
+}
+.feature-quote {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--accent);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Issue Nameplate (V2 Landing magazine strip)
+   ═══════════════════════════════════════════════════════════════════ */
+
+.nameplate {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+  margin-bottom: 56px;
+}
+.nameplate > span:not(:first-child):not(:last-child) {
+  color: var(--fg-2);
+}
+
+/* Stats row (Landing) */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+  padding: 32px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+@media (min-width: 768px) {
+  .stats-row { grid-template-columns: repeat(4, 1fr); }
+}
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.stat__num {
+  font-family: var(--sans);
+  font-weight: 800;
+  font-size: clamp(28px, 4vw, 48px);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+}
+.stat__label {
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Terminal chrome (V1 Test running, Top, Compare)
+   ═══════════════════════════════════════════════════════════════════ */
+
+.terminal {
+  border: 1px solid var(--line);
+  background: var(--bg-2);
+}
+.terminal__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+  background: var(--bg-3);
+}
+.terminal__head .live-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  display: inline-block;
+  margin-right: 8px;
+  animation: live-pulse 1.4s ease-in-out infinite;
+}
+@keyframes live-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.3; }
+}
+.terminal__body {
+  padding: 18px;
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--fg-2);
+}
+.terminal__log {
+  font-family: var(--mono);
+  font-size: 11px;
+  line-height: 1.65;
+  color: var(--fg-3);
+  white-space: pre-wrap;
+}
+.terminal__log .ts    { color: var(--fg-4); }
+.terminal__log .key   { color: var(--accent); }
+.terminal__log .val   { color: var(--fg); }
+
+/* ═══════════════════════════════════════════════════════════════════
+   Tables (Top scores, Compare diff)
+   ═══════════════════════════════════════════════════════════════════ */
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--mono);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.table th {
+  text-align: left;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+}
+.table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line-2);
+  color: var(--fg);
+}
+.table tr:hover td { background: var(--bg-2); }
+.table .rank-cell  { color: var(--accent); font-weight: 700; }
+.table .num        { text-align: right; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   Hardware comparison bars (V1 Result viral asset)
+   ═══════════════════════════════════════════════════════════════════ */
+
+.cmp-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 24px 0;
+}
+.cmp-bar {
+  display: grid;
+  grid-template-columns: minmax(140px, 1fr) 2fr 60px;
+  align-items: center;
+  gap: 14px;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+.cmp-bar__label  { color: var(--fg-2); }
+.cmp-bar__track  {
+  position: relative;
+  height: 8px;
+  background: var(--line);
+}
+.cmp-bar__fill {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  background: var(--accent);
+}
+.cmp-bar__fill--neg { background: var(--warn); }
+.cmp-bar__delta {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--accent);
+  font-weight: 700;
+}
+.cmp-bar__delta--neg { color: var(--warn); }
+
+/* ═══════════════════════════════════════════════════════════════════
+   Trading card (Result share asset — also captured by html-to-image)
+   ═══════════════════════════════════════════════════════════════════ */
+
+.trading-card {
+  width: 360px;
+  padding: 24px;
+  background: var(--bg-2);
+  border: 1px solid var(--accent);
+  font-family: var(--mono);
+  color: var(--fg);
+  position: relative;
+}
+.trading-card__head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-3);
+  margin-bottom: 16px;
+}
+.trading-card__score {
+  font-family: var(--sans);
+  font-weight: 800;
+  font-size: 84px;
+  line-height: 0.9;
+  letter-spacing: -0.02em;
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+}
+.trading-card__tier {
+  display: inline-block;
+  margin-left: 8px;
+  font-family: var(--sans);
+  font-size: 36px;
+  font-weight: 800;
+  color: var(--accent);
+  vertical-align: super;
+}
+.trading-card__hw {
+  margin-top: 8px;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--fg-2);
+}
+.trading-card__components {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.trading-card__comp {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.trading-card__comp-label {
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.trading-card__comp-value {
+  font-size: 18px;
+  font-weight: 700;
+  font-family: var(--sans);
+  color: var(--fg);
+  font-variant-numeric: tabular-nums;
+}
+.trading-card__pct {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  font-size: 11px;
+  color: var(--fg-3);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.trading-card__url {
+  margin-top: 4px;
+  font-size: 10px;
+  color: var(--fg-3);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Forms / inputs
+   ═══════════════════════════════════════════════════════════════════ */
+
+input[type="text"], input[type="search"], textarea {
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  color: var(--fg);
+  font-family: var(--mono);
+  font-size: 13px;
+  padding: 10px 14px;
+}
+input[type="text"]:focus, input[type="search"]:focus, textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Links
+   ═══════════════════════════════════════════════════════════════════ */
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+a:hover { text-decoration: underline; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   Utility — accent fill helper
+   ═══════════════════════════════════════════════════════════════════ */
+
+.text-brand,
+.text-accent { color: var(--accent); }
+.text-warn   { color: var(--warn);  }
+.text-good   { color: var(--good);  }
+.text-fg     { color: var(--fg);    }
+.text-fg-2   { color: var(--fg-2);  }
+.text-fg-3   { color: var(--fg-3);  }
+
+.bg-brand,
+.bg-accent   { background: var(--accent); }
+
+.font-mono   { font-family: var(--mono); }
+.font-sans   { font-family: var(--sans); }
+
+/* ═══════════════════════════════════════════════════════════════════
+   Tailwind override safety — ensure dark BG overrides Tailwind
+   ═══════════════════════════════════════════════════════════════════ */
+
+body.theme-bg { background: var(--bg); color: var(--fg); }
+.theme-bg     { background: var(--bg); color: var(--fg); }
+
+/* Print: minimal */
+@media print {
+  body { background: #fff; color: #000; }
+  .run-btn, .reaction-bar { display: none; }
 }

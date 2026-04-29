@@ -1,0 +1,684 @@
+---
+/**
+ * /test — V1 Terminal benchmark execution screen.
+ *
+ * Auto-starts runFullBench on mount. Shows live progress through the
+ * three test phases (GPU → CPU → RAM), then submits to /api/submit and
+ * redirects to /r/[hash]/ for the result page.
+ *
+ * UI: V1 Terminal (matched to drop spec) — status bar, progress bar,
+ * 3 live graph blocks (GPU/CPU/RAM), console log, truth disclaimer.
+ *
+ * If user lands here without WebGPU/Wasm support, redirect home with a
+ * caps query so the Landing can show a graceful failure message.
+ */
+import BaseLayout from '../layouts/BaseLayout.astro';
+import TruthDisclaimer from '../components/bench/TruthDisclaimer.astro';
+---
+
+<BaseLayout
+  title="Testing your hardware — 9bench"
+  description="9bench is benchmarking your CPU, GPU, and RAM in real time. ~15 seconds, all in your browser."
+>
+  <main class="container test-running">
+
+    <!-- ── Status bar ───────────────────────────────────────────────── -->
+    <div class="status-bar" id="status-bar">
+      <span class="status-bar__pulse" aria-hidden="true"></span>
+      <span class="status-bar__primary" id="status-primary">● BENCHMARK IN PROGRESS</span>
+      <span class="status-bar__sep">·</span>
+      <span class="status-bar__secondary" id="status-secondary">WEBGPU + WASM SIMD ACTIVE · DO NOT SWITCH TABS</span>
+      <span class="status-bar__pct tnum" id="status-pct">00%</span>
+    </div>
+
+    <!-- ── Progress bar ─────────────────────────────────────────────── -->
+    <div class="progress-track">
+      <div class="progress-track__fill" id="progress-fill"></div>
+    </div>
+
+    <!-- ── Three live blocks (GPU / CPU / RAM) ──────────────────────── -->
+    <div class="live-blocks">
+      <article class="live-block" data-block="gpu">
+        <header class="live-block__head">
+          <span class="live-block__icon" aria-hidden="true">🎮</span>
+          <div class="live-block__titles">
+            <h3 class="live-block__label">GPU · COMPUTE</h3>
+            <p class="live-block__sub">1024×1024 FP32 MATMUL · WEBGPU</p>
+          </div>
+          <span class="live-block__pct" data-pct>0%</span>
+        </header>
+        <div class="live-block__body">
+          <div class="live-block__graph" data-graph>
+            <canvas data-canvas></canvas>
+            <div class="live-block__graph-meta">
+              <span class="live-block__graph-stage">MATMUL_512</span>
+              <span class="live-block__graph-tag">○ IDLE</span>
+            </div>
+            <div class="live-block__graph-value">
+              <span class="tnum" data-value>—</span>
+              <span class="live-block__graph-unit">GFLOPS</span>
+            </div>
+          </div>
+          <div class="live-block__variance">
+            <div><span>MIN</span> <span class="tnum" data-min>—</span></div>
+            <div><span>AVG</span> <span class="tnum" data-avg>—</span></div>
+            <div><span>MAX</span> <span class="tnum" data-max>—</span></div>
+          </div>
+        </div>
+      </article>
+
+      <article class="live-block" data-block="cpu">
+        <header class="live-block__head">
+          <span class="live-block__icon" aria-hidden="true">⚙️</span>
+          <div class="live-block__titles">
+            <h3 class="live-block__label">CPU · 1C + MC</h3>
+            <p class="live-block__sub">SHA-256 · WEB WORKERS</p>
+          </div>
+          <span class="live-block__pct" data-pct>0%</span>
+        </header>
+        <div class="live-block__body">
+          <div class="live-block__graph" data-graph>
+            <canvas data-canvas></canvas>
+            <div class="live-block__graph-meta">
+              <span class="live-block__graph-stage">SHA256_W12</span>
+              <span class="live-block__graph-tag">○ IDLE</span>
+            </div>
+            <div class="live-block__graph-value">
+              <span class="tnum" data-value>—</span>
+              <span class="live-block__graph-unit">HASH/s · MC</span>
+            </div>
+          </div>
+          <div class="live-block__variance">
+            <div><span>MIN</span> <span class="tnum" data-min>—</span></div>
+            <div><span>AVG</span> <span class="tnum" data-avg>—</span></div>
+            <div><span>MAX</span> <span class="tnum" data-max>—</span></div>
+          </div>
+        </div>
+      </article>
+
+      <article class="live-block live-block--warn" data-block="ram">
+        <header class="live-block__head">
+          <span class="live-block__icon" aria-hidden="true">💾</span>
+          <div class="live-block__titles">
+            <h3 class="live-block__label">RAM · BANDWIDTH</h3>
+            <p class="live-block__sub">256 MB · SEQ + RANDOM</p>
+          </div>
+          <span class="live-block__pct" data-pct>0%</span>
+        </header>
+        <div class="live-block__body">
+          <div class="live-block__graph" data-graph>
+            <canvas data-canvas></canvas>
+            <div class="live-block__graph-meta">
+              <span class="live-block__graph-stage">SEQ_READ_64K</span>
+              <span class="live-block__graph-tag">○ IDLE</span>
+            </div>
+            <div class="live-block__graph-value">
+              <span class="tnum" data-value>—</span>
+              <span class="live-block__graph-unit">GB/s · READ</span>
+            </div>
+          </div>
+          <div class="live-block__variance">
+            <div><span>MIN</span> <span class="tnum" data-min>—</span></div>
+            <div><span>AVG</span> <span class="tnum" data-avg>—</span></div>
+            <div><span>MAX</span> <span class="tnum" data-max>—</span></div>
+          </div>
+        </div>
+      </article>
+    </div>
+
+    <!-- ── Console log ─────────────────────────────────────────────── -->
+    <div class="console-log" id="console-log" aria-live="polite" aria-atomic="false">
+      <div class="console-log__line"><span class="ts">[--:--]</span> waiting for browser capability check…</div>
+    </div>
+
+    <!-- ── Truth Disclaimer ────────────────────────────────────────── -->
+    <TruthDisclaimer compact />
+
+    <!-- ── Failure card (hidden until error) ───────────────────────── -->
+    <div class="error-card" id="error-card" hidden>
+      <h2 class="section-h" style="font-size: 28px; margin-top: 32px;">Something went wrong</h2>
+      <p id="error-message" class="text-fg-2" style="font-family: var(--mono); font-size: 13px;">—</p>
+      <p style="margin-top: 24px;">
+        <a href="/" class="btn-outline">← Back to home</a>
+      </p>
+    </div>
+  </main>
+</BaseLayout>
+
+<style>
+  .test-running {
+    padding: 24px 0 56px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  /* Status bar — top of screen, accent-bordered */
+  .status-bar {
+    border: 1px solid var(--accent);
+    background: rgba(0, 217, 255, 0.04);
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.04em;
+  }
+  :root[data-accent="orange"] .status-bar {
+    background: rgba(255, 107, 43, 0.04);
+  }
+  .status-bar__pulse {
+    width: 10px; height: 10px;
+    background: var(--accent);
+    flex: 0 0 auto;
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.3; }
+  }
+  .status-bar__primary {
+    color: var(--accent);
+    font-weight: 700;
+    letter-spacing: 0.1em;
+  }
+  .status-bar__sep { color: var(--fg-3); }
+  .status-bar__secondary { color: var(--fg-2); flex: 1; }
+  .status-bar__pct {
+    margin-left: auto;
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 18px;
+    flex: 0 0 auto;
+  }
+
+  /* Progress bar */
+  .progress-track {
+    height: 4px;
+    background: var(--bg-3);
+    border: 1px solid var(--line);
+  }
+  .progress-track__fill {
+    height: 100%;
+    width: 0%;
+    background: var(--accent);
+    transition: width 0.2s ease-out;
+  }
+
+  /* Live blocks (3 column grid on desktop) */
+  .live-blocks {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  @media (min-width: 768px) {
+    .live-blocks { grid-template-columns: repeat(3, 1fr); }
+  }
+  .live-block {
+    border: 1px solid var(--line);
+    background: var(--bg-2);
+    display: flex;
+    flex-direction: column;
+  }
+  .live-block__head {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .live-block__icon {
+    color: var(--accent);
+    font-size: 20px;
+    flex: 0 0 auto;
+  }
+  .live-block--warn .live-block__icon { color: var(--warn); }
+  .live-block__titles { flex: 1; min-width: 0; }
+  .live-block__label {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--fg);
+    margin: 0;
+  }
+  .live-block__sub {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--fg-3);
+    letter-spacing: 0.04em;
+    margin: 2px 0 0 0;
+  }
+  .live-block__pct {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    flex: 0 0 auto;
+  }
+  .live-block--warn .live-block__pct { color: var(--warn); }
+  .live-block__body {
+    padding: 14px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  /* Live graph */
+  .live-block__graph {
+    position: relative;
+    height: 140px;
+    border: 1px solid var(--line);
+    background: var(--bg-2);
+  }
+  .live-block__graph canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+  .live-block__graph-meta {
+    position: absolute;
+    top: 10px;
+    left: 12px;
+    right: 12px;
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--fg-3);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    pointer-events: none;
+  }
+  .live-block__graph-tag {
+    color: var(--fg-3);
+  }
+  .live-block.is-active .live-block__graph-tag { color: var(--accent); }
+  .live-block--warn.is-active .live-block__graph-tag { color: var(--warn); }
+  .live-block__graph-value {
+    position: absolute;
+    bottom: 10px;
+    left: 12px;
+    font-family: var(--mono);
+    color: var(--fg);
+    pointer-events: none;
+  }
+  .live-block__graph-value [data-value] {
+    font-size: 24px;
+    font-weight: 700;
+  }
+  .live-block__graph-unit {
+    font-size: 11px;
+    color: var(--fg-3);
+    margin-left: 6px;
+  }
+
+  /* Variance row */
+  .live-block__variance {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    border-top: 1px solid var(--line-2);
+    padding-top: 10px;
+    margin-top: auto;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--fg-3);
+    letter-spacing: 0.04em;
+  }
+  .live-block__variance > div { display: flex; gap: 6px; }
+  .live-block__variance [data-min],
+  .live-block__variance [data-avg],
+  .live-block__variance [data-max] {
+    color: var(--fg);
+  }
+
+  /* Console log */
+  .console-log {
+    border: 1px solid var(--line);
+    background: var(--bg-2);
+    padding: 12px 16px;
+    min-height: 140px;
+    max-height: 220px;
+    overflow-y: auto;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--fg-2);
+    line-height: 1.7;
+  }
+  .console-log__line {
+    color: var(--fg-3);
+  }
+  .console-log__line.is-latest { color: var(--accent); }
+  .console-log__line .ts  { color: var(--fg-4); margin-right: 6px; }
+  .console-log__line .key { color: var(--accent); }
+
+  /* Error fallback */
+  .error-card {
+    border: 1px solid var(--warn);
+    padding: 24px;
+    background: var(--bg-2);
+  }
+</style>
+
+<script>
+  // ─────────────────────────────────────────────────────────────────
+  //  TEST RUNNER — wires our existing src/bench/runner.ts to the UI.
+  //  Phases (matches BenchResult.scores ordering):
+  //    1. GPU compute  (~30% of total time)
+  //    2. CPU single + multi  (~40%)
+  //    3. RAM bandwidth + latency  (~30%)
+  //  After completion: POST /api/submit → redirect /r/[hash]/.
+  // ─────────────────────────────────────────────────────────────────
+
+  import { runFullBench } from '../bench/runner';
+
+  type StageKey = 'gpu' | 'cpu' | 'ram' | 'done';
+
+  // ── DOM refs ─────────────────────────────────────────────────────
+  const $ = (sel: string) => document.querySelector(sel) as HTMLElement | null;
+  const blockEls: Record<'gpu' | 'cpu' | 'ram', HTMLElement | null> = {
+    gpu: document.querySelector('[data-block="gpu"]'),
+    cpu: document.querySelector('[data-block="cpu"]'),
+    ram: document.querySelector('[data-block="ram"]'),
+  };
+
+  function setProgress(pct: number) {
+    const fill = $('#progress-fill');
+    const pctEl = $('#status-pct');
+    if (fill) fill.style.width = Math.min(100, Math.max(0, pct)) + '%';
+    if (pctEl) pctEl.textContent = String(Math.floor(pct)).padStart(2, '0') + '%';
+  }
+
+  function setBlockActive(stage: 'gpu' | 'cpu' | 'ram', active: boolean, pct?: number) {
+    const el = blockEls[stage];
+    if (!el) return;
+    el.classList.toggle('is-active', active);
+    if (typeof pct === 'number') {
+      const pctEl = el.querySelector<HTMLElement>('[data-pct]');
+      if (pctEl) pctEl.textContent = Math.floor(pct) + '%';
+    }
+    const tagEl = el.querySelector<HTMLElement>('.live-block__graph-tag');
+    if (tagEl) tagEl.textContent = active ? '● LIVE' : '○ IDLE';
+  }
+
+  function setBlockValue(stage: 'gpu' | 'cpu' | 'ram', value: string) {
+    const el = blockEls[stage];
+    if (!el) return;
+    const v = el.querySelector<HTMLElement>('[data-value]');
+    if (v) v.textContent = value;
+  }
+
+  function setBlockVariance(stage: 'gpu' | 'cpu' | 'ram', min: string, avg: string, max: string) {
+    const el = blockEls[stage];
+    if (!el) return;
+    el.querySelector<HTMLElement>('[data-min]')?.replaceChildren(document.createTextNode(min));
+    el.querySelector<HTMLElement>('[data-avg]')?.replaceChildren(document.createTextNode(avg));
+    el.querySelector<HTMLElement>('[data-max]')?.replaceChildren(document.createTextNode(max));
+  }
+
+  function appendLog(line: string) {
+    const log = $('#console-log');
+    if (!log) return;
+    // Mark previous-latest as historical, append new latest
+    log.querySelectorAll('.console-log__line.is-latest')
+       .forEach(el => el.classList.remove('is-latest'));
+    const div = document.createElement('div');
+    div.className = 'console-log__line is-latest';
+    const t = ((Date.now() - startedAt) / 1000).toFixed(2).padStart(5, '0');
+    div.innerHTML = `<span class="ts">[${t}]</span> ${line}`;
+    log.appendChild(div);
+    // Auto-scroll to latest
+    log.scrollTop = log.scrollHeight;
+    // Cap log to last 40 lines so memory doesn't grow on long sessions
+    while (log.children.length > 40) log.removeChild(log.firstChild!);
+  }
+
+  function setStatus(primary: string, secondary?: string) {
+    const p = $('#status-primary');
+    const s = $('#status-secondary');
+    if (p) p.textContent = primary;
+    if (s && secondary !== undefined) s.textContent = secondary;
+  }
+
+  function showError(message: string) {
+    const card = $('#error-card');
+    const msg  = $('#error-message');
+    if (card) card.removeAttribute('hidden');
+    if (msg)  msg.textContent = message;
+    setStatus('● ERROR', message);
+    document.querySelector('.status-bar')?.setAttribute('style',
+      'border-color: var(--warn); background: rgba(255,87,34,0.06);');
+  }
+
+  // ── Live graph drawing (lightweight canvas, no React) ────────────
+  // Deterministic pseudo-random walk drives the wave. We don't try to
+  // visualize actual realtime samples (those come in chunks at GPU
+  // dispatch boundaries, not smooth) — the wave is "vibes" while real
+  // numbers populate the value display + variance row.
+  const graphState: Record<string, { t: number; running: boolean; peak: number; raf?: number }> = {
+    gpu: { t: 0, running: false, peak: 0.85 },
+    cpu: { t: 0, running: false, peak: 0.70 },
+    ram: { t: 0, running: false, peak: 0.60 },
+  };
+
+  function startGraph(stage: 'gpu' | 'cpu' | 'ram') {
+    const el = blockEls[stage];
+    if (!el) return;
+    const canvas = el.querySelector<HTMLCanvasElement>('[data-canvas]');
+    if (!canvas) return;
+    const isWarn = stage === 'ram';
+    const state = graphState[stage];
+    state.running = true;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const dpr = window.devicePixelRatio || 1;
+    const seedNum = stage === 'gpu' ? 4 : stage === 'cpu' ? 5 : 6;
+
+    function size() {
+      const r = canvas.getBoundingClientRect();
+      canvas.width = r.width * dpr;
+      canvas.height = r.height * dpr;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    size();
+    const ro = new ResizeObserver(size);
+    ro.observe(canvas);
+
+    function draw() {
+      const r = canvas.getBoundingClientRect();
+      const W = r.width, H = r.height;
+      ctx.clearRect(0, 0, W, H);
+
+      // Baseline grid
+      ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+      ctx.lineWidth = 1;
+      for (let i = 0; i < 5; i++) {
+        const y = (H / 4) * i + 0.5;
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+      }
+
+      // Signal
+      const samples = Math.floor(W / 2);
+      const data: number[] = [];
+      for (let i = 0; i < samples; i++) {
+        const x = i / samples;
+        const s = Math.sin((x * 8 + state.t) * (1 + seedNum * 0.3)) * 0.32
+                + Math.sin((x * 23 + state.t * 1.7) * (1 + seedNum * 0.5)) * 0.18
+                + Math.sin((x * 51 + state.t * 0.6) * (1 + seedNum * 0.2)) * 0.10;
+        data.push((0.5 + s * 0.45) * state.peak);
+      }
+
+      // Fill
+      ctx.beginPath();
+      ctx.moveTo(0, H);
+      data.forEach((v, i) => ctx.lineTo((i / (samples - 1)) * W, H - v * H));
+      ctx.lineTo(W, H);
+      ctx.closePath();
+      ctx.fillStyle = isWarn ? 'rgba(255,87,34,0.10)' : 'rgba(0,217,255,0.10)';
+      ctx.fill();
+
+      // Line
+      ctx.beginPath();
+      data.forEach((v, i) => {
+        const x = (i / (samples - 1)) * W;
+        const y = H - v * H;
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      });
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = isWarn ? '#FF5722' : (
+        // Honor the current accent (cyan or orange via toggle)
+        getComputedStyle(document.documentElement).getPropertyValue('--accent').trim() || '#00D9FF'
+      );
+      ctx.stroke();
+
+      // Current dot
+      const last = data[data.length - 1];
+      ctx.fillStyle = ctx.strokeStyle;
+      ctx.beginPath();
+      ctx.arc(W - 2, H - last * H, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (state.running) state.t += 0.04;
+      state.raf = requestAnimationFrame(draw);
+    }
+    draw();
+  }
+
+  function stopGraph(stage: 'gpu' | 'cpu' | 'ram') {
+    graphState[stage].running = false;
+    if (graphState[stage].raf) cancelAnimationFrame(graphState[stage].raf!);
+  }
+
+  // ── Main bench execution ────────────────────────────────────────
+  const startedAt = Date.now();
+
+  async function runBench() {
+    appendLog('init  → checking browser capabilities…');
+
+    // Hard caps check before we waste time spinning up a benchmark
+    if (!('gpu' in navigator)) {
+      showError('Your browser does not support WebGPU. Try Chrome 113+ or Safari 26+.');
+      return;
+    }
+    if (typeof Worker === 'undefined') {
+      showError('Your browser does not support Web Workers.');
+      return;
+    }
+
+    appendLog('init  → webgpu adapter found · web workers ready');
+    startGraph('gpu');
+    setBlockActive('gpu', true, 0);
+    setStatus('● BENCHMARK IN PROGRESS', 'GPU MATMUL · DO NOT SWITCH TABS');
+
+    let result: any;
+    try {
+      result = await runFullBench((stage: StageKey, percent: number, message: string) => {
+        // Map runner stages to our 3-block UI. We fake a smooth 0→100
+        // global progress by weighting: GPU 35%, CPU 35%, RAM 30%.
+        if (stage === 'gpu') {
+          setBlockActive('gpu', percent < 100, percent);
+          if (percent >= 100) {
+            stopGraph('gpu');
+            startGraph('cpu');
+            setBlockActive('cpu', true, 0);
+            setStatus('● BENCHMARK IN PROGRESS', 'CPU SHA-256 · WEB WORKERS');
+            appendLog(`gpu   → ${message.toLowerCase()}`);
+          } else {
+            // Show in-progress dispatch info on first call
+            if (percent === 0) appendLog('gpu   → submitting matmul 1024×1024 fp32 ×8 …');
+          }
+          setProgress(percent * 0.35);
+        } else if (stage === 'cpu') {
+          setBlockActive('cpu', percent < 100, percent);
+          if (percent >= 100) {
+            stopGraph('cpu');
+            startGraph('ram');
+            setBlockActive('ram', true, 0);
+            setStatus('● BENCHMARK IN PROGRESS', 'RAM BANDWIDTH · SEQ + RANDOM');
+            appendLog(`cpu   → ${message.toLowerCase()}`);
+          } else if (percent === 0) {
+            appendLog('cpu   → spawning workers · sha256 single + multi');
+          }
+          setProgress(35 + percent * 0.35);
+        } else if (stage === 'ram') {
+          setBlockActive('ram', percent < 100, percent);
+          if (percent >= 100) {
+            stopGraph('ram');
+            setBlockActive('ram', false, 100);
+            appendLog(`ram   → ${message.toLowerCase()}`);
+            appendLog('score → composing 9bench score…');
+          } else if (percent === 0) {
+            appendLog('ram   → seq.read.64k commencing · sandboxed (browser-cap)');
+          }
+          setProgress(70 + percent * 0.30);
+        } else if (stage === 'done') {
+          setProgress(100);
+          appendLog('done  → ' + message.toLowerCase());
+        }
+      });
+    } catch (e: any) {
+      stopGraph('gpu'); stopGraph('cpu'); stopGraph('ram');
+      console.error('runFullBench failed', e);
+      showError(e?.message || 'Benchmark execution failed. Try refreshing the page.');
+      return;
+    }
+
+    // ── Update blocks with final values ───────────────────────────
+    setBlockValue('gpu', Math.round(result.gpu.gflops).toLocaleString());
+    setBlockValue('cpu', Math.round(result.cpu.hashesPerSecondMulti / 1000).toLocaleString() + 'k');
+    setBlockValue('ram', result.ram.readBandwidthGBs.toFixed(1));
+
+    // Variance: GPU has measurements[]; CPU/RAM not yet — show '—'
+    if (result.gpu.measurements && result.gpu.measurements.length >= 3) {
+      const m = result.gpu.measurements as number[];
+      const min = Math.min(...m).toFixed(0);
+      const avg = (m.reduce((a, b) => a + b, 0) / m.length).toFixed(0);
+      const max = Math.max(...m).toFixed(0);
+      setBlockVariance('gpu', min, avg, max);
+    }
+
+    setStatus('✓ TEST COMPLETE', `${(result.durationMs / 1000).toFixed(1)}s · submitting…`);
+    appendLog(`score → ${result.scores.overall.toLocaleString()} (overall)`);
+
+    // ── Submit + redirect ─────────────────────────────────────────
+    try {
+      const submitRes = await fetch('/api/submit', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          scores: result.scores,
+          gpu: { gflops: result.gpu.gflops, adapterName: result.hardware.gpu },
+          cpu: result.cpu,
+          ram: result.ram,
+          hardware: result.hardware,
+          durationMs: result.durationMs,
+        }),
+      });
+      if (submitRes.ok) {
+        const submitted = await submitRes.json() as { id?: string };
+        if (submitted.id) {
+          appendLog(`submit → /r/${submitted.id}`);
+          setStatus('✓ COMPLETE', 'redirecting to your result…');
+          // Tiny delay so the user sees the success state before navigation
+          setTimeout(() => { window.location.href = `/r/${submitted.id}/`; }, 600);
+          return;
+        }
+      }
+      // Submit failed but bench succeeded — show local result without permalink
+      appendLog('submit → offline · result not saved (try again later)');
+      setStatus('✓ TEST COMPLETE (LOCAL)', 'submission failed — your bench data is intact');
+    } catch (e: any) {
+      console.warn('submit failed', e);
+      appendLog('submit → network error · result not saved');
+    }
+  }
+
+  // ── Auto-start on mount ─────────────────────────────────────────
+  // Wait one tick so the layout settles + canvases get their measured size
+  // before we start drawing.
+  requestAnimationFrame(() => requestAnimationFrame(runBench));
+</script>

@@ -1,0 +1,48 @@
+---
+/**
+ * TierBadge — sharing-friendly hardware tier display.
+ *
+ * Tier system (from drop, anti-shame for bottom tiers):
+ *   S-tier (≥1386)  Big letter, accent color  — Enthusiast / workstation
+ *   A-tier (≥900)   Big letter                — Power user
+ *   Solid daily driver (≥600)  Descriptive label — Comfortable for most work
+ *   Working machine (≥300)     Descriptive label — Office class
+ *   Patient & honest (≥0)      Descriptive label — It still gets the job done
+ *
+ * The descriptive bottom labels prevent D-tier shaming that kills
+ * sharing rate. Letters above median (shareable). Words below.
+ *
+ * Usage:
+ *   <TierBadge score={1386} />            — full visual badge
+ *   <TierBadge score={1386} compact />    — small inline pill
+ */
+import { tierFor } from './tier-system';
+interface Props {
+  score: number;
+  compact?: boolean;
+  class?: string;
+}
+const { score, compact = false, class: className = '' } = Astro.props;
+const tier = tierFor(score);
+const isLetterTier = tier.key === 'S' || tier.key === 'A';
+---
+{compact ? (
+  <span
+    class:list={['pill', isLetterTier ? 'pill--accent' : '', className]}
+    style={isLetterTier ? '' : `color: var(--fg-2); border-color: var(--line);`}
+  >
+    {tier.label}
+  </span>
+) : (
+  <div class:list={['tier-badge', className]}>
+    {isLetterTier ? (
+      <div class="tier-badge__letter">{tier.key}</div>
+    ) : (
+      <div class="tier-badge__sub" style="font-size: 22px; font-weight: 600; color: var(--fg);">
+        {tier.label}
+      </div>
+    )}
+    <div class="tier-badge__label">{isLetterTier ? tier.label : 'Classification'}</div>
+    <div class="tier-badge__sub">{tier.sub}</div>
+  </div>
+)}

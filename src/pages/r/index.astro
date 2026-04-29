@@ -1,210 +1,897 @@
 ---
+/**
+ * /r/[id] — Hybrid Result + Share page.
+ *
+ * Layout: V2 Editorial (big score, narrative) + V1 viral assets
+ * (HardwareComparisonBars, action stack with PNG export).
+ *
+ * Architecture: client-side fetch /api/r/[id] (Astro doesn't pre-render
+ * dynamic D1 routes on Cloudflare Pages). Static HTML shell renders
+ * skeleton; JS populates real data after fetch.
+ *
+ * PNG export: html-to-image captures the .trading-card DOM element
+ * directly (no React island needed — simpler, smaller bundle).
+ */
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import TruthDisclaimer from '../../components/bench/TruthDisclaimer.astro';
+import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
 ---
 
 <BaseLayout
   title="Score — 9bench"
   description="Browser-based hardware benchmark result. Test yours at 9bench.com — no download, no account, no bias."
 >
-  <main class="max-w-3xl mx-auto px-5 py-12">
-    <header class="text-center mb-8">
-      <a href="/" class="inline-block px-3 py-1 bg-brand-light/10 text-brand rounded-full text-xs font-bold tracking-wider uppercase mb-4">
-        ← 9bench · Test yours
-      </a>
-    </header>
+  <main class="container result-page">
 
-    <div id="loading" class="text-center text-slate-400">
-      <div class="text-2xl mb-2">⏳</div>
-      Loading result…
+    <!-- ── Loading state (replaced after fetch) ─────────────────── -->
+    <div id="loading" class="loading-state">
+      <div class="loading-state__pulse" aria-hidden="true"></div>
+      <p class="loading-state__text">Loading result…</p>
     </div>
 
-    <div id="error" hidden class="text-center text-red-500"></div>
-
-    <div id="result-card" hidden></div>
-
-    <div class="text-center mt-12">
-      <a href="/" class="inline-block px-6 py-3 bg-brand text-white rounded-xl font-bold hover:bg-brand-dark transition-colors">
-        Test your hardware →
-      </a>
+    <!-- ── Error state (shown if fetch fails) ───────────────────── -->
+    <div id="error" class="error-state" hidden>
+      <h2 class="section-h" style="font-size: 32px;">Result not found</h2>
+      <p class="text-fg-2 font-mono" style="font-size: 13px; margin: 16px 0 24px;" id="error-message">—</p>
+      <a href="/" class="btn-outline">← Test your hardware</a>
     </div>
 
-    <div class="mt-10 px-4 py-3 rounded-xl border border-slate-700/40 bg-slate-900/40 text-slate-400 text-xs leading-relaxed">
-      ⚖️ <strong>What this score actually measures:</strong> a single matrix-multiplication GPU workload,
-      a single SHA-256 CPU workload (single + multi-core), a single TypedArray RAM bandwidth test —
-      all running inside a browser sandbox with its inherent ceiling. It's a fast relative ranking,
-      not an absolute hardware profile. For sustained / thermal / disk / game-specific benchmarking,
-      use a native tool. <a href="/methodology" class="underline text-brand">Read the full methodology →</a>
-    </div>
-  </main>
+    <!-- ── Result content (populated client-side) ───────────────── -->
+    <article id="result" class="result" hidden>
 
-  <script>
-    const loading = document.getElementById('loading')!;
-    const errorDiv = document.getElementById('error')!;
-    const card = document.getElementById('result-card')!;
+      <!-- Header strip -->
+      <header class="result__header">
+        <div class="result__header-left">
+          <span class="pill pill--accent" id="result-status">✓ TEST COMPLETE</span>
+          <span class="pill" id="result-browser">—</span>
+        </div>
+        <div class="result__header-right">
+          <span class="text-fg-3 font-mono" style="font-size: 11px; letter-spacing: 0.08em;">
+            9BENCH SCORE · <span id="result-date">—</span>
+          </span>
+        </div>
+      </header>
 
-    // Extract id from URL: /r/abc12345/ or /r/abc12345
-    const pathParts = window.location.pathname.split('/').filter(Boolean);
-    const resultId = pathParts[1] || '';
+      <!-- Hero: score + narrative -->
+      <section class="result__hero">
+        <div class="result__hero-score">
+          <div class="result__big tnum" id="result-score">—</div>
+          <div class="result__tier" id="result-tier">
+            <span class="result__tier-label" id="tier-label">—</span>
+            <span class="result__tier-sub"   id="tier-sub">—</span>
+          </div>
+        </div>
+        <div class="result__hero-narrative">
+          <p class="result__narrative" id="result-narrative">—</p>
+          <p class="result__rank font-mono" id="result-rank">—</p>
+        </div>
+      </section>
 
-    function fmt(n: number) { return Number(n).toLocaleString(); }
-    function pct(n: number, max: number) { return Math.min(100, Math.round((n / max) * 100)); }
-    function ordinal(n: number): string {
-      const s = ['th','st','nd','rd'];
-      const v = n % 100;
-      return n + (s[(v - 20) % 10] || s[v] || s[0]);
-    }
+      <!-- Component breakdown (4-card grid) -->
+      <section class="component-grid">
+        <article class="component-card">
+          <span class="component-card__label">— GPU</span>
+          <div class="component-card__value tnum" id="comp-gpu">—</div>
+          <div class="component-card__sub" id="comp-gpu-sub">—</div>
+        </article>
+        <article class="component-card">
+          <span class="component-card__label">— CPU·1</span>
+          <div class="component-card__value tnum" id="comp-cpu1">—</div>
+          <div class="component-card__sub" id="comp-cpu1-sub">single-core</div>
+        </article>
+        <article class="component-card">
+          <span class="component-card__label">— CPU·M</span>
+          <div class="component-card__value tnum" id="comp-cpum">—</div>
+          <div class="component-card__sub" id="comp-cpum-sub">multi-core</div>
+        </article>
+        <article class="component-card">
+          <span class="component-card__label">— RAM</span>
+          <div class="component-card__value tnum" id="comp-ram">—</div>
+          <div class="component-card__sub" id="comp-ram-sub">—</div>
+        </article>
+      </section>
 
-    function verdict(score: number) {
-      if (score >= 4000) return { label: '🏆 Elite tier — top 5%', color: '#10B981',
-        snark: "Your hardware doesn't need motivation. It needs an audience." };
-      if (score >= 2500) return { label: '✓ High-end performer', color: '#10B981',
-        snark: "Strong configuration. You're paying enough that this should be expected." };
-      if (score >= 1700) return { label: '◯ Strong mainstream', color: '#0EA5E9',
-        snark: "Capable of nearly anything. Most of what slows you down isn't the hardware." };
-      if (score >= 1000) return { label: '~ Mid-range standard', color: '#0EA5E9',
-        snark: "Solid working machine. Demanding 2026 tasks will feel the squeeze." };
-      if (score >= 500) return { label: '~ Mainstream / older', color: '#F59E0B',
-        snark: "Functional everyday machine. CPU/GPU-heavy tasks will feel slow." };
-      return { label: '⚠ Office / Chromebook tier', color: '#DC2626',
-        snark: "Built for spreadsheets, not silicon-flexing. Calibrate expectations." };
-    }
+      <!-- Two-column: detected hardware + trading card -->
+      <section class="result__main">
+        <div class="result__col-left">
 
-    async function load() {
-      if (!/^[a-f0-9]{8}$/.test(resultId)) {
-        loading.hidden = true;
-        errorDiv.hidden = false;
-        errorDiv.innerHTML = `<div class="result-card"><div class="result-snark" style="border-color:#DC2626">Invalid result ID. Try the homepage.</div></div>`;
-        return;
-      }
-
-      try {
-        const res = await fetch(`/api/r/${resultId}`);
-        if (!res.ok) {
-          const errBody = await res.json().catch(() => ({}));
-          throw new Error((errBody as any).error || `HTTP ${res.status}`);
-        }
-        const data = await res.json() as any;
-        if (!data.ok) throw new Error(data.error || 'Unknown error');
-
-        const r = data.result;
-        const v = verdict(r.scores.overall);
-        const date = new Date(r.createdAt).toLocaleDateString('en-US', {
-          month: 'short', day: 'numeric', year: 'numeric'
-        });
-
-        // Update document title with score
-        document.title = `9bench ${fmt(r.scores.overall)} — ${v.label.replace(/^[^a-zA-Z]+/, '').trim()}`;
-
-        loading.hidden = true;
-        card.hidden = false;
-        card.innerHTML = `
-          <div class="result-card">
-            <div class="result-header">
-              <span>⚡ TRUTH SERIES · HARDWARE</span>
-              <span>9bench.com</span>
+          <h3 class="result__section-h">— Detected hardware</h3>
+          <div class="hw-rows">
+            <div class="hw-row">
+              <span class="hw-row__label">GPU</span>
+              <span class="hw-row__value" id="hw-gpu">—</span>
             </div>
-            <div class="result-statement">9bench score · ${date}</div>
-            <div class="result-big">${fmt(r.scores.overall)}</div>
-            <div class="result-verdict" style="color: ${v.color}">${v.label}</div>
-            <div class="result-snark">${v.snark}</div>
-
-            <h3 class="text-sm font-bold tracking-wider uppercase text-slate-400 mb-3">Component breakdown</h3>
-            <div class="mb-5">
-              <div class="score-component">
-                <div class="score-component-label">🎮 GPU</div>
-                <div class="score-component-bar"><div class="score-component-fill" style="width:${pct(r.scores.gpu, 5000)}%"></div></div>
-                <div class="score-component-value">${fmt(r.scores.gpu)}</div>
-              </div>
-              <div class="score-component">
-                <div class="score-component-label">⚙️ CPU·1</div>
-                <div class="score-component-bar"><div class="score-component-fill" style="width:${pct(r.scores.cpuSingle, 1500)}%"></div></div>
-                <div class="score-component-value">${fmt(r.scores.cpuSingle)}</div>
-              </div>
-              <div class="score-component">
-                <div class="score-component-label">⚙️ CPU·M</div>
-                <div class="score-component-bar"><div class="score-component-fill" style="width:${pct(r.scores.cpuMulti, 5000)}%"></div></div>
-                <div class="score-component-value">${fmt(r.scores.cpuMulti)}</div>
-              </div>
-              <div class="score-component">
-                <div class="score-component-label">💾 RAM</div>
-                <div class="score-component-bar"><div class="score-component-fill" style="width:${pct(r.scores.ram, 1500)}%"></div></div>
-                <div class="score-component-value">${fmt(r.scores.ram)}</div>
-              </div>
+            <div class="hw-row">
+              <span class="hw-row__label">CPU</span>
+              <span class="hw-row__value" id="hw-cpu">—</span>
             </div>
-
-            <h3 class="text-sm font-bold tracking-wider uppercase text-slate-400 mb-3">Hardware</h3>
-            <div class="result-rows mb-5">
-              <div class="result-row"><span class="result-row-label">GPU</span><span class="result-row-value">${r.gpu.name || 'Unknown'}</span></div>
-              <div class="result-row"><span class="result-row-label">GPU compute</span><span class="result-row-value">${r.gpu.gflops.toFixed(1)} GFLOPS</span></div>
-              <div class="result-row"><span class="result-row-label">CPU cores</span><span class="result-row-value">${r.cpu.cores}</span></div>
-              <div class="result-row"><span class="result-row-label">SHA-256 single</span><span class="result-row-value">${fmt(r.cpu.hashesSingle)} h/s</span></div>
-              <div class="result-row"><span class="result-row-label">SHA-256 multi</span><span class="result-row-value">${fmt(r.cpu.hashesMulti)} h/s</span></div>
-              <div class="result-row"><span class="result-row-label">RAM read</span><span class="result-row-value">${r.ram.readGBs.toFixed(1)} GB/s</span></div>
-              <div class="result-row"><span class="result-row-label">RAM write</span><span class="result-row-value">${r.ram.writeGBs.toFixed(1)} GB/s</span></div>
-              <div class="result-row"><span class="result-row-label">Global percentile</span><span class="result-row-value"><strong>${ordinal(data.percentile)}</strong> of ${fmt(data.total)} tests</span></div>
+            <div class="hw-row">
+              <span class="hw-row__label">RAM</span>
+              <span class="hw-row__value" id="hw-ram">—</span>
             </div>
-
-            <div class="reaction-bar">
-              <button class="share-btn-action" id="copy-link">🔗 Copy link</button>
-              <button class="share-btn-action" id="share-twitter">🐦 Tweet</button>
-              <button class="share-btn-action share-btn-primary" id="run-again">↻ Test your own</button>
+            <div class="hw-row">
+              <span class="hw-row__label">Browser</span>
+              <span class="hw-row__value" id="hw-browser">—</span>
             </div>
           </div>
-        `;
 
-        // Wire up share actions
-        const shareUrl = `https://9bench.com/r/${resultId}`;
-        document.getElementById('copy-link')!.addEventListener('click', async () => {
-          try {
-            await navigator.clipboard.writeText(shareUrl);
-            const btn = document.getElementById('copy-link')!;
-            const orig = btn.textContent;
-            btn.textContent = '✓ Copied';
-            setTimeout(() => { btn.textContent = orig; }, 1500);
-          } catch {}
-        });
-        document.getElementById('share-twitter')!.addEventListener('click', () => {
-          const cleanLabel = v.label.replace(/^[^a-zA-Z]+/, '').trim();
-          const text = `9bench: ${fmt(r.scores.overall)} (${cleanLabel}) — ${data.percentile}th percentile globally.`;
-          const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(shareUrl)}`;
-          window.open(url, '_blank');
-        });
-        document.getElementById('run-again')!.addEventListener('click', () => {
-          window.location.href = '/';
-        });
+          <!-- VS. KNOWN HARDWARE (V1 viral asset) -->
+          <h3 class="result__section-h">— vs. known hardware</h3>
+          <div id="cmp-bars" class="cmp-bars">
+            <!-- Phase 2 placeholder: shown until reference_hardware D1 table is seeded -->
+            <p class="cmp-bars__placeholder font-mono">
+              <span class="text-warn">Phase 2:</span>
+              comparison data unlocks once reference hardware is seeded.
+              <a href="/methodology" class="text-accent">How this works →</a>
+            </p>
+          </div>
 
-      } catch (e: any) {
-        loading.hidden = true;
-        errorDiv.hidden = false;
-        errorDiv.innerHTML = `<div class="result-card"><div class="result-snark" style="border-color:#DC2626">Result not found or expired: ${e.message}</div></div>`;
-      }
-    }
+          <!-- Raw measurements (collapsible) -->
+          <details class="raw-measurements">
+            <summary class="raw-measurements__summary">
+              — Raw measurements
+              <span class="raw-measurements__hint">click to expand</span>
+            </summary>
+            <div class="raw-measurements__body">
+              <div class="result-row">
+                <span class="result-row-label">GPU compute</span>
+                <span class="result-row-value tnum" id="raw-gflops">—</span>
+              </div>
+              <div class="result-row">
+                <span class="result-row-label">CPU cores</span>
+                <span class="result-row-value tnum" id="raw-cores">—</span>
+              </div>
+              <div class="result-row">
+                <span class="result-row-label">SHA-256 single</span>
+                <span class="result-row-value tnum" id="raw-sha-single">—</span>
+              </div>
+              <div class="result-row">
+                <span class="result-row-label">SHA-256 multi</span>
+                <span class="result-row-value tnum" id="raw-sha-multi">—</span>
+              </div>
+              <div class="result-row">
+                <span class="result-row-label">RAM read</span>
+                <span class="result-row-value tnum" id="raw-ram-read">—</span>
+              </div>
+              <div class="result-row">
+                <span class="result-row-label">RAM write</span>
+                <span class="result-row-value tnum" id="raw-ram-write">—</span>
+              </div>
+              <div class="result-row">
+                <span class="result-row-label">RAM random latency</span>
+                <span class="result-row-value tnum" id="raw-ram-latency">—</span>
+              </div>
+            </div>
+          </details>
+        </div>
 
-    load();
-  </script>
+        <!-- Right column: Trading Card + Share Actions -->
+        <aside class="result__col-right">
 
-  <style is:global>
-    .share-btn-action {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.4rem;
-      padding: 0.55rem 1rem;
-      background: var(--bg-elevated);
-      border: 1px solid var(--border);
-      border-radius: 0.5rem;
-      color: var(--text);
-      cursor: pointer;
-      font-size: 0.9rem;
-      font-weight: 600;
-    }
-    .share-btn-action:hover {
-      border-color: var(--brand);
-      transform: translateY(-1px);
-    }
-    .share-btn-action.share-btn-primary {
-      background: var(--brand);
-      border-color: var(--brand);
-      color: #fff;
-    }
-  </style>
+          <!-- TRADING CARD — captured by html-to-image for PNG export -->
+          <div class="trading-card-wrap">
+            <div class="trading-card" id="trading-card">
+              <div class="trading-card__head">
+                <span>9BENCH · TRUTH SERIES</span>
+                <span id="card-id">—</span>
+              </div>
+              <div>
+                <span class="trading-card__score tnum" id="card-score">—</span>
+                <span class="trading-card__tier" id="card-tier">—</span>
+              </div>
+              <div class="trading-card__hw" id="card-hw">—</div>
+              <div class="trading-card__components">
+                <div class="trading-card__comp">
+                  <span class="trading-card__comp-label">— GPU</span>
+                  <span class="trading-card__comp-value tnum" id="card-gpu">—</span>
+                </div>
+                <div class="trading-card__comp">
+                  <span class="trading-card__comp-label">— CPU·1</span>
+                  <span class="trading-card__comp-value tnum" id="card-cpu1">—</span>
+                </div>
+                <div class="trading-card__comp">
+                  <span class="trading-card__comp-label">— CPU·M</span>
+                  <span class="trading-card__comp-value tnum" id="card-cpum">—</span>
+                </div>
+                <div class="trading-card__comp">
+                  <span class="trading-card__comp-label">— RAM</span>
+                  <span class="trading-card__comp-value tnum" id="card-ram">—</span>
+                </div>
+              </div>
+              <div class="trading-card__pct" id="card-pct">—</div>
+              <div class="trading-card__url" id="card-url">9bench.com/r/—</div>
+            </div>
+          </div>
+
+          <!-- Share Actions Stack -->
+          <div class="share-actions">
+            <a href="#" class="share-actions__primary" id="share-beat">
+              BEAT MY SCORE →
+              <span class="share-actions__url" id="share-url-display">9bench.com/r/—</span>
+            </a>
+            <button type="button" class="share-actions__btn" id="share-png">↓ DOWNLOAD CARD AS PNG · 1080×1350</button>
+            <button type="button" class="share-actions__btn" id="share-link">🔗 COPY LINK</button>
+            <button type="button" class="share-actions__btn" id="share-twitter">𝕏 / TWITTER</button>
+            <button type="button" class="share-actions__btn" id="share-reddit">🟧 POST TO REDDIT</button>
+            <button type="button" class="share-actions__btn" id="share-json">{ } EXPORT RAW JSON</button>
+          </div>
+
+          <!-- Permalink reminder -->
+          <div class="permalink-reminder">
+            <span class="permalink-reminder__label">// PERMALINK</span>
+            <span class="permalink-reminder__url" id="permalink-url">9bench.com/r/—</span>
+            <span class="permalink-reminder__sub">
+              Anonymous. No fingerprint stored. Open across devices, share with anyone.
+            </span>
+          </div>
+        </aside>
+      </section>
+
+      <!-- Truth Disclaimer (always shown) -->
+      <section style="padding: 32px 0;">
+        <TruthDisclaimer />
+      </section>
+
+      <!-- CTA back to test -->
+      <section class="result__cta">
+        <a href="/test/" class="run-btn">▶ TEST AGAIN</a>
+        <a href="/methodology" class="btn-outline">Read the methodology</a>
+      </section>
+    </article>
+  </main>
 </BaseLayout>
+
+<style>
+  .result-page {
+    padding: 24px 0 56px;
+  }
+
+  /* Loading + error states */
+  .loading-state, .error-state {
+    text-align: center;
+    padding: 96px 0;
+  }
+  .loading-state__pulse {
+    width: 14px; height: 14px;
+    background: var(--accent);
+    margin: 0 auto 18px;
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+  .loading-state__text {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--fg-3);
+  }
+
+  /* Header strip */
+  .result__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 12px 0;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 56px;
+  }
+  .result__header-left { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* Hero */
+  .result__hero {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 32px;
+    margin-bottom: 56px;
+    align-items: end;
+  }
+  @media (min-width: 1024px) {
+    .result__hero { grid-template-columns: 1.4fr 1fr; gap: 56px; }
+  }
+  .result__hero-score {
+    display: flex;
+    align-items: end;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .result__big {
+    font-family: var(--sans);
+    font-weight: 800;
+    font-size: clamp(80px, 14vw, 200px);
+    line-height: 0.85;
+    letter-spacing: -0.04em;
+    color: var(--fg);
+  }
+  .result__tier {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-bottom: 16px;
+  }
+  .result__tier-label {
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .result__tier-sub {
+    font-family: var(--sans);
+    font-size: 14px;
+    color: var(--fg-2);
+  }
+
+  .result__hero-narrative {
+    padding-bottom: 16px;
+  }
+  .result__narrative {
+    font-family: var(--sans);
+    font-size: 17px;
+    line-height: 1.55;
+    color: var(--fg-2);
+    margin: 0 0 16px 0;
+    max-width: 480px;
+  }
+  .result__rank {
+    font-size: 12px;
+    color: var(--fg-3);
+    letter-spacing: 0.04em;
+  }
+
+  /* Component grid (4 cards) */
+  .component-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    margin-bottom: 56px;
+  }
+  @media (min-width: 768px) {
+    .component-grid { grid-template-columns: repeat(4, 1fr); }
+  }
+  .component-card {
+    background: var(--bg-2);
+    padding: 24px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .component-card__label {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .component-card__value {
+    font-family: var(--sans);
+    font-weight: 800;
+    font-size: clamp(36px, 4vw, 56px);
+    line-height: 1;
+    letter-spacing: -0.02em;
+    color: var(--fg);
+  }
+  .component-card__sub {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--fg-3);
+    margin-top: auto;
+    letter-spacing: 0.03em;
+  }
+
+  /* Main two-column area */
+  .result__main {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 48px;
+  }
+  @media (min-width: 1024px) {
+    .result__main { grid-template-columns: 1.4fr 1fr; gap: 48px; }
+  }
+  .result__section-h {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--fg-3);
+    margin: 0 0 16px 0;
+  }
+  .result__section-h:not(:first-child) { margin-top: 40px; }
+
+  /* Hardware rows */
+  .hw-rows {
+    border-top: 1px solid var(--line-2);
+  }
+  .hw-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--line-2);
+    font-family: var(--mono);
+    font-size: 13px;
+  }
+  .hw-row__label {
+    color: var(--fg-3);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    flex: 0 0 90px;
+  }
+  .hw-row__value {
+    color: var(--fg);
+    text-align: right;
+    flex: 1;
+    word-break: break-word;
+  }
+
+  /* Comparison bars (Phase 2 placeholder for now) */
+  .cmp-bars__placeholder {
+    padding: 14px 16px;
+    border: 1px dashed var(--line);
+    background: var(--bg-2);
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--fg-2);
+  }
+
+  /* Raw measurements (collapsible) */
+  .raw-measurements {
+    margin-top: 32px;
+    border-top: 1px solid var(--line);
+    padding-top: 16px;
+  }
+  .raw-measurements__summary {
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--fg-3);
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+  }
+  .raw-measurements__summary::-webkit-details-marker { display: none; }
+  .raw-measurements__hint {
+    color: var(--fg-4);
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0.04em;
+  }
+  .raw-measurements[open] .raw-measurements__hint { content: 'click to collapse'; }
+  .raw-measurements__body {
+    margin-top: 8px;
+    border-top: 1px solid var(--line-2);
+  }
+
+  /* Right column: trading card + share actions */
+  .result__col-right {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .trading-card-wrap {
+    overflow-x: auto;
+  }
+
+  /* Share actions stack */
+  .share-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    border: 1px solid var(--line);
+  }
+  .share-actions__primary {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    padding: 14px 18px;
+    background: var(--accent);
+    color: #000;
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-decoration: none;
+    border-bottom: 1px solid #000;
+  }
+  .share-actions__primary:hover { background: var(--fg); }
+  .share-actions__url {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 400;
+    text-transform: lowercase;
+    letter-spacing: 0;
+    color: rgba(0, 0, 0, 0.55);
+  }
+  .share-actions__btn {
+    background: transparent;
+    color: var(--fg-2);
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    padding: 12px 18px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    text-align: left;
+    transition: color 0.15s, background 0.15s;
+  }
+  .share-actions__btn:last-child { border-bottom: 0; }
+  .share-actions__btn:hover { color: var(--accent); background: var(--bg-2); }
+  .share-actions__btn.is-success { color: var(--good); }
+
+  /* Permalink reminder */
+  .permalink-reminder {
+    border: 1px solid var(--line);
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .permalink-reminder__label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--fg-3);
+    letter-spacing: 0.12em;
+  }
+  .permalink-reminder__url {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent);
+    word-break: break-all;
+  }
+  .permalink-reminder__sub {
+    font-family: var(--sans);
+    font-size: 11px;
+    color: var(--fg-3);
+    line-height: 1.5;
+  }
+
+  /* CTA */
+  .result__cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding: 32px 0;
+    border-top: 1px solid var(--line);
+  }
+</style>
+
+<script>
+  // ─────────────────────────────────────────────────────────────────
+  //  RESULT PAGE — fetch + render + share actions
+  // ─────────────────────────────────────────────────────────────────
+
+  import { tierFor, PERCENTILE_MIN_N, shareText } from '../../components/bench/tier-system';
+  import { toPng } from 'html-to-image';
+
+  const $ = <T extends HTMLElement = HTMLElement>(sel: string) =>
+    document.querySelector(sel) as T | null;
+  const $$ = (sel: string) => Array.from(document.querySelectorAll(sel));
+
+  const loadingEl = $('#loading')!;
+  const errorEl   = $('#error')!;
+  const resultEl  = $('#result')!;
+
+  // Extract id from URL: /r/abc12345/ or /r/abc12345
+  const pathParts = window.location.pathname.split('/').filter(Boolean);
+  const resultId  = (pathParts[1] || '').toLowerCase();
+
+  function fmt(n: number): string {
+    return Number(n).toLocaleString();
+  }
+  function ordinal(n: number): string {
+    const s = ['th','st','nd','rd'];
+    const v = n % 100;
+    return n + (s[(v - 20) % 10] || s[v] || s[0]);
+  }
+  function setText(sel: string, text: string) {
+    const el = $(sel); if (el) el.textContent = text;
+  }
+
+  /**
+   * Build the narrative paragraph from real data.
+   * Avoids fabrication — only references measurements that exist.
+   */
+  function narrativeFor(r: any, percentile: number, total: number): string {
+    const tier = tierFor(r.scores.overall);
+    const isStrong = r.scores.overall >= 1700;
+    const isMid    = r.scores.overall >= 1000;
+    const isLow    = r.scores.overall < 500;
+
+    // Identify component imbalance (RAM is structurally low in browsers,
+    // so don't shame it — but if GPU or CPU is much weaker than the others,
+    // call it out)
+    const components = [
+      ['GPU', r.scores.gpu],
+      ['CPU', r.scores.cpuMulti],
+    ] as Array<[string, number]>;
+    const max = Math.max(...components.map(c => c[1]));
+    const min = Math.min(...components.map(c => c[1]));
+    const weakest = components.find(c => c[1] === min)?.[0];
+    const imbalanced = max > 0 && (min / max) < 0.45;
+
+    if (isStrong) {
+      return imbalanced
+        ? `Strong overall, but ${weakest} lags noticeably. Likely your next upgrade target.`
+        : `Strong configuration. You're paying enough that this is what you should expect.`;
+    }
+    if (isMid) {
+      return `Solid working machine. Office, browser-everything, light gaming — fine. Demanding 2026 tasks (local LLMs, 4K editing) will feel the squeeze.`;
+    }
+    if (isLow) {
+      return `Built for spreadsheets, not silicon-flexing. That's totally fine — calibrate expectations.`;
+    }
+    return `Functional everyday machine. Replacement cycle approaching for creative or technical work.`;
+  }
+
+  async function load() {
+    if (!/^[a-f0-9]{8}$/.test(resultId)) {
+      loadingEl.hidden = true;
+      errorEl.hidden = false;
+      $('#error-message')!.textContent = 'Invalid result ID format. Try the homepage.';
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/r/${resultId}`);
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}));
+        throw new Error((errBody as any).error || `HTTP ${res.status}`);
+      }
+      const data = await res.json() as any;
+      if (!data.ok) throw new Error(data.error || 'Unknown error');
+
+      const r          = data.result;
+      const percentile = data.percentile ?? 0;
+      const total      = data.total ?? 0;
+      const tier       = tierFor(r.scores.overall);
+
+      const dateStr = new Date(r.createdAt * 1000).toLocaleString('en-US', {
+        month: 'short', day: 'numeric', year: 'numeric',
+        hour: '2-digit', minute: '2-digit', timeZone: 'UTC',
+      }) + ' UTC';
+
+      // ── Document title with score ────────────────────────────
+      document.title = `9bench ${fmt(r.scores.overall)} (${tier.label}) — your hardware in 15 seconds`;
+
+      // ── Header strip ─────────────────────────────────────────
+      setText('#result-status', '✓ TEST COMPLETE');
+      setText('#result-date',   dateStr);
+      // We don't store browser strings yet — placeholder until schema migration
+      $('#result-browser')!.style.display = 'none';
+
+      // ── Hero ─────────────────────────────────────────────────
+      setText('#result-score', fmt(r.scores.overall));
+      setText('#tier-label',   tier.label);
+      setText('#tier-sub',     tier.sub);
+      $('#tier-label')!.style.color = tier.color;
+      setText('#result-narrative', narrativeFor(r, percentile, total));
+
+      // ── Rank line: percentile gate at N ≥ 100 ────────────────
+      if (total >= PERCENTILE_MIN_N) {
+        setText('#result-rank',
+          `Faster than ${percentile}% of all runs · Ranked ${ordinal(total - Math.round(total * percentile / 100))} of ${fmt(total)}.`);
+      } else {
+        setText('#result-rank',
+          `Early days — ${fmt(total)} test${total === 1 ? '' : 's'} so far. Percentile ranking unlocks at 100+ runs.`);
+      }
+
+      // ── Component grid ───────────────────────────────────────
+      setText('#comp-gpu',  fmt(r.scores.gpu));
+      setText('#comp-cpu1', fmt(r.scores.cpuSingle));
+      setText('#comp-cpum', fmt(r.scores.cpuMulti));
+      setText('#comp-ram',  fmt(r.scores.ram));
+      setText('#comp-gpu-sub',  `${r.gpu.gflops.toFixed(0)} GFLOPS`);
+      setText('#comp-ram-sub',  `${r.ram.readGBs.toFixed(1)} / ${r.ram.writeGBs.toFixed(1)} GB/s`);
+
+      // ── Detected hardware rows ───────────────────────────────
+      setText('#hw-gpu',     r.gpu.name || 'Browser hides this — re-test to add manually');
+      setText('#hw-cpu',     `${r.cpu.cores} cores`);
+      setText('#hw-ram',     `${r.ram.readGBs.toFixed(1)} GB/s read · ${r.ram.writeGBs.toFixed(1)} GB/s write · ${r.ram.latencyNs.toFixed(1)} ns latency`);
+      setText('#hw-browser', 'Browser info per-test (not stored)');
+
+      // ── Raw measurements ─────────────────────────────────────
+      setText('#raw-gflops',     `${r.gpu.gflops.toFixed(1)} GFLOPS`);
+      setText('#raw-cores',      String(r.cpu.cores));
+      setText('#raw-sha-single', `${fmt(Math.round(r.cpu.hashesSingle))} h/s`);
+      setText('#raw-sha-multi',  `${fmt(Math.round(r.cpu.hashesMulti))} h/s`);
+      setText('#raw-ram-read',   `${r.ram.readGBs.toFixed(1)} GB/s`);
+      setText('#raw-ram-write',  `${r.ram.writeGBs.toFixed(1)} GB/s`);
+      setText('#raw-ram-latency',`${r.ram.latencyNs.toFixed(1)} ns`);
+
+      // ── Trading card ─────────────────────────────────────────
+      setText('#card-id',     `-${r.id.slice(0, 6)}-`);
+      setText('#card-score',  fmt(r.scores.overall));
+      setText('#card-tier',   tier.key === 'S' || tier.key === 'A' ? tier.key : '');
+      setText('#card-hw',     [
+        r.gpu.name || 'GPU details hidden',
+        `${r.cpu.cores}-core CPU`,
+      ].join(' · '));
+      setText('#card-gpu',    fmt(r.scores.gpu));
+      setText('#card-cpu1',   fmt(r.scores.cpuSingle));
+      setText('#card-cpum',   fmt(r.scores.cpuMulti));
+      setText('#card-ram',    fmt(r.scores.ram));
+      const cardPctText = total >= PERCENTILE_MIN_N
+        ? `Faster than ${percentile}% globally`
+        : `Early days · ${fmt(total)} test${total === 1 ? '' : 's'} so far`;
+      setText('#card-pct', cardPctText);
+      setText('#card-url', `9bench.com/r/${r.id}`);
+
+      // ── Share actions URLs ───────────────────────────────────
+      const url = `https://9bench.com/r/${r.id}`;
+      setText('#share-url-display', url.replace(/^https?:\/\//, ''));
+      setText('#permalink-url',     url);
+      ($('#share-beat')! as HTMLAnchorElement).href = url;
+
+      // ── Show result, hide loading ────────────────────────────
+      loadingEl.hidden = true;
+      resultEl.hidden = false;
+
+      // ── Wire share buttons ───────────────────────────────────
+      wireShareButtons(r, percentile, total, tier, url);
+
+      // ── Load reference hardware comparison (async, non-blocking) ──
+      loadReferenceComparison(r.scores.overall);
+    } catch (e: any) {
+      console.error('Failed to load result', e);
+      loadingEl.hidden = true;
+      errorEl.hidden = false;
+      $('#error-message')!.textContent = e?.message || 'Could not load this result.';
+    }
+  }
+
+  /**
+   * Wire all the share-action buttons. Each is independent so a failure
+   * in one (e.g. clipboard blocked) doesn't break the others.
+   */
+  function wireShareButtons(r: any, percentile: number, total: number, tier: any, url: string) {
+    const shareTextStr = shareText(r.scores.overall, total >= PERCENTILE_MIN_N ? percentile : undefined);
+
+    // Copy link
+    $('#share-link')?.addEventListener('click', async (e) => {
+      const btn = e.currentTarget as HTMLButtonElement;
+      try {
+        await navigator.clipboard.writeText(url);
+        const original = btn.textContent;
+        btn.classList.add('is-success');
+        btn.textContent = '✓ COPIED';
+        setTimeout(() => { btn.classList.remove('is-success'); btn.textContent = original; }, 1500);
+      } catch {
+        // Fallback: open prompt() for user to copy manually
+        prompt('Copy this URL:', url);
+      }
+    });
+
+    // X / Twitter share
+    $('#share-twitter')?.addEventListener('click', () => {
+      const text = `${shareTextStr} ${url}`;
+      const u = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
+      window.open(u, '_blank', 'noopener,width=560,height=600');
+    });
+
+    // Reddit share — opens compose with title pre-filled
+    $('#share-reddit')?.addEventListener('click', () => {
+      const title = `${shareTextStr.replace(/\.$/, '')} — built it in the browser`;
+      const u = `https://www.reddit.com/submit?url=${encodeURIComponent(url)}&title=${encodeURIComponent(title)}`;
+      window.open(u, '_blank', 'noopener');
+    });
+
+    // PNG export — captures the .trading-card DOM directly
+    $('#share-png')?.addEventListener('click', async (e) => {
+      const btn = e.currentTarget as HTMLButtonElement;
+      const card = $('#trading-card');
+      if (!card) return;
+      const original = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = '⏳ RENDERING…';
+      try {
+        // 3x pixelRatio for crisp 1080×1350 export — Twitter/Reddit display
+        // images at 1080px wide; 3x of our 360px card width = 1080px exact.
+        const dataUrl = await toPng(card, {
+          pixelRatio: 3,
+          backgroundColor: '#0A0A0A',
+          cacheBust: true,
+        });
+        const a = document.createElement('a');
+        a.download = `9bench-${r.id}.png`;
+        a.href = dataUrl;
+        a.click();
+        btn.classList.add('is-success');
+        btn.textContent = '✓ DOWNLOADED';
+        setTimeout(() => { btn.classList.remove('is-success'); btn.textContent = original; btn.disabled = false; }, 1500);
+      } catch (err) {
+        console.error('PNG export failed', err);
+        btn.textContent = '✗ FAILED — try copy link instead';
+        btn.disabled = false;
+        setTimeout(() => { btn.textContent = original; }, 2500);
+      }
+    });
+
+    // JSON export — full result for verification
+    $('#share-json')?.addEventListener('click', () => {
+      const blob = new Blob([JSON.stringify({
+        url,
+        result: r,
+        percentile,
+        total,
+        exportedAt: new Date().toISOString(),
+      }, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.download = `9bench-${r.id}.json`;
+      a.href = URL.createObjectURL(blob);
+      a.click();
+      URL.revokeObjectURL(a.href);
+    });
+  }
+
+  /**
+   * Load reference hardware comparison bars from /api/reference-hardware.
+   * Empty response → keep Phase 2 placeholder visible.
+   * Real data → replace placeholder with bar chart.
+   */
+  async function loadReferenceComparison(userScore: number) {
+    try {
+      const res = await fetch(`/api/reference-hardware?limit=6&around=${userScore}`);
+      if (!res.ok) return;  // graceful — keep placeholder
+      const data = await res.json() as any;
+      const items = data.items || [];
+      if (items.length < 3) return;  // Less than 3 references = not useful — keep placeholder
+
+      const container = $('#cmp-bars');
+      if (!container) return;
+
+      // Determine the bar scale: we render relative to the user's score.
+      // Bars go left (negative delta) or right (positive delta) from a
+      // center line, max ±60% gives readable scale for typical hardware.
+      const MAX_DELTA = 60;
+
+      const html = items.map((item: any) => {
+        const pct = ((item.score - userScore) / userScore) * 100;
+        const sign = pct > 0 ? '+' : pct < 0 ? '-' : '';
+        const absPct = Math.min(Math.abs(pct), MAX_DELTA);
+        const halfWidth = (absPct / MAX_DELTA) * 50;  // 0-50% of half-track
+        const isFasterThanUser = pct > 0;
+        const fillStyle = isFasterThanUser
+          ? `left: 50%; width: ${halfWidth}%;`
+          : `right: 50%; width: ${halfWidth}%;`;
+        const fillClass = isFasterThanUser ? '' : 'cmp-bar__fill--neg';
+        const deltaClass = isFasterThanUser ? '' : 'cmp-bar__delta--neg';
+        const deltaText = sign === '' ? '·' : `${sign}${absPct.toFixed(0)}%`;
+        return `
+          <div class="cmp-bar">
+            <span class="cmp-bar__label" title="${item.notes || ''}">${item.name}</span>
+            <div class="cmp-bar__track">
+              <div class="cmp-bar__fill ${fillClass}" style="${fillStyle}"></div>
+            </div>
+            <span class="cmp-bar__delta ${deltaClass}">${deltaText}</span>
+          </div>
+        `;
+      }).join('');
+
+      container.innerHTML = `
+        <p style="font-family: var(--mono); font-size: 11px; color: var(--fg-3); margin: 0 0 12px 0;">
+          Negative = your machine is faster · Positive = reference is faster
+        </p>
+        ${html}
+      `;
+    } catch (e) {
+      // Silent fallback — placeholder stays visible
+      console.warn('reference-hardware fetch failed', e);
+    }
+  }
+
+  load();
+</script>

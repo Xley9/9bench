@@ -1,588 +1,414 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import IssueNameplate from '../components/bench/IssueNameplate.astro';
+import LiveCounter from '../components/bench/LiveCounter.astro';
+import TruthDisclaimer from '../components/bench/TruthDisclaimer.astro';
+
+// Stats are loaded client-side from /api/stats. SSR-safe defaults
+// here so the layout doesn't shift when the fetch resolves.
+// Vendor payments is hard-coded to 0 — by design, not by query.
+const initialStats = {
+  total_runs: 0,
+  gpu_models_seen: 0,
+  avg_duration_seconds: 0,
+  vendor_payments: 0,
+};
+
+const FEATURES = [
+  {
+    n: '01',
+    h: 'No paid bias',
+    b: "r/hardware banned UserBenchmark for documented anti-AMD bias. 9bench takes zero money from chip vendors. The scoring formula is on GitHub.",
+    pull: 'Zero vendor money.',
+  },
+  {
+    n: '02',
+    h: 'No 8 GB download',
+    b: 'Geekbench, Cinebench, 3DMark, PassMark all need 500 MB–8 GB and admin rights. Useless on corporate networks, schools, shared computers.',
+    pull: '0 MB to test.',
+  },
+  {
+    n: '03',
+    h: 'No fake precision',
+    b: "We tell you when our number is approximate. RAM is browser-sandboxed. We say so loudly instead of pretending our number is gospel.",
+    pull: "We say what we can't measure.",
+  },
+];
 ---
 
 <BaseLayout
   title="9bench — Free Browser CPU GPU RAM Benchmark, No Download"
   description="Test your computer's CPU, GPU, and RAM speed in 15 seconds — directly in your browser. WebGPU + WebAssembly powered. No download, no account, no bias. Free alternative to UserBenchmark."
-  keywords="browser hardware benchmark, online cpu gpu ram test, free pc benchmark no download, webgpu benchmark, userbenchmark alternative, instant pc speed test, is my computer fast, online geekbench alternative, browser-based benchmark, sha-256 cpu test"
 >
-  <main class="max-w-3xl mx-auto px-5 py-12">
-    <!-- Hero -->
-    <header class="text-center mb-12">
-      <div class="inline-block px-3 py-1 bg-brand-light/10 text-brand rounded-full text-xs font-bold tracking-wider uppercase mb-4">
-        ⚡ Truth Series · Hardware
+  <main class="container landing">
+
+    <IssueNameplate />
+
+    <!-- ── Hero ───────────────────────────────────────────────────── -->
+    <section class="hero">
+      <div class="hero__col-headline">
+        <h1 class="hero__h1">
+          Your PC<br />
+          in <em>15</em><br />
+          seconds.
+        </h1>
       </div>
-      <h1 class="text-5xl md:text-6xl font-extrabold tracking-tight mb-4">9bench</h1>
-      <p class="text-xl text-slate-400 mb-2">The honest browser benchmark.</p>
-      <p class="text-base text-slate-500 max-w-xl mx-auto">
-        Test your CPU + GPU + RAM in 15 seconds. No download. No bias.
-        Runs entirely in your browser via WebGPU + WebAssembly.
-      </p>
-    </header>
-
-    <!-- Run Button -->
-    <div class="text-center mb-12">
-      <button id="run-btn" class="run-btn">
-        <span id="run-btn-icon">▶</span>
-        <span id="run-btn-text">Test my hardware</span>
-      </button>
-      <p class="text-xs text-slate-500 mt-3">~15 seconds · No login · Privacy-first</p>
-      <div id="bench-warnings" class="mt-4 max-w-md mx-auto text-left space-y-2"></div>
-    </div>
-
-    <!-- Progress Stages (hidden until test starts) -->
-    <div id="progress" hidden>
-      <div class="progress-stage" id="stage-gpu">
-        <div class="progress-icon">🎮</div>
-        <div class="progress-label">GPU compute</div>
-        <div class="progress-detail" id="stage-gpu-detail">waiting…</div>
+      <div class="hero__col-aside">
+        <p class="hero__lede">
+          CPU + GPU + RAM, measured in your browser. No download. No login.
+          No vendor money. Open methodology — every formula on the page.
+        </p>
+        <div class="hero__cta-row">
+          <a href="/test/" class="run-btn">▶ TEST MY HARDWARE</a>
+          <a href="#paste-permalink" class="hero__permalink-link">or paste a permalink</a>
+        </div>
+        <p class="hero__sub">
+          ~15 seconds · No login · Privacy-first · Cyan or Orange — your call (top right).
+        </p>
       </div>
-      <div class="progress-stage" id="stage-cpu">
-        <div class="progress-icon">⚙️</div>
-        <div class="progress-label">CPU single + multi-core</div>
-        <div class="progress-detail" id="stage-cpu-detail">waiting…</div>
+    </section>
+
+    <!-- ── Stats row (live) ──────────────────────────────────────── -->
+    <section class="stats-row" id="stats-row" data-stats>
+      <div class="stat">
+        <div class="stat__num tnum" data-stat="total_runs">{initialStats.total_runs.toLocaleString()}</div>
+        <div class="stat__label">Runs submitted</div>
       </div>
-      <div class="progress-stage" id="stage-ram">
-        <div class="progress-icon">💾</div>
-        <div class="progress-label">RAM bandwidth</div>
-        <div class="progress-detail" id="stage-ram-detail">waiting…</div>
+      <div class="stat">
+        <div class="stat__num tnum" data-stat="gpu_models_seen">{initialStats.gpu_models_seen.toLocaleString()}</div>
+        <div class="stat__label">GPU models seen</div>
       </div>
-    </div>
+      <div class="stat">
+        <div class="stat__num tnum" data-stat="avg_duration_seconds">~{initialStats.avg_duration_seconds || '—'}s</div>
+        <div class="stat__label">Avg test duration</div>
+      </div>
+      <div class="stat">
+        <div class="stat__num tnum" style="color: var(--accent);">0</div>
+        <div class="stat__label">Vendors paid us</div>
+      </div>
+    </section>
 
-    <!-- Result Card -->
-    <div id="result" hidden></div>
+    <!-- ── How it differs (3-column) ──────────────────────────────── -->
+    <section class="features">
+      <header class="features__head">
+        <div class="feature-num">FEATURE / 01</div>
+        <h2 class="section-h">The honest one.</h2>
+        <p class="features__intro">
+          Three things every other benchmark gets wrong, and how 9bench fixes them.
+        </p>
+      </header>
+      <div class="features__grid">
+        {FEATURES.map((c, i) => (
+          <article class="feature" style={i < 2 ? 'border-right: 1px solid var(--line);' : ''}>
+            <div class="feature-num">· {c.n}</div>
+            <h3 class="feature-title">{c.h}</h3>
+            <p class="feature-body">{c.b}</p>
+            <p class="feature-quote">"{c.pull}"</p>
+          </article>
+        ))}
+      </div>
+    </section>
 
-    <!-- Capability check -->
-    <div id="caps" class="mt-12 text-center text-xs text-slate-500"></div>
+    <!-- ── Quote block (Methodology pull-quote) ──────────────────── -->
+    <section class="pullquote">
+      <blockquote class="pullquote__text">
+        <span class="text-accent">"</span>
+        Every formula. Every constant. Every weight.
+        If you find a flaw, file an issue. We ship the patch the same week.
+        <span class="text-accent">"</span>
+      </blockquote>
+      <div class="pullquote__attr">— METHODOLOGY · v3.1 · APR 2026</div>
+    </section>
 
-    <!-- SEO content section — keyword-rich, AI-citable -->
-    <section class="mt-20 prose-content max-w-none">
-      <h2 class="text-2xl font-bold text-brand mb-4">What 9bench measures</h2>
-      <p class="text-slate-300 leading-relaxed mb-4">
-        9bench is a free, open browser-based hardware benchmark that tests your
-        <strong>CPU</strong>, <strong>GPU</strong>, and <strong>RAM</strong> speed in about 15 seconds — no download,
-        no installation, no account required. The entire benchmark runs locally in your browser using
-        <strong>WebGPU compute shaders</strong>, <strong>WebAssembly</strong>, <strong>Web Workers</strong>,
-        and the <strong>Web Crypto API</strong>.
-      </p>
-
-      <h3 class="text-lg font-bold mt-6 mb-2">How it differs from UserBenchmark and Geekbench</h3>
-      <p class="text-slate-300 leading-relaxed mb-4">
-        <a href="https://www.reddit.com/r/pcmasterrace/" rel="external" class="text-brand hover:underline">r/pcmasterrace</a> and
-        <a href="https://www.reddit.com/r/hardware/" rel="external" class="text-brand hover:underline">r/hardware</a> have banned
-        <em>UserBenchmark.com</em> due to documented anti-AMD bias. <em>Geekbench</em>, <em>Cinebench</em>, <em>3DMark</em>, and
-        <em>PassMark</em> all require 500MB–8GB downloads and admin rights — unusable in corporate networks, schools, and
-        on shared computers. 9bench fills the gap: instant, transparent, no install, fair scoring.
-      </p>
-
-      <h3 class="text-lg font-bold mt-6 mb-2">What gets tested</h3>
-      <ul class="text-slate-300 list-disc list-inside leading-relaxed mb-4 space-y-1">
-        <li><strong>GPU compute</strong> — 1024×1024 floating-point matrix multiplication via WebGPU compute shader. Output: GFLOPS.</li>
-        <li><strong>CPU single-core</strong> — 200,000 SHA-256 hashes computed serially. Output: hashes/sec + score.</li>
-        <li><strong>CPU multi-core</strong> — Same workload across all cores via Web Workers. Output: hashes/sec + speedup efficiency.</li>
-        <li><strong>RAM bandwidth</strong> — 256 MB working set tested for sequential read, write, copy, plus random-access latency.</li>
-      </ul>
-
-      <h3 class="text-lg font-bold mt-6 mb-2">How to use 9bench</h3>
-      <ol class="text-slate-300 list-decimal list-inside leading-relaxed mb-4 space-y-1">
-        <li>Open <a href="https://9bench.com/" class="text-brand hover:underline">9bench.com</a> in any modern browser (Chrome 113+, Firefox 147+, Safari 26+, Edge 113+).</li>
-        <li>Click <em>"Test my hardware"</em>. The benchmark runs automatically in ~15 seconds.</li>
-        <li>Your score, percentile ranking, and detailed component breakdown appear instantly.</li>
-        <li>Optionally share your result via permalink, copy link, or tweet.</li>
-      </ol>
-
-      <h3 class="text-lg font-bold mt-6 mb-2">Browser compatibility (April 2026)</h3>
-      <ul class="text-slate-300 list-disc list-inside leading-relaxed mb-4 space-y-1">
-        <li>✅ <strong>Chrome 113+</strong> on Windows, macOS, Linux, Android — full support since 2023</li>
-        <li>✅ <strong>Edge 113+</strong> — full support</li>
-        <li>✅ <strong>Safari 26+</strong> on macOS Tahoe, iOS 26, iPadOS 26, visionOS 26 — full WebGPU support</li>
-        <li>✅ <strong>Firefox 147+</strong> on Windows + macOS Tahoe (ARM64)</li>
-      </ul>
-
-      <p class="text-slate-300 leading-relaxed mt-6">
-        Read the full <a href="/methodology" class="text-brand hover:underline font-semibold">scoring methodology</a> for every formula and bracket,
-        or check the <a href="/faq" class="text-brand hover:underline font-semibold">FAQ</a> for common questions.
-        Source code on <a href="https://github.com/atillakuruk/9bench" class="text-brand hover:underline" rel="external">GitHub</a>.
+    <!-- ── Permalink paste box ────────────────────────────────────── -->
+    <section class="permalink-section" id="paste-permalink">
+      <div class="permalink-section__head">
+        <div class="feature-num">JUMP / 02</div>
+        <h2 class="section-h">Compare a permalink.</h2>
+      </div>
+      <form class="permalink-form" id="permalink-form">
+        <input
+          type="text"
+          name="permalink"
+          placeholder="9bench.com/r/74aa808d  or  74aa808d"
+          aria-label="9bench result permalink or hash"
+        />
+        <button type="submit" class="btn-outline">Open result →</button>
+      </form>
+      <p class="permalink-section__hint">
+        Paste any 9bench result URL or 8-char hash to view the full breakdown.
       </p>
     </section>
 
-    <!-- HowTo schema for AEO/GEO -->
-    <script slot="head" type="application/ld+json" set:html={JSON.stringify({
-      '@context': 'https://schema.org',
-      '@type': 'HowTo',
-      name: 'How to test your computer\'s CPU, GPU, and RAM speed in 15 seconds',
-      description: 'Use 9bench, a free browser-based hardware benchmark, to measure your CPU, GPU, and RAM performance with no download.',
-      totalTime: 'PT15S',
-      tool: [{ '@type': 'HowToTool', name: 'Modern web browser (Chrome 113+, Firefox 147+, Safari 26+, Edge 113+)' }],
-      step: [
-        { '@type': 'HowToStep', position: 1, name: 'Open 9bench.com', text: 'Open https://9bench.com in any modern web browser.' },
-        { '@type': 'HowToStep', position: 2, name: 'Click "Test my hardware"', text: 'Click the green "Test my hardware" button to start the benchmark.' },
-        { '@type': 'HowToStep', position: 3, name: 'Wait 15 seconds', text: 'The benchmark runs CPU, GPU, and RAM tests automatically in about 15 seconds.' },
-        { '@type': 'HowToStep', position: 4, name: 'View your score', text: 'Your overall 9bench score, component breakdown, percentile ranking, and shareable permalink appear instantly.' }
-      ]
-    })} />
+    <!-- ── Truth disclaimer (always visible on Landing for new visitors) ── -->
+    <section class="landing-disclaimer">
+      <TruthDisclaimer compact />
+    </section>
 
-    <!-- Trust footer -->
-    <footer class="mt-20 pt-8 border-t border-slate-800 text-center text-xs text-slate-500">
-      <nav class="mb-4 flex justify-center gap-6 text-sm">
-        <a href="/methodology" class="text-brand hover:underline">Methodology</a>
-        <a href="/faq" class="text-brand hover:underline">FAQ</a>
-        <a href="https://github.com/atillakuruk/9bench" class="text-brand hover:underline" rel="external">GitHub</a>
-      </nav>
-      <p class="mb-2">
-        9bench is built by <a href="https://toololis.com/atilla/" class="text-brand hover:underline">Atilla Kürük</a> · sister-product of
-        <a href="https://toololis.com" class="text-brand hover:underline">Toololis</a>
+    <!-- ── SEO body content (long-form, AI-citable) ────────────────── -->
+    <section class="seo-body">
+      <h2 class="section-h" style="margin-top: 96px;">What 9bench measures</h2>
+      <p class="seo-body__p">
+        9bench is a free, open browser-based hardware benchmark that tests your
+        <strong>CPU</strong>, <strong>GPU</strong>, and <strong>RAM</strong> speed in about
+        15 seconds — no download, no installation, no account required. The entire benchmark
+        runs locally in your browser using <strong>WebGPU compute shaders</strong>,
+        <strong>WebAssembly</strong>, <strong>Web Workers</strong>, and the
+        <strong>Web Crypto API</strong>.
       </p>
-      <p>
-        Open methodology · No data leaves your browser unless you submit · No account · No ads
+      <h3 class="seo-body__h3">How it differs from UserBenchmark and Geekbench</h3>
+      <p class="seo-body__p">
+        <a href="https://www.reddit.com/r/pcmasterrace/" rel="external">r/pcmasterrace</a> and
+        <a href="https://www.reddit.com/r/hardware/" rel="external">r/hardware</a>
+        have banned <em>UserBenchmark.com</em> due to documented anti-AMD bias.
+        <em>Geekbench</em>, <em>Cinebench</em>, <em>3DMark</em>, and <em>PassMark</em>
+        all require 500MB–8GB downloads and admin rights — unusable in corporate networks,
+        schools, and on shared computers. 9bench fills the gap: instant, transparent,
+        no install, fair scoring.
       </p>
-    </footer>
+    </section>
   </main>
-
-  <script>
-    import { runFullBench, type Stage } from '../bench/runner.ts';
-
-    const runBtn = document.getElementById('run-btn') as HTMLButtonElement;
-    const runBtnIcon = document.getElementById('run-btn-icon')!;
-    const runBtnText = document.getElementById('run-btn-text')!;
-    const progress = document.getElementById('progress')!;
-    const result = document.getElementById('result')!;
-    const caps = document.getElementById('caps')!;
-
-    // Capability check
-    const hasWebGPU = 'gpu' in navigator;
-    const hasWebWorkers = 'Worker' in window;
-    const hasCrypto = 'crypto' in window && 'subtle' in crypto;
-    const cores = navigator.hardwareConcurrency || '?';
-    caps.innerHTML = `
-      <div class="inline-flex gap-3 flex-wrap justify-center">
-        <span>${hasWebGPU ? '✓' : '✗'} WebGPU</span>
-        <span>${hasWebWorkers ? '✓' : '✗'} Workers</span>
-        <span>${hasCrypto ? '✓' : '✗'} Web Crypto</span>
-        <span>${cores} cores reported</span>
-        <a href="/methodology" class="text-brand underline">Methodology</a>
-      </div>
-    `;
-
-    // ── Pre-bench transparency warnings ──────────────────────────
-    // Detect conditions that will distort the score and tell the user
-    // before they hit "Test my hardware". Truth Series principle:
-    // tell the user what's affecting their result, don't pretend it's clean.
-    const warningsEl = document.getElementById('bench-warnings')!;
-    function pushWarn(msg: string, severity: 'info' | 'warn' = 'warn') {
-      const cls = severity === 'warn'
-        ? 'text-amber-300 bg-amber-500/10 border-amber-500/30'
-        : 'text-sky-300 bg-sky-500/10 border-sky-500/30';
-      const div = document.createElement('div');
-      div.className = `px-3 py-2 rounded-lg border ${cls} text-xs`;
-      div.innerHTML = msg;
-      warningsEl.appendChild(div);
-    }
-
-    // 1. Browser-vendor note
-    const ua = navigator.userAgent;
-    const isFirefox = /Firefox\//.test(ua);
-    const isSafari = /Safari\//.test(ua) && !/Chrome|Chromium|Edg/.test(ua);
-    if (isFirefox) {
-      pushWarn('🦊 <strong>Firefox detected.</strong> Same hardware typically scores 10–20% lower in Firefox vs Chrome (V8 is faster than SpiderMonkey for our workloads). For comparable scores, use Chrome.', 'info');
-    } else if (isSafari) {
-      pushWarn('🧭 <strong>Safari detected.</strong> WebGPU support varies by Safari version. Some compute paths fall back to slower Metal-via-WebGL emulation. For comparable scores, use Chrome.', 'info');
-    }
-
-    // 2. Battery / power-state warning (async — doesn't block button)
-    if ('getBattery' in navigator) {
-      (navigator as any).getBattery().then((battery: any) => {
-        if (!battery.charging) {
-          pushWarn('🔋 <strong>Running on battery.</strong> Most laptops cap CPU/GPU performance 30–50% on battery to save power. For your real performance ceiling, plug in and re-run.', 'warn');
-        }
-      }).catch(() => { /* getBattery deprecated in some browsers */ });
-    }
-
-    // 3. WebGPU absence
-    if (!hasWebGPU) {
-      pushWarn('⚠️ <strong>WebGPU not available</strong> — GPU score will be 0. Enable in <code>chrome://flags</code> or use Chrome 113+ / Edge / Safari 17+.');
-    }
-
-    // Rotating status messages per stage — gives impression of multi-step computation
-    // Even though the actual bench function is one blocking call, the user sees
-    // realistic sub-step feedback every 700ms.
-    const STAGE_MESSAGES: Record<string, string[]> = {
-      gpu: [
-        'Probing WebGPU adapter…',
-        'Compiling compute shader…',
-        'Allocating 12 MB GPU buffers…',
-        'Running matrix multiplication…',
-        'Synchronizing GPU pipeline…',
-        'Reading back results…',
-        'Computing GFLOPS…'
-      ],
-      cpu: [
-        'Warming up CPU caches…',
-        'Single-core SHA-256 chain…',
-        'Spawning Web Workers…',
-        'Parallel SHA-256 across cores…',
-        'Measuring multi-core scaling…',
-        'Computing efficiency ratio…'
-      ],
-      ram: [
-        'Allocating 256 MB working set…',
-        'Sequential read pass…',
-        'Sequential write pass…',
-        'Memory copy throughput…',
-        'Random-access latency probe…',
-        'Computing bandwidth…'
-      ]
-    };
-
-    const stageIntervals: Record<string, number> = {};
-
-    function updateStage(id: string, percent: number, message: string) {
-      const stage = document.getElementById('stage-' + id);
-      const detail = document.getElementById('stage-' + id + '-detail');
-      if (!stage || !detail) return;
-
-      if (percent >= 100) {
-        // Stage done — clear cycling, show real result
-        stage.classList.add('done');
-        stage.classList.remove('active');
-        if (stageIntervals[id]) {
-          clearInterval(stageIntervals[id]);
-          delete stageIntervals[id];
-        }
-        detail.textContent = message;
-      } else {
-        // Stage active — start cycling messages
-        stage.classList.add('active');
-        stage.classList.remove('done');
-
-        const msgs = STAGE_MESSAGES[id] || [message];
-        let i = 0;
-        detail.textContent = msgs[0];
-        if (stageIntervals[id]) clearInterval(stageIntervals[id]);
-        stageIntervals[id] = window.setInterval(() => {
-          i = (i + 1) % msgs.length;
-          if (detail) detail.textContent = msgs[i];
-        }, 700);
-      }
-    }
-
-    // English ordinal: 1→1st, 2→2nd, 3→3rd, 4→4th, 11→11th, 21→21st, 33→33rd
-    function ordinal(n: number): string {
-      const s = ['th', 'st', 'nd', 'rd'];
-      const v = n % 100;
-      return n + (s[(v - 20) % 10] || s[v] || s[0]);
-    }
-
-    // Wake Lock — keep screen on during test (mobile especially)
-    let wakeLock: any = null;
-    async function requestWakeLock() {
-      try {
-        if ('wakeLock' in navigator) {
-          wakeLock = await (navigator as any).wakeLock.request('screen');
-        }
-      } catch {}
-    }
-    async function releaseWakeLock() {
-      try { if (wakeLock) { await wakeLock.release(); wakeLock = null; } } catch {}
-    }
-
-    runBtn.addEventListener('click', async () => {
-      runBtn.disabled = true;
-      runBtnIcon.textContent = '⟳';
-      runBtnText.textContent = 'Scanning…';
-      progress.hidden = false;
-      result.hidden = true;
-      result.innerHTML = '';
-
-      // Activate global scanning state (scanlines + top status bar)
-      document.body.classList.add('scanning');
-
-      await requestWakeLock();
-
-      try {
-        const r = await runFullBench((stage, percent, message) => {
-          if (stage === 'done') return;
-          updateStage(stage, percent, message);
-        });
-
-        // Auto-submit to global ranking + get persistent URL
-        let submitted: { id?: string; url?: string; percentile?: number; total?: number } = {};
-        try {
-          const submitRes = await fetch('/api/submit', {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({
-              scores: r.scores,
-              gpu: { gflops: r.gpu.gflops, adapterName: r.hardware.gpu },
-              cpu: r.cpu,
-              ram: r.ram,
-              hardware: r.hardware,
-              durationMs: r.durationMs
-            })
-          });
-          if (submitRes.ok) {
-            submitted = await submitRes.json() as any;
-            // Override local percentile estimate with real one from server
-            if (typeof submitted.percentile === 'number') {
-              r.verdict.percentileEstimate = submitted.percentile;
-            }
-          }
-        } catch (e) {
-          console.warn('Submit failed (offline?):', e);
-        }
-
-        // Save to local history (privacy-respecting)
-        try {
-          const hist = JSON.parse(localStorage.getItem('9bench:history') || '[]');
-          hist.push({
-            timestamp: Date.now(),
-            resultId: submitted.id || null,
-            score: r.scores.overall,
-            scores: r.scores,
-            gpu: r.hardware.gpu,
-            cores: r.cpu.cores
-          });
-          // Keep last 50 entries
-          localStorage.setItem('9bench:history', JSON.stringify(hist.slice(-50)));
-        } catch {}
-
-        // Render result card
-        const fmt = (n: number) => n.toLocaleString();
-        const pct = (n: number, max: number) => Math.min(100, Math.round((n / max) * 100));
-        // Escape user-controllable strings (GPU renderer string can contain weird chars
-        // from driver versions, ANGLE wrappers, kernel module names). Critical defense
-        // in case innerHTML is used downstream — never trust the GPU string raw.
-        const escapeHtml = (s: string) => String(s ?? '')
-          .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-          .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-
-        result.innerHTML = `
-          <div class="result-card">
-            <div class="result-header">
-              <span>⚡ TRUTH SERIES · HARDWARE</span>
-              <span>9bench.com</span>
-            </div>
-            <div class="result-statement">your 9bench score</div>
-            <div class="result-big">${fmt(r.scores.overall)}</div>
-            <div class="result-verdict" style="color: ${r.verdict.color}">
-              ${r.verdict.label}
-            </div>
-            <div class="result-snark">${r.verdict.snark}</div>
-
-            <h3 class="text-sm font-bold tracking-wider uppercase text-slate-400 mb-3">Component breakdown</h3>
-            <div class="mb-5">
-              <div class="score-component">
-                <div class="score-component-label">🎮 GPU</div>
-                <div class="score-component-bar"><div class="score-component-fill" style="width:${pct(r.scores.gpu, 5000)}%"></div></div>
-                <div class="score-component-value">${fmt(r.scores.gpu)}</div>
-              </div>
-              <div class="score-component">
-                <div class="score-component-label">⚙️ CPU·1</div>
-                <div class="score-component-bar"><div class="score-component-fill" style="width:${pct(r.scores.cpuSingle, 1500)}%"></div></div>
-                <div class="score-component-value">${fmt(r.scores.cpuSingle)}</div>
-              </div>
-              <div class="score-component">
-                <div class="score-component-label">⚙️ CPU·M</div>
-                <div class="score-component-bar"><div class="score-component-fill" style="width:${pct(r.scores.cpuMulti, 2500)}%"></div></div>
-                <div class="score-component-value">${fmt(r.scores.cpuMulti)}</div>
-              </div>
-              <div class="score-component">
-                <div class="score-component-label">💾 RAM</div>
-                <div class="score-component-bar"><div class="score-component-fill" style="width:${pct(r.scores.ram, 1500)}%"></div></div>
-                <div class="score-component-value">${fmt(r.scores.ram)}</div>
-              </div>
-            </div>
-
-            <h3 class="text-sm font-bold tracking-wider uppercase text-slate-400 mb-3">Detected hardware</h3>
-            <div class="result-rows">
-              ${r.hardware.info.gpu.unknown ? `
-              <div class="result-row"><span class="result-row-label">GPU</span><span class="result-row-value"><em class="text-slate-500">Browser hides this</em> · <a href="#" class="text-brand underline" id="add-gpu-manually">add manually</a></span></div>
-              ` : `
-              <div class="result-row"><span class="result-row-label">GPU</span><span class="result-row-value" id="gpu-display">${escapeHtml(r.hardware.info.gpu.name)}${r.hardware.info.gpu.source !== 'webgl' ? ` <span class="text-slate-500 text-xs">(${r.hardware.info.gpu.source})</span>` : ''}</span></div>
-              `}
-              <div class="result-row"><span class="result-row-label">CPU cores</span><span class="result-row-value">${r.cpu.cores}${r.hardware.info.cpu.archHint ? ` · ${escapeHtml(r.hardware.info.cpu.archHint)}` : ''}</span></div>
-              ${r.hardware.info.ram.deviceMemoryGB != null ? `
-              <div class="result-row"><span class="result-row-label">RAM (system)</span><span class="result-row-value">${r.hardware.info.ram.deviceMemoryGB >= 8 ? '≥ 8 GB <span class="text-slate-500 text-xs">(browser cap)</span>' : `≈ ${r.hardware.info.ram.deviceMemoryGB} GB <span class="text-slate-500 text-xs">(approx)</span>`}</span></div>
-              ` : ''}
-              <div class="result-row"><span class="result-row-label">Browser</span><span class="result-row-value">${escapeHtml(r.hardware.info.browser.name)}${r.hardware.info.browser.version ? ' ' + escapeHtml(r.hardware.info.browser.version) : ''} · ${escapeHtml(r.hardware.info.browser.os)}${r.hardware.info.browser.osVersion ? ' ' + escapeHtml(r.hardware.info.browser.osVersion) : ''}</span></div>
-            </div>
-
-            <h3 class="text-sm font-bold tracking-wider uppercase text-slate-400 mb-3 mt-6">Raw measurements</h3>
-            <div class="result-rows">
-              <div class="result-row"><span class="result-row-label">GPU compute</span><span class="result-row-value">${r.gpu.gflops.toFixed(1)} GFLOPS</span></div>
-              <div class="result-row"><span class="result-row-label">SHA-256 single</span><span class="result-row-value">${fmt(Math.round(r.cpu.hashesPerSecondSingle))} h/s</span></div>
-              <div class="result-row"><span class="result-row-label">SHA-256 multi</span><span class="result-row-value">${fmt(Math.round(r.cpu.hashesPerSecondMulti))} h/s</span></div>
-              <div class="result-row"><span class="result-row-label">Multi-core speedup</span><span class="result-row-value">${r.cpu.speedup.toFixed(2)}× (${(r.cpu.efficiency * 100).toFixed(0)}% eff)</span></div>
-              <div class="result-row"><span class="result-row-label">RAM read</span><span class="result-row-value">${r.ram.readBandwidthGBs.toFixed(1)} GB/s</span></div>
-              <div class="result-row"><span class="result-row-label">RAM write</span><span class="result-row-value">${r.ram.writeBandwidthGBs.toFixed(1)} GB/s</span></div>
-              <div class="result-row"><span class="result-row-label">RAM random latency</span><span class="result-row-value">${r.ram.randomAccessLatencyNs.toFixed(1)} ns</span></div>
-              <div class="result-row"><span class="result-row-label">Total test time</span><span class="result-row-value">${(r.durationMs / 1000).toFixed(1)} s</span></div>
-              <div class="result-row"><span class="result-row-label">${submitted.id ? 'Global percentile' : 'Estimated percentile'}</span><span class="result-row-value">${submitted.id ? `<strong>${ordinal(submitted.percentile!)}</strong> of ${submitted.total!.toLocaleString()} tests` : `~${ordinal(r.verdict.percentileEstimate)} (estimated)`}</span></div>
-              ${submitted.id ? `<div class="result-row"><span class="result-row-label">Permalink</span><span class="result-row-value"><a href="/r/${submitted.id}/" class="text-brand underline">9bench.com/r/${submitted.id}</a></span></div>` : ''}
-            </div>
-
-            ${submitted.id ? `
-            <div class="reaction-bar">
-              <button class="reaction-btn share-action" id="copy-share-link">
-                <span class="icon">🔗</span><span>Copy link</span>
-              </button>
-              <button class="reaction-btn share-action" id="share-twitter">
-                <span class="icon">🐦</span><span>Tweet</span>
-              </button>
-              <button class="reaction-btn share-action" id="share-native" hidden>
-                <span class="icon">📲</span><span>Share</span>
-              </button>
-            </div>
-            ` : ''}
-            <div class="reaction-bar">
-              <button class="reaction-btn" data-reaction="match">
-                <span class="icon">❤️</span><span>Matches my experience</span>
-              </button>
-              <button class="reaction-btn" data-reaction="off">
-                <span class="icon">🤔</span><span>Felt off</span>
-              </button>
-              <button class="reaction-btn" data-reaction="surprised">
-                <span class="icon">😮</span><span>Surprised me</span>
-              </button>
-            </div>
-
-            <div class="disclaimer">
-              <strong>Methodology:</strong> Score = geometric mean of GPU·CPU-multi·RAM weighted 35·45·20%.
-              Measurements are real but bound by browser overhead (typically 5-15% slower than native).
-              Cross-platform comparable. Not a replacement for Geekbench/Cinebench for absolute peak measurement —
-              optimized for instant, install-free, honest relative ranking.
-            </div>
-          </div>
-        `;
-
-        // Wire up "add manually" link when GPU detection failed.
-        // We never invent a GPU name — if the user wants their GPU shown,
-        // they enter it themselves. This stays consistent with Truth Series.
-        const addGpuLink = document.getElementById('add-gpu-manually');
-        if (addGpuLink) {
-          addGpuLink.addEventListener('click', async (e) => {
-            e.preventDefault();
-            // Pre-fill from prior manual entry if user did this before
-            const previous = localStorage.getItem('9bench:manual-gpu') || '';
-            const entered = window.prompt(
-              'Your browser is hiding your GPU info. What GPU do you have?\n\n' +
-              'Examples: "NVIDIA RTX 4070", "AMD Radeon RX 6800 XT", "Apple M2 Pro", "Intel Iris Xe"',
-              previous
-            );
-            if (entered && entered.trim()) {
-              const cleaned = entered.trim().slice(0, 80); // cap length to prevent abuse
-              try { localStorage.setItem('9bench:manual-gpu', cleaned); } catch {}
-              // Replace the entire result-row in place — no re-render needed
-              const row = (e.target as HTMLElement).closest('.result-row');
-              if (row) {
-                const valueSpan = row.querySelector('.result-row-value');
-                if (valueSpan) {
-                  valueSpan.innerHTML = escapeHtml(cleaned) +
-                    ' <span class="text-slate-500 text-xs">(self-reported)</span>';
-                }
-              }
-              // Update the in-memory result so subsequent share/submit uses it.
-              // Mark source clearly as "self-reported" to keep provenance honest —
-              // critical for Truth Series: never let user-typed data masquerade
-              // as detected hardware.
-              r.hardware.gpu = cleaned;
-              r.hardware.info.gpu.name = cleaned;
-              r.hardware.info.gpu.source = 'self-reported';
-              r.hardware.info.gpu.unknown = false;
-            }
-          });
-        }
-
-        // Wire up reaction buttons — submit to backend if we have an ID, else LocalStorage
-        result.querySelectorAll('.reaction-btn[data-reaction]').forEach((btn) => {
-          btn.addEventListener('click', async () => {
-            const reaction = (btn as HTMLElement).dataset.reaction!;
-            // Visually mark
-            result.querySelectorAll('.reaction-btn[data-reaction]').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            // Send to backend if we have an ID
-            if (submitted.id) {
-              try {
-                await fetch('/api/react', {
-                  method: 'POST',
-                  headers: { 'content-type': 'application/json' },
-                  body: JSON.stringify({ id: submitted.id, reaction })
-                });
-              } catch {}
-            }
-            // Always also save locally for personal history
-            try {
-              const stored = JSON.parse(localStorage.getItem('9bench:reactions') || '[]');
-              stored.push({
-                reaction,
-                resultId: submitted.id,
-                score: r.scores.overall,
-                gpu: r.hardware.gpu,
-                timestamp: Date.now()
-              });
-              localStorage.setItem('9bench:reactions', JSON.stringify(stored.slice(-50)));
-            } catch {}
-          });
-        });
-
-        // Wire up share actions if we have a result ID
-        if (submitted.id) {
-          const shareUrl = `https://9bench.com/r/${submitted.id}`;
-          const cleanLabel = r.verdict.label.replace(/^[^a-zA-Z]+/, '').trim();
-          const shareText = `9bench: ${r.scores.overall.toLocaleString()} (${cleanLabel}) — ${submitted.percentile}th percentile globally.`;
-
-          const copyLink = document.getElementById('copy-share-link');
-          if (copyLink) {
-            copyLink.addEventListener('click', async () => {
-              try {
-                await navigator.clipboard.writeText(shareUrl);
-                copyLink.classList.add('active');
-                const span = copyLink.querySelector('span:last-child')!;
-                const orig = span.textContent;
-                span.textContent = '✓ Copied';
-                setTimeout(() => { span.textContent = orig; copyLink.classList.remove('active'); }, 1500);
-              } catch {}
-            });
-          }
-          const tw = document.getElementById('share-twitter');
-          if (tw) {
-            tw.addEventListener('click', () => {
-              const u = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
-              window.open(u, '_blank');
-            });
-          }
-          // Native share on mobile if supported
-          const nativeBtn = document.getElementById('share-native');
-          if (nativeBtn && (navigator as any).share) {
-            const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
-            if (isMobile) {
-              nativeBtn.hidden = false;
-              nativeBtn.addEventListener('click', async () => {
-                try {
-                  await (navigator as any).share({
-                    title: '9bench score',
-                    text: shareText,
-                    url: shareUrl
-                  });
-                } catch {}
-              });
-            }
-          }
-        }
-
-        result.hidden = false;
-        result.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      } catch (e: any) {
-        result.innerHTML = `<div class="result-card"><div class="result-snark" style="border-color:#DC2626">Benchmark failed: ${e?.message || e}</div></div>`;
-        result.hidden = false;
-      } finally {
-        document.body.classList.remove('scanning');
-        await releaseWakeLock();
-        runBtn.disabled = false;
-        runBtnIcon.textContent = '↻';
-        runBtnText.textContent = 'Run again';
-      }
-    });
-  </script>
 </BaseLayout>
+
+<style>
+  .landing {
+    padding-top: 24px;
+    padding-bottom: 56px;
+  }
+
+  /* Hero — 3:2 grid on desktop, stacked on mobile */
+  .hero {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 32px;
+    padding: 56px 0 40px;
+    align-items: end;
+  }
+  @media (min-width: 1024px) {
+    .hero {
+      grid-template-columns: 3fr 2fr;
+      gap: 60px;
+    }
+  }
+  .hero__h1 {
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: clamp(64px, 11vw, 140px);
+    line-height: 0.85;
+    letter-spacing: -0.055em;
+    color: var(--fg);
+    margin: 0;
+  }
+  .hero__h1 em {
+    font-style: normal;
+    color: var(--accent);
+  }
+  .hero__col-aside { padding-bottom: 12px; }
+  .hero__lede {
+    font-family: var(--sans);
+    font-size: clamp(15px, 1.5vw, 19px);
+    line-height: 1.55;
+    color: var(--fg-2);
+    margin: 0 0 24px 0;
+    max-width: 480px;
+  }
+  .hero__cta-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+    margin-top: 16px;
+  }
+  .hero__permalink-link {
+    font-family: var(--sans);
+    font-size: 14px;
+    color: var(--fg-2);
+    text-decoration: none;
+    border-bottom: 1px solid var(--fg-3);
+    padding-bottom: 2px;
+  }
+  .hero__permalink-link:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+  .hero__sub {
+    margin-top: 16px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--fg-3);
+    letter-spacing: 0.04em;
+  }
+
+  /* Stats row — desktop 4-col, mobile 2-col */
+  .stats-row {
+    margin-top: 24px;
+  }
+
+  /* Features section — 1:3 column ratio (label : 3 cards) */
+  .features {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 32px;
+    padding: 80px 0;
+  }
+  @media (min-width: 1024px) {
+    .features {
+      grid-template-columns: 1fr 3fr;
+      gap: 60px;
+    }
+  }
+  .features__head {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .features__intro {
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--fg-3);
+    margin: 0;
+  }
+  .features__grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+  @media (min-width: 768px) {
+    .features__grid { grid-template-columns: repeat(3, 1fr); gap: 0; }
+    .feature { padding: 0 24px; }
+    .feature:first-child { padding-left: 0; }
+    .feature:last-child  { padding-right: 0; border-right: none !important; }
+  }
+  .feature {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+  .feature-quote {
+    margin: 14px 0 0 0;
+    padding-top: 10px;
+    border-top: 1px solid var(--line);
+  }
+
+  /* Pullquote block */
+  .pullquote {
+    padding: 56px 0;
+    border-top: 1px solid var(--line);
+  }
+  .pullquote__text {
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: clamp(24px, 4vw, 48px);
+    line-height: 1.05;
+    letter-spacing: -0.025em;
+    color: var(--fg);
+    margin: 0;
+    max-width: 1100px;
+  }
+  .pullquote__attr {
+    margin-top: 18px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--fg-3);
+    letter-spacing: 0.08em;
+  }
+
+  /* Permalink section */
+  .permalink-section {
+    padding: 56px 0;
+    border-top: 1px solid var(--line);
+  }
+  .permalink-section__head {
+    margin-bottom: 24px;
+  }
+  .permalink-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: stretch;
+    max-width: 600px;
+  }
+  .permalink-form input {
+    flex: 1 1 280px;
+    min-width: 220px;
+  }
+  .permalink-section__hint {
+    margin-top: 12px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--fg-3);
+  }
+
+  .landing-disclaimer {
+    padding: 32px 0 56px;
+  }
+
+  /* SEO body */
+  .seo-body {
+    border-top: 1px solid var(--line);
+    padding: 56px 0 0;
+    max-width: 720px;
+  }
+  .seo-body__p {
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--fg-2);
+    margin: 0 0 18px 0;
+  }
+  .seo-body__p strong { color: var(--fg); font-weight: 600; }
+  .seo-body__p em     { color: var(--fg); font-style: normal; }
+  .seo-body__h3 {
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 22px;
+    color: var(--fg);
+    margin: 32px 0 14px 0;
+  }
+</style>
+
+<script>
+  // ─── Live stats fetch ────────────────────────────────────────────
+  // Replace SSR placeholders with real /api/stats data once mounted.
+  // Stats endpoint is fast (single COUNT query); no loading state needed.
+  (async function loadStats() {
+    try {
+      const res = await fetch('/api/stats', { headers: { accept: 'application/json' }});
+      if (!res.ok) return;
+      const data = await res.json() as Record<string, number>;
+      document.querySelectorAll<HTMLElement>('[data-stat]').forEach((el) => {
+        const key = el.dataset.stat;
+        if (!key) return;
+        const v = data[key];
+        if (typeof v !== 'number') return;
+        if (key === 'avg_duration_seconds') {
+          el.textContent = '~' + (v > 0 ? v.toFixed(1) : '—') + 's';
+        } else {
+          el.textContent = v.toLocaleString();
+        }
+      });
+    } catch {
+      // Silent fallback — stats are non-critical, server hiccups are fine
+    }
+  })();
+
+  // ─── Permalink paste form ────────────────────────────────────────
+  // Accepts: full URL ("https://9bench.com/r/74aa808d") or bare hash ("74aa808d").
+  // Validates the hash format (8 hex chars) before navigating to prevent
+  // malformed redirects.
+  document.getElementById('permalink-form')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const input = (e.target as HTMLFormElement).elements.namedItem('permalink') as HTMLInputElement;
+    const raw = (input.value || '').trim();
+    // Extract trailing 8-char hex if present in URL form
+    const match = raw.match(/([0-9a-fA-F]{8})\/?$/);
+    if (match) {
+      window.location.href = '/r/' + match[1].toLowerCase() + '/';
+    } else {
+      input.setCustomValidity('Expected an 8-character hex hash like 74aa808d');
+      input.reportValidity();
+      setTimeout(() => input.setCustomValidity(''), 3000);
+    }
+  });
+</script>

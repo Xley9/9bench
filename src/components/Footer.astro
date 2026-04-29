@@ -3,59 +3,110 @@ const year = new Date().getFullYear();
 ---
 
 <footer class="site-footer">
-  <div class="site-footer-inner">
-    <nav class="footer-nav" aria-label="Footer">
-      <a href="/">Test</a>
-      <a href="/articles">Articles</a>
-      <a href="/methodology">Methodology</a>
-      <a href="/faq">FAQ</a>
-      <a href="/about">About</a>
-      <a href="/privacy">Privacy</a>
-    </nav>
-    <div class="footer-bottom">
-      <span>&copy; {year} 9bench — The honest browser benchmark.</span>
-      <a href="https://github.com/atillakuruk/9bench" rel="external noopener" target="_blank">GitHub</a>
+  <div class="container site-footer__inner">
+    <!-- Brand line — Truth Series tagline + sister-of-toololis E-E-A-T -->
+    <div class="site-footer__brand">
+      <p class="site-footer__title">9bench — the honest browser benchmark.</p>
+      <p class="site-footer__sub">
+        Built by <a href="https://toololis.com/atilla/" rel="external noopener">Atilla Kürük</a>.
+        Sister of <a href="https://toololis.com" rel="external noopener">Toololis</a>.
+      </p>
+      <p class="site-footer__sub">© {year}. No data leaves your browser unless you submit.</p>
+    </div>
+
+    <!-- Three column nav -->
+    <div class="site-footer__cols">
+      <div class="site-footer__col">
+        <h4>Product</h4>
+        <a href="/">Test</a>
+        <a href="/top">Top scores</a>
+        <a href="/compare">Compare two</a>
+        <a href="/history">My history</a>
+      </div>
+      <div class="site-footer__col">
+        <h4>Learn</h4>
+        <a href="/methodology">Methodology</a>
+        <a href="/faq">FAQ</a>
+        <a href="/articles">Articles</a>
+        <a href="/about">About</a>
+      </div>
+      <div class="site-footer__col">
+        <h4>Source</h4>
+        <a href="https://github.com/Xley9/9bench" rel="external noopener" target="_blank">GitHub ↗</a>
+        <a href="/privacy">Privacy</a>
+        <a href="/methodology#license">License</a>
+      </div>
     </div>
   </div>
 </footer>
 
 <style>
   .site-footer {
-    border-top: 1px solid var(--border);
-    margin-top: 3rem;
-    padding: 2rem 1.25rem 1.5rem;
+    border-top: 1px solid var(--line);
+    margin-top: 96px;
+    padding: 56px 0 48px;
+    background: var(--bg);
   }
-  .site-footer-inner {
-    max-width: 1080px;
-    margin: 0 auto;
-    text-align: center;
+  .site-footer__inner {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 48px;
   }
-  .footer-nav {
+  @media (min-width: 768px) {
+    .site-footer__inner {
+      grid-template-columns: 1fr 1.4fr;
+      gap: 64px;
+    }
+  }
+
+  .site-footer__brand {
     display: flex;
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: 0.5rem 1.25rem;
-    margin-bottom: 1.25rem;
+    flex-direction: column;
+    gap: 8px;
   }
-  .footer-nav a {
-    color: var(--text-muted);
+  .site-footer__title {
+    font-family: var(--sans);
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--fg);
+    margin: 0;
+  }
+  .site-footer__sub {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--fg-3);
+    margin: 0;
+    letter-spacing: 0.02em;
+  }
+  .site-footer__sub a {
+    color: var(--fg-2);
     text-decoration: none;
-    font-size: 0.88rem;
+    border-bottom: 1px solid var(--line);
+  }
+  .site-footer__sub a:hover { color: var(--accent); border-color: var(--accent); }
+
+  .site-footer__cols {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 32px;
+  }
+  .site-footer__col h4 {
+    font-family: var(--mono);
+    font-size: 10px;
     font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--fg-3);
+    margin: 0 0 14px 0;
+  }
+  .site-footer__col a {
+    display: block;
+    padding: 4px 0;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--fg-2);
+    text-decoration: none;
     transition: color 0.15s;
   }
-  .footer-nav a:hover { color: var(--brand); }
-  .footer-bottom {
-    display: flex;
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: 0.5rem 1.5rem;
-    font-size: 0.78rem;
-    color: var(--text-muted);
-  }
-  .footer-bottom a {
-    color: var(--text-muted);
-    text-decoration: none;
-  }
-  .footer-bottom a:hover { color: var(--brand); }
+  .site-footer__col a:hover { color: var(--accent); }
 </style>

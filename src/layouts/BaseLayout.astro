@@ -149,8 +149,33 @@ const baseSchema = {
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#0B1120" />
+    <meta name="theme-color" content="#0A0A0A" />
     <meta name="color-scheme" content="dark" />
+
+    <!-- ── No-flash accent (Cyan default · Orange via toggle) ──
+         Runs BEFORE <body> paint to prevent flash of wrong color.
+         Persisted in localStorage as '9bench-accent' = 'cyan' | 'orange'.
+         Cyan is the default — Orange is opt-in for users who prefer warm. -->
+    <script is:inline>
+      (function () {
+        try {
+          var a = localStorage.getItem('9bench-accent');
+          if (a === 'orange') document.documentElement.setAttribute('data-accent', 'orange');
+        } catch (e) {}
+      })();
+    </script>
+
+    <!-- ── Editorial brand fonts: JetBrains Mono + Inter ──
+         Self-hosted via /fonts/ would be faster (Toololis pattern), but
+         9bench has different font weights than Toololis (700, 800 needed
+         for big editorial type). Keep Google Fonts for now; migrate
+         to self-hosted in Phase F if PageSpeed shows render-block. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
 
     <!-- Title + description (SEO) -->
     <title>{fullTitle}</title>
@@ -234,7 +259,7 @@ const baseSchema = {
       </>
     )}
   </head>
-  <body>
+  <body class="theme-bg">
     <Header />
     <slot />
     <Footer />

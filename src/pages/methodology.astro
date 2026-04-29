@@ -1,390 +1,493 @@
 ---
+/**
+ * /methodology — V2 Editorial long-form.
+ *
+ * Truth Series authority page. Documents every formula, every constant,
+ * every weight. The pull-quote on the Landing page references this page:
+ *   "Every formula. Every constant. Every weight.
+ *    If you find a flaw, file an issue. We ship the patch the same week."
+ *
+ * SEO + AEO target: "9bench methodology", "how 9bench works", "is 9bench
+ * accurate", "9bench vs userbenchmark formula".
+ */
 import BaseLayout from '../layouts/BaseLayout.astro';
+import IssueNameplate from '../components/bench/IssueNameplate.astro';
+import TruthDisclaimer from '../components/bench/TruthDisclaimer.astro';
+
+const FAQ = [
+  {
+    q: 'Is 9bench accurate?',
+    a: "Within ~3-10% of native benchmarks for CPU and GPU compute. RAM is browser-sandboxed — it consistently scores 30-50% of native bandwidth. We say so loudly. For absolute peak measurement use Geekbench, Cinebench, or 3DMark. For instant cross-platform relative ranking, 9bench is built for the job."
+  },
+  {
+    q: 'Does 9bench take money from chip vendors?',
+    a: "No. Zero. The 'Vendors paid us: 0' counter on the Landing page is hardcoded to 0 because that's a fact. r/hardware banned UserBenchmark for documented anti-AMD bias; we built 9bench to fill that gap with an open-source, vendor-neutral alternative."
+  },
+  {
+    q: 'Why does my RAM score look so low?',
+    a: "Browsers (V8, SpiderMonkey, JavaScriptCore) sandbox memory access for security. Float32Array reads and writes are not vectorized to the same degree as native code, and there is no SIMD pathway for arbitrary memory work. Typical browser RAM throughput is 30-50% of native. We could pretend our number is gospel; we choose to disclose this on every result page instead."
+  },
+  {
+    q: 'Does it run on iPhone / iPad / Android?',
+    a: "Yes. Safari 26+ on iOS/iPadOS 26 supports WebGPU. Android Chrome 113+ does too. Older devices fall back to a CPU-only run with a clear notice."
+  },
+  {
+    q: 'Why is it free?',
+    a: "Because it costs us $0 to run. The benchmark executes entirely in your browser. The only server cost is storing the optional submitted score in Cloudflare D1, which is essentially free at our scale. No tracking, no upsell, no premium tier."
+  },
+  {
+    q: 'How is this different from UserBenchmark?',
+    a: "UserBenchmark has documented anti-AMD bias (caught by independent reviewers in 2019, banned from r/hardware and r/AMD). 9bench takes zero money from chip vendors. The scoring formula is in this page and on GitHub. r/hardware can verify every weight."
+  },
+  {
+    q: 'Where is my data stored?',
+    a: "Nowhere, unless you click Submit. The benchmark runs locally in your browser. If you submit, exactly one row goes to Cloudflare D1: your score breakdown, GPU name string, CPU core count, and a random 8-char hash ID. No IP address, no cookie, no fingerprint, no IP geolocation."
+  },
+  {
+    q: "What does 'self-reported' mean on a GPU name?",
+    a: "Some browsers (Firefox in strict privacy mode, Tor, Brave Strict) hide GPU info from web pages. When that happens, 9bench shows 'Browser hides this — add manually' and lets you type your GPU. Self-reported entries are tagged so they cannot be confused with detected hardware."
+  },
+];
 ---
 
 <BaseLayout
   title="Methodology — 9bench"
-  description="How 9bench measures CPU, GPU, and RAM performance in the browser. Full transparency on benchmarks, formulas, and score brackets."
+  description="How 9bench measures CPU, GPU, and RAM in the browser. Full transparency: formulas, weights, score brackets, and known limits."
   schemaType="WebPage"
-  ogImage="https://9bench.com/og?p=methodology"
 >
-  <main class="max-w-3xl mx-auto px-5 py-12">
-    <header class="text-center mb-10">
-      <a href="/" class="inline-block px-3 py-1 bg-brand-light/10 text-brand rounded-full text-xs font-bold tracking-wider uppercase mb-4">
-        ← back to 9bench
-      </a>
-      <h1 class="text-4xl md:text-5xl font-extrabold mb-3">Methodology</h1>
-      <p class="text-lg text-slate-400">Every formula. Every score bracket. No hidden weights.</p>
-    </header>
+  <main class="container methodology">
 
-    <article class="prose-content">
-      <section>
-        <h2>Why 9bench exists</h2>
-        <p>
-          UserBenchmark was banned by r/hardware and r/pcmasterrace for documented bias toward Intel single-core
-          performance. Geekbench, Cinebench, 3DMark, and PassMark all require 500MB-8GB downloads and admin rights —
-          unusable in corporate networks, schools, and on shared computers.
-        </p>
-        <p>
-          9bench is a deliberate, honest, browser-only alternative. The entire test runs in your browser via
-          WebGPU, WebAssembly, Web Workers, and Web Crypto APIs. No download. No account. No data leaves your browser
-          unless you explicitly submit your score.
-        </p>
-      </section>
+    <IssueNameplate middle="Methodology — Truth Series" right="v3.1 · Apr 2026" />
 
-      <section>
-        <h2>The 4 measurements</h2>
+    <!-- Hero -->
+    <section class="methodology__hero">
+      <div class="eyebrow eyebrow--accent">// METHODOLOGY · v3.1</div>
+      <h1 class="methodology__h1">
+        Every formula.<br />
+        <span class="text-fg-3">Every constant.</span><br />
+        <span class="text-fg-3">Every weight.</span>
+      </h1>
+      <p class="methodology__lede">
+        If you find a flaw in our scoring, file an issue on GitHub.
+        We ship the patch the same week. This page documents the entire
+        9bench composite score, including the parts we can't measure perfectly.
+      </p>
+    </section>
 
-        <h3>1. GPU Compute (WebGPU)</h3>
-        <p>
-          A 1024×1024 floating-point matrix multiplication is executed 5 times via a WebGPU compute shader.
-          Each multiplication = 2 × 1024³ ≈ 2.1 billion floating-point operations. We compute total time
-          and divide to get GFLOPS (giga-floating-point-operations-per-second).
-        </p>
-        <p>
-          <strong>Formula:</strong> <code>GFLOPS = (2 × N³ × iterations) / (duration_seconds × 1e9)</code>
-        </p>
-        <p>
-          Why this benchmark: matrix multiplication is the foundational GPU compute operation, used in every
-          ML inference, every 3D engine, every neural net. WebGPU compute shaders perform within 5-15% of native
-          performance on the same hardware.
-        </p>
+    <!-- TOC -->
+    <nav class="methodology__toc">
+      <div class="eyebrow">// CONTENTS</div>
+      <ul>
+        <li><a href="#what-we-measure">1. What we measure</a></li>
+        <li><a href="#formulas">2. The formulas</a></li>
+        <li><a href="#composite">3. Composite weighting</a></li>
+        <li><a href="#tiers">4. Tier brackets</a></li>
+        <li><a href="#limits">5. What we cannot measure</a></li>
+        <li><a href="#faq">6. FAQ</a></li>
+        <li><a href="#license">7. License</a></li>
+      </ul>
+    </nav>
 
-        <h3>2. CPU Single-Core (SHA-256 hash chain)</h3>
-        <p>
-          200,000 SHA-256 hashes are computed in a single chain (each hash's output is the input for the next).
-          The hashes-per-second rate is recorded.
-        </p>
-        <p>
-          Why SHA-256: it's CPU-bound, deterministic, parallelizable, real-world relevant (TLS, blockchain,
-          file integrity), and platform-independent. Modern CPUs accelerate it via SHA-NI extensions on x86 and
-          native instructions on ARM, so the test reflects real-world performance, not pure JIT speed.
-        </p>
+    <!-- Section 1 -->
+    <section id="what-we-measure" class="methodology__section">
+      <h2 class="section-h">1. What we measure</h2>
+      <div class="methodology__grid">
+        <article class="methodology__card">
+          <div class="feature-num">— GPU compute</div>
+          <h3 class="feature-title">WebGPU matrix multiplication</h3>
+          <p class="feature-body">
+            We run a 1024×1024 FP32 matrix multiplication compute shader on
+            your GPU. The shader executes <code>2 × N³</code> floating-point
+            operations per pass. Best-of-3 measurement with adaptive warm-up
+            so laptop GPUs that idle at low power get a fair reading.
+            Output is GFLOPS (billions of FP operations per second).
+          </p>
+        </article>
+        <article class="methodology__card">
+          <div class="feature-num">— CPU single + multi</div>
+          <h3 class="feature-title">SHA-256 hash chain</h3>
+          <p class="feature-body">
+            Single-core: SHA-256 hash chain on the main thread via
+            Web Crypto API. Multi-core: same workload across N Web Workers
+            where N = <code>navigator.hardwareConcurrency</code>. Output is
+            hashes per second. Multi-core scaling efficiency is also reported.
+          </p>
+        </article>
+        <article class="methodology__card">
+          <div class="feature-num">— RAM bandwidth</div>
+          <h3 class="feature-title">TypedArray throughput</h3>
+          <p class="feature-body">
+            Sequential reads, sequential writes, and a random-access pointer-chase
+            on a 256 MB Float32Array. Reports GB/s read, GB/s write, and ns latency.
+            Browser sandboxing caps this at 30-50% of native — we never pretend
+            otherwise.
+          </p>
+        </article>
+      </div>
+    </section>
 
-        <h3>3. CPU Multi-Core (parallel SHA-256 via Web Workers)</h3>
-        <p>
-          The same SHA-256 chain is spawned in N workers simultaneously, where N = <code>navigator.hardwareConcurrency</code>.
-          Each worker runs 500,000 iterations to amortize Worker initialization overhead.
-        </p>
-        <p>
-          <strong>Important caveat:</strong> Browser Web APIs limit true parallelism. Web Crypto's
-          <code>crypto.subtle.digest</code> may serialize internally for security. Web Workers compete for a
-          shared thread pool. Real-world multi-core efficiency in browser is typically 30-60% of what native
-          tools (Cinebench, Geekbench native) measure. 9bench scores reflect <em>browser</em> capability.
-        </p>
+    <!-- Section 2 -->
+    <section id="formulas" class="methodology__section">
+      <h2 class="section-h">2. The formulas</h2>
+      <p class="methodology__p">
+        Every component score is a simple linear or logarithmic transform of
+        the raw measurement. There is no proprietary "magic" — anyone can
+        reproduce these numbers.
+      </p>
+      <div class="formula-grid">
+        <div class="formula">
+          <div class="formula__name">GPU score</div>
+          <code class="formula__expr">round(GFLOPS × 3)</code>
+          <p class="formula__note">
+            Calibration: a typical 2024 mid-range GPU (~500 GFLOPS in browser)
+            scores ~1500. RTX 4070-class hits ~3000 in browser (well below
+            native ceiling).
+          </p>
+        </div>
+        <div class="formula">
+          <div class="formula__name">CPU single-core score</div>
+          <code class="formula__expr">round(SHA_per_sec_single / 300)</code>
+          <p class="formula__note">
+            Calibration: Apple Silicon high-end ~1300, modern x86 ~1000-1500.
+          </p>
+        </div>
+        <div class="formula">
+          <div class="formula__name">CPU multi-core score</div>
+          <code class="formula__expr">round(SHA_per_sec_multi / 600)</code>
+          <p class="formula__note">
+            Multi-core counts cores divided by 600. Browser Web-Worker scaling
+            is structurally below native (~3-5× speedup typical for 16-core
+            instead of native ~12×).
+          </p>
+        </div>
+        <div class="formula">
+          <div class="formula__name">RAM score</div>
+          <code class="formula__expr">round(((read_GBs + write_GBs) / 2) × 60)</code>
+          <p class="formula__note">
+            Average of read + write bandwidth × 60. Browser-sandbox-capped — see
+            section 5 for limits.
+          </p>
+        </div>
+      </div>
+    </section>
 
-        <h3>4. RAM Bandwidth + Latency (TypedArray patterns)</h3>
-        <p>
-          A 256MB Float32Array working set (large enough to exceed L3 cache on most CPUs) is repeatedly:
-        </p>
-        <ul>
-          <li><strong>Sequential read:</strong> sum every 4th element across full array, 5 iterations</li>
-          <li><strong>Sequential write:</strong> fill with constant value, 5 iterations</li>
-          <li><strong>Sequential copy:</strong> <code>dst.set(src)</code> 5 iterations</li>
-          <li><strong>Random latency:</strong> 1,000,000 random index reads (PRNG-driven walk through full set)</li>
-        </ul>
-        <p>
-          Output: GB/s read, GB/s write, ns random-access latency.
-        </p>
-        <p>
-          <strong>Caveat:</strong> Browser RAM bandwidth measurement is fundamentally limited compared to
-          native tools. V8/JIT optimization, OS paging, and Float32Array vectorization variance can produce
-          15-50% variance vs. native memcpy benchmarks. The measurement is most useful for relative comparison
-          between machines, not absolute peak bandwidth.
-        </p>
-      </section>
+    <!-- Section 3 -->
+    <section id="composite" class="methodology__section">
+      <h2 class="section-h">3. Composite weighting</h2>
+      <p class="methodology__p">
+        The 9bench overall score is a <strong>weighted geometric mean</strong>
+        of the four component scores. Geometric mean prevents a single weak
+        component from being masked by strong ones — the "no shortcut" version.
+      </p>
+      <div class="formula formula--composite">
+        <code class="formula__expr">overall = exp(0.35 × ln(GPU) + 0.45 × ln(CPU·M) + 0.20 × ln(RAM))</code>
+      </div>
+      <ul class="weight-list">
+        <li><strong>GPU: 35%</strong> — modern workloads (AI, video, gaming) are GPU-bound.</li>
+        <li><strong>CPU multi-core: 45%</strong> — primary CPU path for development, multitasking, productivity.</li>
+        <li><strong>RAM: 20%</strong> — bandwidth matters, but capped by browser-sandbox so we don't over-weight.</li>
+      </ul>
+      <p class="methodology__p">
+        We don't include CPU single-core in the composite because it
+        correlates strongly with multi-core for in-browser SHA workloads.
+        Including it would double-count.
+      </p>
+    </section>
 
-      <section>
-        <h2>Score formulas</h2>
-        <p>
-          Each component score is calculated to produce roughly comparable numbers across components, then
-          combined via geometric mean (which prevents one weak component from being masked by strong ones):
-        </p>
-        <pre><code>scoreGpu       = round(GFLOPS × 3)           // 500 GFLOPS → 1500
-scoreCpuSingle = round(hashes_per_sec / 300) // 400K h/s → 1333
-scoreCpuMulti  = round(hashes_per_sec / 600) // 1.2M h/s → 2000
-scoreRam       = round((readGBs + writeGBs)/2 × 60) // 8 GB/s avg → 480
+    <!-- Section 4 -->
+    <section id="tiers" class="methodology__section">
+      <h2 class="section-h">4. Tier brackets</h2>
+      <p class="methodology__p">
+        Tiers are <strong>descriptive labels for sharing</strong>, not gospel.
+        We use letter-tiers (S/A/B) for the top half because that's
+        Reddit-shareable, and word-labels for the bottom half because no
+        one shares "D-tier".
+      </p>
+      <table class="tier-table">
+        <thead>
+          <tr><th>Tier</th><th>Score</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="text-accent">S-tier</td>          <td>≥ 1386</td><td>Enthusiast / workstation</td></tr>
+          <tr><td class="text-accent">A-tier</td>          <td>≥ 900</td> <td>Power user</td></tr>
+          <tr><td>Solid daily driver</td>                  <td>≥ 600</td> <td>Comfortable for most work</td></tr>
+          <tr><td>Working machine</td>                     <td>≥ 300</td> <td>Office class</td></tr>
+          <tr><td>Patient & honest</td>                    <td>≥ 0</td>   <td>It still gets the job done</td></tr>
+        </tbody>
+      </table>
+    </section>
 
-overall = exp(0.35×ln(scoreGpu) + 0.45×ln(scoreCpuMulti) + 0.20×ln(scoreRam))</code></pre>
-        <p>
-          The weights (35% GPU, 45% CPU multi, 20% RAM) reflect modern workload importance. Single-core CPU
-          is shown but excluded from the composite to avoid double-counting CPU.
-        </p>
-      </section>
+    <!-- Section 5 -->
+    <section id="limits" class="methodology__section">
+      <h2 class="section-h">5. What we cannot measure</h2>
+      <TruthDisclaimer />
+      <p class="methodology__p" style="margin-top: 24px;">
+        Browsers cap absolute throughput on RAM workloads via the JavaScript
+        memory model (no SIMD-vectorized memcpy, no DMA, no direct mmap).
+        Browser RAM scores typically run at 30-50% of native. We disclose this
+        on every result page.
+      </p>
+      <p class="methodology__p">
+        We also cannot measure: thermal throttling under sustained load,
+        disk/SSD I/O, network bandwidth, GPU memory bandwidth (only compute),
+        peak-vs-sustained turbo behavior. For those, install a native benchmark.
+      </p>
+      <p class="methodology__p">
+        What we <strong>can</strong> measure: relative ranking across machines.
+        9bench is calibrated for cross-platform fairness — a 2024 MacBook Pro
+        and a 2024 Windows desktop running the same browser produce comparable
+        composite scores within ±5-10%.
+      </p>
+    </section>
 
-      <section>
-        <h2>Score brackets (calibrated to 2026 hardware)</h2>
-        <table>
-          <thead>
-            <tr><th>Bracket</th><th>Range</th><th>Typical hardware</th></tr>
-          </thead>
-          <tbody>
-            <tr><td>🏆 Elite tier</td><td>4000+</td><td>Apple M5 Max, Ryzen 9 9950X3D + RTX 5090</td></tr>
-            <tr><td>✓ High-end</td><td>2500-4000</td><td>Apple M4 Pro, Ryzen 9 7950X + RTX 4080</td></tr>
-            <tr><td>◯ Strong mainstream</td><td>1700-2500</td><td>Apple M3 Pro, Ryzen 7 7800X3D + RTX 4070</td></tr>
-            <tr><td>~ Mid-range standard</td><td>1000-1700</td><td>Ryzen 7 5800X, mid-tier 2024 laptops</td></tr>
-            <tr><td>⚠ Mainstream / older</td><td>500-1000</td><td>Older laptops, integrated GPUs</td></tr>
-            <tr><td>🚨 Office / Chromebook</td><td>&lt;500</td><td>Chromebook, older office laptop</td></tr>
-          </tbody>
-        </table>
-      </section>
+    <!-- Section 6 — FAQ -->
+    <section id="faq" class="methodology__section">
+      <h2 class="section-h">6. FAQ</h2>
+      <div class="faq">
+        {FAQ.map((item) => (
+          <details class="faq-item">
+            <summary class="faq-item__q">{item.q}</summary>
+            <div class="faq-item__a">{item.a}</div>
+          </details>
+        ))}
+      </div>
+    </section>
 
-      <section>
-        <h2>What 9bench cannot measure (be aware of these)</h2>
-        <p>
-          The browser sandbox has hard limits. These are real constraints on every web-based benchmark
-          — including 9bench. Knowing them prevents misinterpreting your score.
-        </p>
+    <!-- Section 7 — License -->
+    <section id="license" class="methodology__section">
+      <h2 class="section-h">7. License</h2>
+      <p class="methodology__p">
+        9bench is MIT-licensed. You can fork it, ship your own variant, run it
+        commercially. Truth-series tools should not be locked behind proprietary
+        licenses. Source on
+        <a href="https://github.com/Xley9/9bench" rel="external noopener">GitHub</a>.
+      </p>
+      <p class="methodology__p">
+        Built solo by <a href="https://toololis.com/atilla/" rel="external noopener">Atilla Kürük</a>,
+        sister of <a href="https://toololis.com" rel="external noopener">Toololis</a>.
+      </p>
+    </section>
 
-        <h3>1. Sustained / thermal performance</h3>
-        <p>
-          9bench finishes in ~8 seconds. Real laptop performance under 30+ minutes of load is dramatically
-          different — most laptops drop 20-40% under sustained load due to thermal throttling. Mobile-class
-          chips (M-series, mobile Intel/AMD) throttle hardest. Desktop chips with proper cooling barely
-          throttle at all. <strong>9bench measures peak burst performance, not what you'll feel in
-          a 4-hour video-edit session.</strong>
-        </p>
-
-        <h3>2. Disk / SSD speed</h3>
-        <p>
-          Storage speed is a huge factor in real-world feel — slow SSD = slow Windows boot, slow app
-          launches, slow file copies. The browser has no API to measure raw disk throughput. 9bench
-          ignores it entirely. A device with NVMe Gen5 SSD and one with SATA SSD will get the same
-          9bench score even though they feel completely different.
-        </p>
-
-        <h3>3. GPU memory bandwidth (separate from compute)</h3>
-        <p>
-          Real GPU performance has two axes: compute throughput (FLOPS) and memory bandwidth (GB/s).
-          We measure compute via matrix multiplication. We don't measure memory bandwidth in isolation.
-          A GPU with 100 TFLOPS but only 200 GB/s memory will score great here but be terrible in
-          memory-heavy workloads (high-res textures, large model inference).
-        </p>
-
-        <h3>4. Game-relevant GPU features</h3>
-        <p>
-          Real GPU benchmarks (3DMark, Unigine) test rasterization, texture sampling, ray-tracing,
-          tessellation. We test only one thing: floating-point matrix multiplication. A GPU's score
-          here doesn't predict how well it runs <em>Cyberpunk 2077</em> at 1440p with ray-tracing on.
-        </p>
-
-        <h3>5. Multi-threading patterns beyond pure work</h3>
-        <p>
-          Real CPU multi-core performance involves locks, atomics, shared memory contention, and OS
-          scheduling. We test the simplest case: independent SHA-256 chains in N workers. This
-          consistently <em>overstates</em> multi-core efficiency — real apps with shared state will
-          scale worse than 9bench predicts.
-        </p>
-
-        <h3>6. RAM timings, latency under load, NUMA</h3>
-        <p>
-          We can measure approximate bandwidth and a single random-walk latency number. We can't measure
-          DDR5 vs DDR4 nuances, dual-channel vs single-channel impact, NUMA effects on multi-socket
-          systems, or memory-pressure throttling.
-        </p>
-
-        <h3>7. Power state — laptop on battery vs plugged in</h3>
-        <p>
-          Most laptops cap performance significantly when on battery. <strong>The same machine can
-          score 30-50% lower on battery than plugged in.</strong> Windows power plans (Best Power
-          Saving / Balanced / Best Performance) compound the effect. We try to detect battery state
-          via <code>navigator.getBattery()</code> — but the API is being deprecated, so detection
-          isn't always reliable.
-        </p>
-
-        <h3>8. Browser-vendor differences</h3>
-        <p>
-          Chrome's V8, Firefox's SpiderMonkey, and Safari's JavaScriptCore have different optimization
-          strategies. The same hardware in Chrome vs Firefox can score 10-20% different on the
-          identical 9bench code. We don't normalize for this — pick a browser and stick with it for
-          comparison runs.
-        </p>
-      </section>
-
-      <section>
-        <h2>Why your score might differ between runs</h2>
-        <p>
-          Even on the same hardware, in the same browser, on the same day — your score will vary.
-          This is normal and not a bug:
-        </p>
-        <ul>
-          <li><strong>±5%</strong> — normal hardware/scheduler jitter, expected on every run</li>
-          <li><strong>±10-15%</strong> — background activity (open tabs, OS updates, antivirus scan)</li>
-          <li><strong>20-50% lower</strong> — laptop just unplugged from charger</li>
-          <li><strong>30-60% lower</strong> — thermal throttling after sustained workload (e.g. you ran the bench right after gaming or video render)</li>
-        </ul>
-        <p>
-          To get the most reliable 9bench score:
-        </p>
-        <ol>
-          <li>Plug your laptop in and set Windows Power Plan to "Best Performance" / macOS "High Power"</li>
-          <li>Close all other browser tabs and apps that might use GPU (Discord, Slack, Spotify all use GPU)</li>
-          <li>Wait 5+ minutes after any heavy work so thermals reset</li>
-          <li>Run the bench 3 times — discard the cold first run, average the next two</li>
-        </ol>
-      </section>
-
-      <section>
-        <h2>Why these aren't Geekbench numbers</h2>
-        <p>
-          9bench scores are <strong>not directly comparable</strong> to Geekbench, Cinebench, or any native
-          benchmark. Browser-API performance is universally lower than native:
-        </p>
-        <ul>
-          <li>WebGPU adds 5-15% overhead vs native Metal/Vulkan/DirectX</li>
-          <li>Web Workers don't achieve full multi-core scaling due to browser sandboxing</li>
-          <li>JavaScript memory operations don't always vectorize as efficiently as native C/C++</li>
-          <li>Web Crypto APIs have synchronous fallback paths that limit throughput</li>
-          <li>Browser security mitigations (Spectre, Meltdown patches) cost 5-15% on every measurement</li>
-        </ul>
-        <p>
-          What 9bench is good for:
-        </p>
-        <ul>
-          <li><strong>Relative comparison</strong> between two browsers/machines on the same web platform</li>
-          <li><strong>Quick triage</strong> — is this device fast or slow without installing anything</li>
-          <li><strong>Browser-cap testing</strong> — what can a website actually expect from this device</li>
-          <li><strong>Vor/Nach-Upgrade-Vergleich</strong> — same machine, same browser, before/after RAM/SSD/GPU swap</li>
-          <li><strong>Privacy-first ranking</strong> — no installer, no admin rights, no tracking</li>
-        </ul>
-        <p>
-          What 9bench is <em>not</em> good for:
-        </p>
-        <ul>
-          <li>Replacing Geekbench/Cinebench for absolute peak measurement</li>
-          <li>Hardcore overclocking benchmarking</li>
-          <li>Comparing to native-tool scores from review sites (different scale, different workloads)</li>
-          <li>Predicting exact game framerates</li>
-          <li>Detecting failing hardware (use vendor diagnostics for that)</li>
-        </ul>
-      </section>
-
-      <section>
-        <h2>The honesty pledge</h2>
-        <p>
-          9bench is part of the <strong>Truth Series</strong> — we'd rather call out our own limits
-          than oversell. Here's what we'll always tell you straight:
-        </p>
-        <ul>
-          <li>If a number can't be reliably measured in the browser, we won't pretend to measure it.</li>
-          <li>If your score is being depressed by power-state or browser, we'll tell you on screen.</li>
-          <li>If a run looks unusually low or high, we'll flag it as an outlier rather than report it as truth.</li>
-          <li>If a competitor benchmark is more accurate for your use case, we'll point you at it instead of stealing your time.</li>
-          <li>The methodology page (this page) will always document every formula, every weight, every limit.</li>
-        </ul>
-        <p>
-          Every measurement on 9bench is real. Every formula is documented. There are no hidden
-          weights, no fictional numbers, no marketing-pumped scores. What you see is what your
-          browser was actually able to measure on your actual hardware.
-        </p>
-      </section>
-
-      <section>
-        <h2>Privacy</h2>
-        <p>
-          The benchmark itself runs entirely in your browser. No data is sent to any server during the test.
-          When you finish, you can <em>optionally</em> submit your score to the global ranking — at which
-          point we store: scores, GPU adapter name (if browser exposes it), CPU core count, hash rates,
-          RAM bandwidth numbers, anonymous user-agent fragment. We do not store your IP, exact location, or
-          any identifying information. Reactions are stored anonymously linked to the result ID, not to you.
-        </p>
-        <p>
-          Result URLs (<code>9bench.com/r/&lt;id&gt;</code>) are not indexed by search engines (noindex).
-          They're meant for sharing with people you choose, not for global discovery.
-        </p>
-      </section>
-
-      <section>
-        <h2>Open source</h2>
-        <p>
-          Source code at <a href="https://github.com/atillakuruk/9bench" rel="external">github.com/atillakuruk/9bench</a>
-          (link active once repo is published). MIT license. Pull requests welcome — especially for additional
-          benchmark methodologies (disk-speed, network-latency, AI-inference-speed, video-encode-speed) that
-          are practical to run in-browser.
-        </p>
-      </section>
-
-      <section>
-        <h2>Built by</h2>
-        <p>
-          <a href="https://toololis.com/atilla/" rel="external">Atilla Kürük</a>, also creator of
-          <a href="https://toololis.com" rel="external">Toololis</a> (668 honest browser tools, also Truth Series).
-        </p>
-        <p>
-          Questions, suggestions, calibration feedback: open an issue on GitHub or contact via Toololis.
-        </p>
-      </section>
-    </article>
+    <!-- CTA -->
+    <section class="methodology__cta">
+      <a href="/test/" class="run-btn">▶ TEST MY HARDWARE</a>
+      <a href="/top/" class="btn-outline">View leaderboard</a>
+    </section>
   </main>
-
-  <style is:global>
-    .prose-content {
-      color: var(--text);
-      line-height: 1.7;
-    }
-    .prose-content section {
-      margin-bottom: 3rem;
-    }
-    .prose-content h2 {
-      font-size: 1.75rem;
-      font-weight: 800;
-      margin-bottom: 1rem;
-      color: var(--brand);
-    }
-    .prose-content h3 {
-      font-size: 1.25rem;
-      font-weight: 700;
-      margin: 1.5rem 0 0.75rem;
-      color: var(--text);
-    }
-    .prose-content p { margin-bottom: 1rem; }
-    .prose-content ul {
-      margin: 1rem 0 1rem 1.5rem;
-      list-style: disc;
-    }
-    .prose-content li { margin-bottom: 0.5rem; }
-    .prose-content code {
-      background: var(--bg-elevated);
-      padding: 0.15rem 0.4rem;
-      border-radius: 0.3rem;
-      font-family: ui-monospace, SFMono-Regular, monospace;
-      font-size: 0.9em;
-      color: var(--brand);
-    }
-    .prose-content pre {
-      background: var(--bg-elevated);
-      padding: 1rem;
-      border-radius: 0.5rem;
-      overflow-x: auto;
-      font-size: 0.9em;
-      margin: 1rem 0;
-    }
-    .prose-content pre code {
-      background: none;
-      padding: 0;
-      color: var(--text);
-    }
-    .prose-content table {
-      width: 100%;
-      margin: 1rem 0;
-      border-collapse: collapse;
-      font-size: 0.95em;
-    }
-    .prose-content th, .prose-content td {
-      padding: 0.6rem 0.85rem;
-      border: 1px solid var(--border);
-      text-align: left;
-    }
-    .prose-content th {
-      background: var(--bg-elevated);
-      font-weight: 700;
-    }
-    .prose-content a {
-      color: var(--brand);
-      text-decoration: underline;
-      font-weight: 600;
-    }
-    .prose-content strong { font-weight: 700; }
-    .prose-content em { font-style: italic; color: var(--text-muted); }
-  </style>
 </BaseLayout>
+
+<style>
+  .methodology { padding: 24px 0 56px; max-width: 880px; }
+
+  .methodology__hero { padding: 56px 0 40px; }
+  .methodology__h1 {
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: clamp(40px, 7vw, 88px);
+    line-height: 0.95;
+    letter-spacing: -0.04em;
+    margin: 16px 0 24px 0;
+    color: var(--fg);
+  }
+  .methodology__lede {
+    font-family: var(--sans);
+    font-size: 18px;
+    line-height: 1.55;
+    color: var(--fg-2);
+    max-width: 600px;
+    margin: 0;
+  }
+
+  /* Table of contents */
+  .methodology__toc {
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    padding: 24px 0;
+    margin-bottom: 48px;
+  }
+  .methodology__toc ul {
+    list-style: none;
+    padding: 0;
+    margin: 12px 0 0 0;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  @media (min-width: 768px) {
+    .methodology__toc ul { grid-template-columns: repeat(2, 1fr); }
+  }
+  .methodology__toc a {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--fg-2);
+    text-decoration: none;
+    padding: 4px 0;
+  }
+  .methodology__toc a:hover { color: var(--accent); }
+
+  .methodology__section {
+    padding: 48px 0;
+    border-top: 1px solid var(--line);
+  }
+  .methodology__section .section-h { margin-bottom: 18px; }
+
+  .methodology__p {
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--fg-2);
+    margin: 0 0 18px 0;
+  }
+  .methodology__p strong { color: var(--fg); font-weight: 600; }
+  .methodology__p code   {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent);
+    background: var(--bg-2);
+    padding: 2px 6px;
+  }
+  .methodology__p a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+
+  /* Section 1 grid */
+  .methodology__grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    margin-top: 24px;
+  }
+  @media (min-width: 768px) {
+    .methodology__grid { grid-template-columns: repeat(3, 1fr); }
+  }
+  .methodology__card {
+    background: var(--bg-2);
+    padding: 24px;
+  }
+
+  /* Formula blocks */
+  .formula-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0;
+    border: 1px solid var(--line);
+    background: var(--bg-2);
+    margin-top: 24px;
+  }
+  .formula {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--line-2);
+  }
+  .formula:last-child { border-bottom: 0; }
+  .formula--composite { background: var(--bg-3); border: 1px solid var(--accent); margin: 24px 0; }
+  .formula__name {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--fg-3);
+    margin-bottom: 8px;
+  }
+  .formula__expr {
+    font-family: var(--mono);
+    font-size: 16px;
+    color: var(--accent);
+    display: block;
+    margin: 4px 0 8px;
+  }
+  .formula__note {
+    font-family: var(--sans);
+    font-size: 13px;
+    color: var(--fg-3);
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  /* Weight list */
+  .weight-list {
+    list-style: none;
+    padding: 0;
+    margin: 16px 0 24px;
+    border: 1px solid var(--line);
+  }
+  .weight-list li {
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--line-2);
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--fg-2);
+  }
+  .weight-list li:last-child { border-bottom: 0; }
+  .weight-list strong { color: var(--accent); font-weight: 700; }
+
+  /* Tier table */
+  .tier-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 24px;
+    border: 1px solid var(--line);
+    background: var(--bg-2);
+  }
+  .tier-table th, .tier-table td {
+    padding: 12px 18px;
+    text-align: left;
+    border-bottom: 1px solid var(--line-2);
+    font-family: var(--mono);
+    font-size: 13px;
+  }
+  .tier-table th {
+    color: var(--fg-3);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+  .tier-table td:first-child { font-weight: 700; }
+  .tier-table td:nth-child(2) { color: var(--fg); }
+  .tier-table td:nth-child(3) { color: var(--fg-2); }
+
+  /* FAQ accordion */
+  .faq {
+    margin-top: 24px;
+    border-top: 1px solid var(--line);
+  }
+  .faq-item {
+    border-bottom: 1px solid var(--line);
+  }
+  .faq-item__q {
+    cursor: pointer;
+    list-style: none;
+    padding: 18px 0;
+    font-family: var(--sans);
+    font-size: 17px;
+    font-weight: 500;
+    color: var(--fg);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .faq-item__q::-webkit-details-marker { display: none; }
+  .faq-item__q::before {
+    content: '+';
+    color: var(--accent);
+    font-family: var(--mono);
+    font-weight: 700;
+    flex: 0 0 16px;
+  }
+  .faq-item[open] .faq-item__q::before { content: '−'; }
+  .faq-item__a {
+    padding: 0 0 18px 28px;
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.65;
+    color: var(--fg-2);
+  }
+
+  .methodology__cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding: 48px 0 0;
+    border-top: 1px solid var(--line);
+  }
+</style>

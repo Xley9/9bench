@@ -1,264 +1,429 @@
 ---
+/**
+ * /compare — V1 Terminal A vs B diff table.
+ *
+ * Two flows:
+ *   1. URL params /compare?a=HASH_A&b=HASH_B → auto-load both
+ *   2. Empty state → two input fields, paste hashes, "Compare" button
+ *
+ * Renders: side-by-side score blocks + tabular diff with delta %
+ * for every metric.
+ */
 import BaseLayout from '../layouts/BaseLayout.astro';
+import TruthDisclaimer from '../components/bench/TruthDisclaimer.astro';
 ---
 
 <BaseLayout
-  title="Compare Two Benchmark Results — 9bench"
-  description="Compare two 9bench hardware benchmark results side by side. Paste two result IDs to see CPU, GPU, RAM differences."
-  keywords="compare hardware benchmark, compare cpu gpu ram, side by side computer comparison, benchmark difference"
-  ogImage="https://9bench.com/og?p=compare"
+  title="Compare two — 9bench"
+  description="Side-by-side comparison of two 9bench results. Paste two permalinks to see GPU, CPU, RAM differences with % deltas."
+  keywords="compare hardware benchmarks, gpu vs gpu comparison, cpu vs cpu comparison, browser benchmark diff"
 >
-  <main class="max-w-4xl mx-auto px-5 py-12">
-    <header class="text-center mb-8">
-      <a href="/" class="inline-block px-3 py-1 bg-brand-light/10 text-brand rounded-full text-xs font-bold tracking-wider uppercase mb-4">
-        ← back to 9bench
-      </a>
-      <h1 class="text-4xl md:text-5xl font-extrabold mb-3">Compare</h1>
-      <p class="text-lg text-slate-400">Paste two 9bench result IDs to compare hardware side by side.</p>
-    </header>
+  <main class="container compare-page">
 
-    <div class="mb-6 px-4 py-3 rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-200 text-xs leading-relaxed">
-      ⚖️ <strong>Fair-comparison checklist:</strong> for the most honest comparison, both runs should
-      use the <strong>same browser</strong> (Chrome ↔ Chrome, not Chrome vs Firefox), both machines
-      <strong>plugged in</strong> (not on battery), and no other GPU-heavy apps running in either.
-      Differences ≥ 15% reflect real hardware gaps; under that, it's mostly browser/OS/power-state
-      noise. <a href="/methodology" class="underline text-amber-300">Read methodology</a>.
+    <div class="compare-page__head">
+      <div class="eyebrow eyebrow--accent">// COMPARE TWO RUNS</div>
+      <h1 class="compare-page__title">
+        A vs. B.<br />
+        <span class="text-fg-3">The numbers don't lie.</span>
+      </h1>
     </div>
 
-    <div class="compare-inputs">
-      <div class="compare-input-group">
-        <label>System A — paste result ID or full URL</label>
-        <input type="text" id="id-a" placeholder="abc12345 or https://9bench.com/r/abc12345" />
+    <form class="compare-page__form" id="compare-form">
+      <div class="compare-page__inputs">
+        <div class="compare-input">
+          <label for="hash-a">RUN A</label>
+          <input type="text" id="hash-a" name="a" placeholder="74aa808d  or  9bench.com/r/74aa808d" autocomplete="off" spellcheck="false" />
+        </div>
+        <span class="compare-page__vs">vs</span>
+        <div class="compare-input">
+          <label for="hash-b">RUN B</label>
+          <input type="text" id="hash-b" name="b" placeholder="9b020c11  or  9bench.com/r/9b020c11" autocomplete="off" spellcheck="false" />
+        </div>
       </div>
-      <div class="compare-input-group">
-        <label>System B — paste result ID or full URL</label>
-        <input type="text" id="id-b" placeholder="xyz67890 or https://9bench.com/r/xyz67890" />
+      <button type="submit" class="run-btn">▶ COMPARE</button>
+    </form>
+
+    <div id="loading" class="compare-page__loading" hidden>
+      <span class="loading-pulse" aria-hidden="true"></span>
+      <span class="font-mono">Fetching both results…</span>
+    </div>
+    <div id="error" class="compare-page__error" hidden>
+      <p class="text-warn font-mono">Could not load comparison.</p>
+      <p id="error-message" class="text-fg-3 font-mono" style="font-size: 12px;">—</p>
+    </div>
+
+    <div id="comparison" class="comparison" hidden>
+      <div class="comparison__scores">
+        <article class="score-block" id="block-a">
+          <header class="score-block__head">
+            <span class="score-block__label">— RUN A</span>
+            <span class="score-block__hash" id="block-a-hash">—</span>
+          </header>
+          <div class="score-block__big tnum" id="block-a-score">—</div>
+          <div class="score-block__hw" id="block-a-hw">—</div>
+        </article>
+
+        <span class="comparison__vs">vs</span>
+
+        <article class="score-block" id="block-b">
+          <header class="score-block__head">
+            <span class="score-block__label">— RUN B</span>
+            <span class="score-block__hash" id="block-b-hash">—</span>
+          </header>
+          <div class="score-block__big tnum" id="block-b-score">—</div>
+          <div class="score-block__hw" id="block-b-hw">—</div>
+        </article>
       </div>
-      <button id="compare-btn" class="run-btn mt-2">Compare →</button>
+
+      <div class="diff-table-wrap">
+        <table class="table diff-table">
+          <thead>
+            <tr>
+              <th class="num">A</th>
+              <th>Metric</th>
+              <th class="num">B</th>
+              <th class="num">Δ</th>
+            </tr>
+          </thead>
+          <tbody id="diff-rows"></tbody>
+        </table>
+      </div>
+
+      <div class="comparison__verdict">
+        <div class="eyebrow eyebrow--accent">// VERDICT</div>
+        <p class="comparison__verdict-text" id="verdict-text">—</p>
+      </div>
     </div>
 
-    <div id="compare-loading" hidden class="text-center text-slate-400 py-8">⏳ Loading…</div>
-    <div id="compare-error" hidden class="text-center text-red-500 py-4"></div>
-    <div id="compare-result" hidden class="mt-10"></div>
+    <section style="padding: 48px 0 32px;">
+      <TruthDisclaimer compact />
+    </section>
 
-    <div class="text-center mt-12">
-      <p class="text-slate-500 text-sm mb-3">Don't have two results yet?</p>
-      <a href="/" class="inline-block px-6 py-3 bg-brand text-white rounded-xl font-bold">Run a benchmark →</a>
-    </div>
+    <section class="compare-page__cta">
+      <a href="/test/" class="run-btn">▶ TEST MY HARDWARE</a>
+      <a href="/top/" class="btn-outline">View leaderboard</a>
+    </section>
   </main>
-
-  <script>
-    const idA = document.getElementById('id-a') as HTMLInputElement;
-    const idB = document.getElementById('id-b') as HTMLInputElement;
-    const btn = document.getElementById('compare-btn') as HTMLButtonElement;
-    const loading = document.getElementById('compare-loading')!;
-    const errorDiv = document.getElementById('compare-error')!;
-    const result = document.getElementById('compare-result')!;
-
-    function fmt(n: number) { return Number(n).toLocaleString(); }
-
-    function extractId(input: string): string {
-      const m = input.trim().match(/([a-f0-9]{8})/);
-      return m ? m[1] : '';
-    }
-
-    function diff(a: number, b: number): string {
-      if (a === b) return '0%';
-      const pct = ((a - b) / b) * 100;
-      const sign = pct > 0 ? '+' : '';
-      const color = pct > 5 ? '#10B981' : pct < -5 ? '#DC2626' : '#94A3B8';
-      return `<span style="color:${color}">${sign}${pct.toFixed(1)}%</span>`;
-    }
-
-    btn.addEventListener('click', async () => {
-      const a = extractId(idA.value);
-      const b = extractId(idB.value);
-      if (!a || !b) {
-        errorDiv.hidden = false;
-        errorDiv.textContent = 'Both inputs must contain a valid 8-character result ID.';
-        return;
-      }
-      if (a === b) {
-        errorDiv.hidden = false;
-        errorDiv.textContent = 'Comparing the same result with itself wouldn\'t reveal much.';
-        return;
-      }
-
-      btn.disabled = true;
-      loading.hidden = false;
-      errorDiv.hidden = true;
-      result.hidden = true;
-
-      try {
-        const [resA, resB] = await Promise.all([
-          fetch(`/api/r/${a}`).then(r => r.json()) as any,
-          fetch(`/api/r/${b}`).then(r => r.json()) as any
-        ]);
-        if (!resA.ok) throw new Error(`Result A: ${resA.error || 'not found'}`);
-        if (!resB.ok) throw new Error(`Result B: ${resB.error || 'not found'}`);
-
-        const A = resA.result;
-        const B = resB.result;
-
-        loading.hidden = true;
-        result.hidden = false;
-        result.innerHTML = `
-          <div class="compare-grid">
-            <div class="compare-col">
-              <div class="compare-col-header">System A</div>
-              <a href="/r/${A.id}/" class="compare-id">/r/${A.id}</a>
-              <div class="compare-score">${fmt(A.scores.overall)}</div>
-              <div class="compare-detail-list">
-                <div class="compare-detail-row"><span>GPU</span><span>${fmt(A.scores.gpu)}</span></div>
-                <div class="compare-detail-row"><span>CPU·1</span><span>${fmt(A.scores.cpuSingle)}</span></div>
-                <div class="compare-detail-row"><span>CPU·M</span><span>${fmt(A.scores.cpuMulti)}</span></div>
-                <div class="compare-detail-row"><span>RAM</span><span>${fmt(A.scores.ram)}</span></div>
-                <div class="compare-detail-row"><span>GFLOPS</span><span>${A.gpu.gflops.toFixed(0)}</span></div>
-                <div class="compare-detail-row"><span>Cores</span><span>${A.cpu.cores}</span></div>
-                <div class="compare-detail-row"><span>RAM read</span><span>${A.ram.readGBs.toFixed(1)} GB/s</span></div>
-              </div>
-            </div>
-            <div class="compare-vs">vs</div>
-            <div class="compare-col">
-              <div class="compare-col-header">System B</div>
-              <a href="/r/${B.id}/" class="compare-id">/r/${B.id}</a>
-              <div class="compare-score">${fmt(B.scores.overall)}</div>
-              <div class="compare-detail-list">
-                <div class="compare-detail-row"><span>GPU</span><span>${fmt(B.scores.gpu)}</span></div>
-                <div class="compare-detail-row"><span>CPU·1</span><span>${fmt(B.scores.cpuSingle)}</span></div>
-                <div class="compare-detail-row"><span>CPU·M</span><span>${fmt(B.scores.cpuMulti)}</span></div>
-                <div class="compare-detail-row"><span>RAM</span><span>${fmt(B.scores.ram)}</span></div>
-                <div class="compare-detail-row"><span>GFLOPS</span><span>${B.gpu.gflops.toFixed(0)}</span></div>
-                <div class="compare-detail-row"><span>Cores</span><span>${B.cpu.cores}</span></div>
-                <div class="compare-detail-row"><span>RAM read</span><span>${B.ram.readGBs.toFixed(1)} GB/s</span></div>
-              </div>
-            </div>
-          </div>
-
-          <div class="compare-summary">
-            <h3 class="text-lg font-bold mb-3 text-brand">A vs B (% difference)</h3>
-            <div class="compare-detail-list">
-              <div class="compare-detail-row"><span>Overall</span><span>${diff(A.scores.overall, B.scores.overall)}</span></div>
-              <div class="compare-detail-row"><span>GPU</span><span>${diff(A.scores.gpu, B.scores.gpu)}</span></div>
-              <div class="compare-detail-row"><span>CPU·M</span><span>${diff(A.scores.cpuMulti, B.scores.cpuMulti)}</span></div>
-              <div class="compare-detail-row"><span>RAM</span><span>${diff(A.scores.ram, B.scores.ram)}</span></div>
-            </div>
-          </div>
-        `;
-      } catch (e: any) {
-        loading.hidden = true;
-        errorDiv.hidden = false;
-        errorDiv.textContent = e.message;
-      } finally {
-        btn.disabled = false;
-      }
-    });
-  </script>
-
-  <style is:global>
-    .compare-inputs {
-      display: flex;
-      flex-direction: column;
-      gap: 0.85rem;
-      max-width: 600px;
-      margin: 0 auto;
-    }
-    .compare-input-group label {
-      display: block;
-      font-size: 0.85rem;
-      font-weight: 600;
-      color: var(--text-muted);
-      margin-bottom: 0.4rem;
-    }
-    .compare-input-group input {
-      width: 100%;
-      padding: 0.85rem 1rem;
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 0.5rem;
-      color: var(--text);
-      font-family: ui-monospace, monospace;
-      font-size: 0.92rem;
-    }
-    .compare-input-group input:focus {
-      outline: none;
-      border-color: var(--brand);
-    }
-
-    .compare-grid {
-      display: grid;
-      grid-template-columns: 1fr auto 1fr;
-      gap: 1.5rem;
-      align-items: start;
-      max-width: 800px;
-      margin: 0 auto;
-    }
-    @media (max-width: 640px) {
-      .compare-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-    .compare-col {
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 0.85rem;
-      padding: 1.25rem;
-    }
-    .compare-col-header {
-      font-size: 0.75rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: var(--text-muted);
-    }
-    .compare-id {
-      display: block;
-      font-family: ui-monospace, monospace;
-      font-size: 0.78rem;
-      color: var(--brand);
-      margin-bottom: 0.75rem;
-    }
-    .compare-score {
-      font-size: 3rem;
-      font-weight: 800;
-      line-height: 1;
-      text-align: center;
-      margin-bottom: 1rem;
-    }
-    .compare-vs {
-      align-self: center;
-      font-size: 1.5rem;
-      font-weight: 800;
-      color: var(--text-muted);
-      font-style: italic;
-    }
-    @media (max-width: 640px) {
-      .compare-vs { text-align: center; padding: 0.5rem 0; }
-    }
-
-    .compare-detail-list {
-      display: flex;
-      flex-direction: column;
-      gap: 0.4rem;
-    }
-    .compare-detail-row {
-      display: flex;
-      justify-content: space-between;
-      padding: 0.4rem 0.7rem;
-      background: var(--bg-elevated);
-      border-radius: 0.4rem;
-      font-size: 0.92rem;
-    }
-    .compare-detail-row span:first-child { color: var(--text-muted); }
-    .compare-detail-row span:last-child { font-family: ui-monospace, monospace; font-weight: 600; }
-
-    .compare-summary {
-      max-width: 600px;
-      margin: 2rem auto 0;
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 0.85rem;
-      padding: 1.25rem;
-    }
-  </style>
 </BaseLayout>
+
+<style>
+  .compare-page { padding: 32px 0 56px; }
+  .compare-page__head { margin-bottom: 32px; }
+  .compare-page__title {
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: clamp(40px, 6vw, 80px);
+    line-height: 0.95;
+    letter-spacing: -0.04em;
+    margin: 16px 0 0 0;
+    color: var(--fg);
+  }
+
+  .compare-page__form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 24px;
+    border: 1px solid var(--line);
+    background: var(--bg-2);
+    margin-bottom: 32px;
+  }
+  .compare-page__inputs {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+    align-items: end;
+  }
+  @media (min-width: 768px) {
+    .compare-page__inputs { grid-template-columns: 1fr auto 1fr; }
+  }
+  .compare-input { display: flex; flex-direction: column; gap: 6px; }
+  .compare-input label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  .compare-input input { width: 100%; }
+  .compare-page__vs {
+    display: none;
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--fg-3);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    text-align: center;
+    padding-bottom: 12px;
+  }
+  @media (min-width: 768px) { .compare-page__vs { display: block; } }
+
+  .compare-page__loading {
+    display: flex; align-items: center; gap: 12px;
+    padding: 32px 0;
+    color: var(--fg-3);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .loading-pulse {
+    width: 10px; height: 10px;
+    background: var(--accent);
+    animation: pulse 1.2s ease-in-out infinite;
+  }
+  .compare-page__error { padding: 24px 0; }
+
+  .comparison { display: flex; flex-direction: column; gap: 32px; }
+
+  .comparison__scores {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+    align-items: center;
+  }
+  @media (min-width: 768px) {
+    .comparison__scores { grid-template-columns: 1fr auto 1fr; gap: 24px; }
+  }
+  .score-block {
+    border: 1px solid var(--line);
+    background: var(--bg-2);
+    padding: 24px;
+  }
+  .score-block.is-winner { border-color: var(--accent); }
+  .score-block__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 12px;
+  }
+  .score-block__label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--fg-3);
+  }
+  .score-block__hash {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--fg-3);
+  }
+  .score-block__big {
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: clamp(56px, 8vw, 96px);
+    line-height: 1;
+    letter-spacing: -0.04em;
+    color: var(--fg);
+    margin: 8px 0;
+  }
+  .score-block.is-winner .score-block__big { color: var(--accent); }
+  .score-block__hw {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--fg-2);
+    line-height: 1.6;
+  }
+  .comparison__vs {
+    font-family: var(--mono);
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--fg-3);
+    text-align: center;
+  }
+
+  .diff-table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    background: var(--bg-2);
+  }
+  .diff-table { min-width: 560px; }
+  .diff-table tbody tr td:nth-child(2) {
+    color: var(--fg-3);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .diff-table tbody tr.is-a-wins td:nth-child(1) { color: var(--accent); font-weight: 700; }
+  .diff-table tbody tr.is-b-wins td:nth-child(3) { color: var(--accent); font-weight: 700; }
+  .diff-table tbody td:nth-child(4) { font-weight: 700; }
+  .diff-table .delta-pos { color: var(--accent); }
+  .diff-table .delta-neg { color: var(--warn); }
+
+  .comparison__verdict {
+    border-top: 1px solid var(--line);
+    padding-top: 24px;
+  }
+  .comparison__verdict-text {
+    font-family: var(--sans);
+    font-size: clamp(18px, 2.5vw, 28px);
+    line-height: 1.4;
+    color: var(--fg);
+    margin: 12px 0 0 0;
+  }
+
+  .compare-page__cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding: 32px 0 0;
+    border-top: 1px solid var(--line);
+  }
+</style>
+
+<script>
+  const $ = (sel: string) => document.querySelector(sel) as HTMLElement | null;
+  function fmt(n: number): string { return Number(n).toLocaleString(); }
+
+  function extractHash(raw: string): string | null {
+    const m = raw.trim().match(/([0-9a-fA-F]{8})\/?$/);
+    return m ? m[1].toLowerCase() : null;
+  }
+
+  async function fetchResult(hash: string) {
+    const res = await fetch(`/api/r/${hash}`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error((err as any).error || `${hash}: ${res.status}`);
+    }
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || `${hash}: unknown error`);
+    return data.result;
+  }
+
+  function delta(a: number, b: number): { pct: number; sign: '+' | '-' | '' } {
+    if (b === 0) return { pct: 0, sign: '' };
+    const pct = ((a - b) / b) * 100;
+    if (Math.abs(pct) < 0.5) return { pct: 0, sign: '' };
+    return { pct: Math.abs(pct), sign: pct > 0 ? '+' : '-' };
+  }
+  function renderDelta(d: { pct: number; sign: '+' | '-' | '' }): string {
+    if (d.sign === '') return '<span class="text-fg-3">·</span>';
+    const cls = d.sign === '+' ? 'delta-pos' : 'delta-neg';
+    return `<span class="${cls}">${d.sign}${d.pct.toFixed(1)}%</span>`;
+  }
+
+  function buildVerdict(a: any, b: any): string {
+    const aWins = a.scores.overall > b.scores.overall;
+    const winner = aWins ? a : b;
+    const loser  = aWins ? b : a;
+    const diff = ((winner.scores.overall - loser.scores.overall) / loser.scores.overall) * 100;
+
+    const components: Array<[string, number, number]> = [
+      ['GPU compute', winner.scores.gpu, loser.scores.gpu],
+      ['Multi-core CPU', winner.scores.cpuMulti, loser.scores.cpuMulti],
+      ['Single-core CPU', winner.scores.cpuSingle, loser.scores.cpuSingle],
+      ['RAM bandwidth', winner.scores.ram, loser.scores.ram],
+    ];
+    const biggest = components
+      .map(([name, w, l]) => ({ name, pct: l === 0 ? 0 : ((w - l) / l) * 100 }))
+      .sort((x, y) => y.pct - x.pct)[0];
+
+    if (Math.abs(diff) < 3) {
+      return `These two machines are within ${Math.abs(diff).toFixed(1)}% — too close to call. Test variance alone could swing this either way.`;
+    }
+    return `Run ${aWins ? 'A' : 'B'} is ${diff.toFixed(1)}% faster overall. ${biggest.name} drives most of the gap (+${biggest.pct.toFixed(0)}% in favor).`;
+  }
+
+  function renderComparison(a: any, b: any) {
+    const aWins = a.scores.overall > b.scores.overall;
+
+    $('#block-a-hash')!.textContent = `-${a.id.slice(0, 6)}-`;
+    $('#block-b-hash')!.textContent = `-${b.id.slice(0, 6)}-`;
+    $('#block-a-score')!.textContent = fmt(a.scores.overall);
+    $('#block-b-score')!.textContent = fmt(b.scores.overall);
+    $('#block-a-hw')!.innerHTML = [
+      a.gpu.name || 'GPU hidden',
+      `${a.cpu.cores}-core CPU`,
+    ].join('<br>');
+    $('#block-b-hw')!.innerHTML = [
+      b.gpu.name || 'GPU hidden',
+      `${b.cpu.cores}-core CPU`,
+    ].join('<br>');
+    $('#block-a')!.classList.toggle('is-winner', aWins);
+    $('#block-b')!.classList.toggle('is-winner', !aWins);
+
+    type Row = { label: string; a: string; b: string; aNum: number; bNum: number };
+    const rows: Row[] = [
+      { label: 'Total score',    a: fmt(a.scores.overall),    b: fmt(b.scores.overall),    aNum: a.scores.overall,    bNum: b.scores.overall    },
+      { label: 'GPU score',      a: fmt(a.scores.gpu),        b: fmt(b.scores.gpu),        aNum: a.scores.gpu,        bNum: b.scores.gpu        },
+      { label: 'GPU GFLOPS',     a: a.gpu.gflops.toFixed(0),  b: b.gpu.gflops.toFixed(0),  aNum: a.gpu.gflops,        bNum: b.gpu.gflops        },
+      { label: 'CPU·1 score',    a: fmt(a.scores.cpuSingle),  b: fmt(b.scores.cpuSingle),  aNum: a.scores.cpuSingle,  bNum: b.scores.cpuSingle  },
+      { label: 'CPU·M score',    a: fmt(a.scores.cpuMulti),   b: fmt(b.scores.cpuMulti),   aNum: a.scores.cpuMulti,   bNum: b.scores.cpuMulti   },
+      { label: 'CPU cores',      a: String(a.cpu.cores),      b: String(b.cpu.cores),      aNum: a.cpu.cores,         bNum: b.cpu.cores         },
+      { label: 'SHA-256 single', a: fmt(Math.round(a.cpu.hashesSingle)), b: fmt(Math.round(b.cpu.hashesSingle)), aNum: a.cpu.hashesSingle, bNum: b.cpu.hashesSingle },
+      { label: 'SHA-256 multi',  a: fmt(Math.round(a.cpu.hashesMulti)),  b: fmt(Math.round(b.cpu.hashesMulti)),  aNum: a.cpu.hashesMulti,  bNum: b.cpu.hashesMulti  },
+      { label: 'RAM read GB/s',  a: a.ram.readGBs.toFixed(1), b: b.ram.readGBs.toFixed(1), aNum: a.ram.readGBs,       bNum: b.ram.readGBs       },
+      { label: 'RAM write GB/s', a: a.ram.writeGBs.toFixed(1),b: b.ram.writeGBs.toFixed(1),aNum: a.ram.writeGBs,      bNum: b.ram.writeGBs      },
+      { label: 'RAM latency ns', a: a.ram.latencyNs.toFixed(1), b: b.ram.latencyNs.toFixed(1), aNum: a.ram.latencyNs, bNum: b.ram.latencyNs   },
+    ];
+
+    $('#diff-rows')!.innerHTML = rows.map((r) => {
+      // For latency, lower is better — flip the delta direction
+      const isLatency = r.label.includes('latency');
+      const aWinsRow = isLatency ? r.aNum < r.bNum : r.aNum > r.bNum;
+      const bWinsRow = isLatency ? r.bNum < r.aNum : r.bNum > r.aNum;
+      const winnerClass = aWinsRow ? 'is-a-wins' : bWinsRow ? 'is-b-wins' : '';
+      const d = delta(r.aNum, r.bNum);
+      let displayDelta = d;
+      if (isLatency && d.sign !== '') {
+        displayDelta = { pct: d.pct, sign: d.sign === '+' ? '-' : '+' };
+      }
+      return `<tr class="${winnerClass}">
+        <td class="num tnum">${r.a}</td>
+        <td>${r.label}</td>
+        <td class="num tnum">${r.b}</td>
+        <td class="num tnum">${renderDelta(displayDelta)}</td>
+      </tr>`;
+    }).join('');
+
+    $('#verdict-text')!.textContent = buildVerdict(a, b);
+    $('#comparison')!.removeAttribute('hidden');
+  }
+
+  async function runComparison(hashA: string, hashB: string) {
+    $('#loading')!.removeAttribute('hidden');
+    $('#error')!.setAttribute('hidden', '');
+    $('#comparison')!.setAttribute('hidden', '');
+    try {
+      const [a, b] = await Promise.all([fetchResult(hashA), fetchResult(hashB)]);
+      $('#loading')!.setAttribute('hidden', '');
+      renderComparison(a, b);
+      const newUrl = `/compare/?a=${a.id}&b=${b.id}`;
+      window.history.replaceState({}, '', newUrl);
+    } catch (e: any) {
+      console.error('compare failed', e);
+      $('#loading')!.setAttribute('hidden', '');
+      $('#error')!.removeAttribute('hidden');
+      $('#error-message')!.textContent = e?.message || 'Network error';
+    }
+  }
+
+  document.getElementById('compare-form')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const aRaw = (document.getElementById('hash-a') as HTMLInputElement).value;
+    const bRaw = (document.getElementById('hash-b') as HTMLInputElement).value;
+    const a = extractHash(aRaw);
+    const b = extractHash(bRaw);
+    if (!a) { (document.getElementById('hash-a') as HTMLInputElement).focus(); return; }
+    if (!b) { (document.getElementById('hash-b') as HTMLInputElement).focus(); return; }
+    if (a === b) {
+      $('#error')!.removeAttribute('hidden');
+      $('#error-message')!.textContent = 'Same hash on both sides — pick two different runs.';
+      return;
+    }
+    runComparison(a, b);
+  });
+
+  (function autoLoad() {
+    const params = new URLSearchParams(window.location.search);
+    const a = extractHash(params.get('a') || '');
+    const b = extractHash(params.get('b') || '');
+    if (a && b && a !== b) {
+      (document.getElementById('hash-a') as HTMLInputElement).value = a;
+      (document.getElementById('hash-b') as HTMLInputElement).value = b;
+      runComparison(a, b);
+    }
+  })();
+</script>

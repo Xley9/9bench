@@ -1,0 +1,45 @@
+---
+/**
+ * TruthDisclaimer — Truth Series guarantee block.
+ *
+ * Displayed on Result + Methodology + Test-Running.
+ * Never hide. Brand-defining honesty signal.
+ *
+ * Variants:
+ *   - default — full bordered box with header (use on Methodology, Result page)
+ *   - compact — left-bordered single line (use under live test, in footers)
+ *
+ * Default text covers the RAM browser-sandbox limitation. For other
+ * disclaimers (e.g. self-reported GPU), pass children as override.
+ */
+interface Props {
+  compact?: boolean;
+  class?: string;
+}
+const { compact = false, class: className = '' } = Astro.props;
+const hasSlot = Astro.slots.has('default');
+---
+{compact ? (
+  <div class:list={['truth-disclaimer', 'truth-disclaimer--compact', className]}>
+    {hasSlot ? (
+      <slot />
+    ) : (
+      <>
+        <strong>RAM disclaimer:</strong> browser sandbox limits absolute throughput.
+        Treat the RAM score as comparative, not absolute. We say so out loud.
+      </>
+    )}
+  </div>
+) : (
+  <div class:list={['truth-disclaimer', className]}>
+    <div class="truth-disclaimer__head">⚠ Honest Disclaimer · Truth Series</div>
+    {hasSlot ? (
+      <slot />
+    ) : (
+      <span>
+        Browsers sandbox memory access. The RAM number is <em>relative</em>, not native bandwidth.
+        We could hide that and pretend our number is gospel. We don't. Read the methodology.
+      </span>
+    )}
+  </div>
+)}

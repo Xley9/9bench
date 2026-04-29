@@ -1,194 +1,315 @@
 ---
+/**
+ * /top — V1 Terminal leaderboard.
+ *
+ * Tabular display matching V1 mockup: rank · score · CPU · GPU · flag · hash · date.
+ * Period filter: 7D / 30D / ALL.
+ *
+ * Country flags are not in the schema yet (Phase 2 enrichment from CF
+ * geo headers). Until then, we hide the FLAG column gracefully — never
+ * fabricate locations.
+ */
 import BaseLayout from '../layouts/BaseLayout.astro';
+import TruthDisclaimer from '../components/bench/TruthDisclaimer.astro';
+import { tierFor } from '../components/bench/tier-system';
 ---
 
 <BaseLayout
-  title="Top Scores Leaderboard — 9bench"
-  description="Top 9bench hardware benchmark scores from across the globe. See the fastest CPUs, GPUs, and RAM measured in browser."
+  title="Top scores — 9bench"
+  description="The fastest computers measured by 9bench, anonymously. Browser hardware benchmark leaderboard, last 7 days."
   keywords="top hardware benchmark scores, fastest computer 9bench, leaderboard, gpu benchmark ranking, cpu benchmark top, browser benchmark leaderboard"
-  ogImage="https://9bench.com/og?p=top"
 >
-  <main class="max-w-4xl mx-auto px-5 py-12">
-    <header class="text-center mb-10">
-      <a href="/" class="inline-block px-3 py-1 bg-brand-light/10 text-brand rounded-full text-xs font-bold tracking-wider uppercase mb-4">
-        ← back to 9bench
-      </a>
-      <h1 class="text-4xl md:text-5xl font-extrabold mb-3">Top Scores</h1>
-      <p class="text-lg text-slate-400">The fastest computers measured by 9bench, anonymously.</p>
-    </header>
+  <main class="container top-page">
 
-    <!-- Period switcher -->
-    <div class="flex justify-center gap-2 mb-8">
-      <button data-period="all" class="period-btn active">All time</button>
-      <button data-period="month">This month</button>
-      <button data-period="week">This week</button>
+    <!-- Eyebrow + Hero -->
+    <div class="top-page__head">
+      <div class="eyebrow eyebrow--accent">// LEADERBOARD · LIVE</div>
+      <h1 class="top-page__title">
+        Top scores.<br />
+        <span class="text-fg-3">Last <span id="period-label">7 days</span>.</span>
+      </h1>
     </div>
 
-    <div id="loading" class="text-center text-slate-400 py-12">⏳ Loading leaderboard…</div>
-    <div id="error" hidden class="text-center text-red-500"></div>
-    <div id="leaderboard" hidden></div>
-
-    <div class="text-center mt-12">
-      <a href="/" class="inline-block px-6 py-3 bg-brand text-white rounded-xl font-bold">Test your hardware →</a>
+    <!-- Period filter -->
+    <div class="top-page__filters">
+      <button class="filter-btn is-active" data-period="week">7D</button>
+      <button class="filter-btn" data-period="month">30D</button>
+      <button class="filter-btn" data-period="all">ALL</button>
+      <span class="filter-meta font-mono" id="filter-meta">—</span>
     </div>
+
+    <!-- Loading / error states -->
+    <div id="loading" class="top-page__loading">
+      <span class="loading-pulse" aria-hidden="true"></span>
+      <span class="font-mono">Fetching leaderboard…</span>
+    </div>
+    <div id="error" class="top-page__error" hidden>
+      <p class="text-warn font-mono">Could not load leaderboard.</p>
+      <p id="error-message" class="text-fg-3 font-mono" style="font-size: 12px;">—</p>
+    </div>
+
+    <!-- Empty state (shown when zero results in period) -->
+    <div id="empty" class="top-page__empty" hidden>
+      <p class="text-fg-2 font-mono">No tests submitted in this period yet.</p>
+      <p class="text-fg-3 font-mono" style="font-size: 12px; margin-top: 8px;">
+        Be the first.
+      </p>
+      <p style="margin-top: 24px;">
+        <a href="/test/" class="run-btn">▶ TEST MY HARDWARE</a>
+      </p>
+    </div>
+
+    <!-- Leaderboard table -->
+    <div id="leaderboard-wrap" hidden>
+      <div class="leaderboard-table">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Score</th>
+              <th>CPU</th>
+              <th>GPU</th>
+              <th>Hash</th>
+              <th class="num">Date</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboard-rows">
+            <!-- populated by JS -->
+          </tbody>
+        </table>
+      </div>
+      <p class="leaderboard-meta font-mono" id="leaderboard-meta">—</p>
+    </div>
+
+    <!-- Truth disclaimer -->
+    <section style="padding: 48px 0 32px;">
+      <TruthDisclaimer compact />
+    </section>
+
+    <!-- CTA -->
+    <section class="top-page__cta">
+      <a href="/test/" class="run-btn">▶ TEST MY HARDWARE</a>
+      <a href="/methodology" class="btn-outline">Read the methodology</a>
+    </section>
   </main>
+</BaseLayout>
 
-  <script>
-    const loading = document.getElementById('loading')!;
-    const errorDiv = document.getElementById('error')!;
-    const leaderboard = document.getElementById('leaderboard')!;
+<style>
+  .top-page {
+    padding: 32px 0 56px;
+  }
+  .top-page__head {
+    margin-bottom: 32px;
+  }
+  .top-page__title {
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: clamp(40px, 6vw, 80px);
+    line-height: 0.95;
+    letter-spacing: -0.04em;
+    margin: 16px 0 0 0;
+    color: var(--fg);
+  }
 
-    function fmt(n: number) { return Number(n).toLocaleString(); }
-    function rankIcon(rank: number) {
-      if (rank === 1) return '🥇';
-      if (rank === 2) return '🥈';
-      if (rank === 3) return '🥉';
-      if (rank <= 10) return '⭐';
-      return '#' + rank;
-    }
-    function bracket(score: number) {
-      if (score >= 4000) return { c: '#10B981', l: 'Elite' };
-      if (score >= 2500) return { c: '#10B981', l: 'High-end' };
-      if (score >= 1700) return { c: '#0EA5E9', l: 'Mainstream' };
-      if (score >= 1000) return { c: '#0EA5E9', l: 'Mid-range' };
-      if (score >= 500) return { c: '#F59E0B', l: 'Older' };
-      return { c: '#DC2626', l: 'Office' };
-    }
+  /* Filter row */
+  .top-page__filters {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    flex-wrap: wrap;
+    padding: 12px 0;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 32px;
+  }
+  .filter-btn {
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--fg-2);
+    padding: 6px 14px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .filter-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .filter-btn.is-active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(0, 217, 255, 0.06);
+  }
+  :root[data-accent="orange"] .filter-btn.is-active {
+    background: rgba(255, 107, 43, 0.06);
+  }
+  .filter-meta {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--fg-3);
+    letter-spacing: 0.04em;
+  }
 
-    async function loadPeriod(period: string) {
-      loading.hidden = false;
-      leaderboard.hidden = true;
-      errorDiv.hidden = true;
+  /* Loading state */
+  .top-page__loading {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 48px 0;
+    font-size: 12px;
+    color: var(--fg-3);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .loading-pulse {
+    width: 10px; height: 10px;
+    background: var(--accent);
+    animation: pulse 1.2s ease-in-out infinite;
+  }
 
-      try {
-        const res = await fetch(`/api/top?limit=50&period=${period}`);
-        const data = await res.json() as any;
-        if (!data.ok) throw new Error(data.error || 'Load failed');
+  .top-page__empty {
+    text-align: center;
+    padding: 64px 0;
+    border: 1px dashed var(--line);
+  }
 
-        loading.hidden = true;
-        leaderboard.hidden = false;
+  /* Leaderboard table — horizontal scroll on mobile */
+  .leaderboard-table {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    background: var(--bg-2);
+  }
+  .leaderboard-table .table {
+    min-width: 720px;
+  }
+  .leaderboard-table .table tbody tr {
+    cursor: pointer;
+  }
+  .leaderboard-table .table tbody tr:hover { background: var(--bg-3); }
+  .leaderboard-table .table .gpu-cell    { color: var(--fg-2); max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .leaderboard-table .table .hash-cell   { color: var(--fg-3); }
+  .leaderboard-table .table .score-cell  { color: var(--accent); font-weight: 700; font-size: 14px; }
+  .leaderboard-table .table .date-cell   { color: var(--fg-3); }
 
-        if (data.results.length === 0) {
-          leaderboard.innerHTML = `<div class="text-center text-slate-500 py-12">No results yet for this period — be the first!</div>`;
-          return;
-        }
+  .leaderboard-meta {
+    margin-top: 16px;
+    font-size: 11px;
+    color: var(--fg-3);
+    letter-spacing: 0.04em;
+  }
 
-        leaderboard.innerHTML = `
-          <div class="text-center text-sm text-slate-500 mb-4">
-            ${fmt(data.total)} total benchmarks · top ${data.results.length} shown
-          </div>
-          <div class="leaderboard-list">
-            ${data.results.map((r: any) => {
-              const b = bracket(r.scores.overall);
-              const date = new Date(r.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-              return `
-                <a href="/r/${r.id}/" class="leaderboard-row">
-                  <div class="leaderboard-rank">${rankIcon(r.rank)}</div>
-                  <div class="leaderboard-score">${fmt(r.scores.overall)}</div>
-                  <div class="leaderboard-bracket" style="color:${b.c}">${b.l}</div>
-                  <div class="leaderboard-hardware">
-                    <div class="leaderboard-gpu">${r.gpu.name || 'Unknown GPU'}</div>
-                    <div class="leaderboard-meta">${r.cpu.cores} cores · ${r.gpu.gflops.toFixed(0)} GFLOPS · ${date}</div>
-                  </div>
-                </a>
-              `;
-            }).join('')}
-          </div>
-        `;
-      } catch (e: any) {
-        loading.hidden = true;
-        errorDiv.hidden = false;
-        errorDiv.textContent = `Failed to load: ${e.message}`;
-      }
-    }
+  .top-page__cta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding-top: 24px;
+    border-top: 1px solid var(--line);
+  }
 
-    // Period switcher
-    document.querySelectorAll('.period-btn').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        loadPeriod((btn as HTMLElement).dataset.period!);
-      });
+  .top-page__error {
+    padding: 32px 0;
+  }
+</style>
+
+<script>
+  const $ = (sel: string) => document.querySelector(sel) as HTMLElement | null;
+
+  const periodLabel = { week: '7 days', month: '30 days', all: 'all time' };
+  let currentPeriod: 'week' | 'month' | 'all' = 'week';
+
+  function fmt(n: number) { return Number(n).toLocaleString(); }
+  function shortDate(unix: number) {
+    const d = new Date(unix * 1000);
+    return d.toISOString().slice(2, 10).replace(/-/g, '-');
+  }
+  function shortGpu(name: string | null) {
+    if (!name) return '—';
+    // Strip ANGLE wrapper if cleanup didn't run pre-storage
+    return name.replace(/^ANGLE\s*\([^)]+\)/, '').trim().slice(0, 60) || '—';
+  }
+  function shortCpu(cores: number) {
+    return `${cores}-core`;
+  }
+
+  async function loadPeriod(period: 'week' | 'month' | 'all') {
+    currentPeriod = period;
+    const labelEl = $('#period-label');
+    if (labelEl) labelEl.textContent = periodLabel[period];
+
+    // Update filter button states
+    document.querySelectorAll<HTMLButtonElement>('.filter-btn').forEach((btn) => {
+      btn.classList.toggle('is-active', btn.dataset.period === period);
     });
 
-    loadPeriod('all');
-  </script>
+    $('#loading')!.removeAttribute('hidden');
+    $('#error')!.setAttribute('hidden', '');
+    $('#empty')!.setAttribute('hidden', '');
+    $('#leaderboard-wrap')!.setAttribute('hidden', '');
 
-  <style is:global>
-    .period-btn {
-      padding: 0.45rem 1rem;
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 0.5rem;
-      color: var(--text-muted);
-      font-size: 0.85rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.15s;
-    }
-    .period-btn:hover { border-color: var(--brand); color: var(--text); }
-    .period-btn.active {
-      background: var(--brand);
-      color: #fff;
-      border-color: var(--brand);
-    }
-
-    .leaderboard-list {
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-    .leaderboard-row {
-      display: grid;
-      grid-template-columns: 60px 100px 100px 1fr;
-      gap: 0.85rem;
-      align-items: center;
-      padding: 0.85rem 1rem;
-      background: var(--bg-card);
-      border: 1px solid var(--border);
-      border-radius: 0.65rem;
-      color: var(--text);
-      text-decoration: none;
-      transition: all 0.15s;
-    }
-    .leaderboard-row:hover {
-      border-color: var(--brand);
-      transform: translateX(4px);
-    }
-    .leaderboard-rank {
-      font-size: 1.3rem;
-      font-weight: 700;
-      text-align: center;
-    }
-    .leaderboard-score {
-      font-size: 1.2rem;
-      font-weight: 800;
-      font-family: ui-monospace, monospace;
-    }
-    .leaderboard-bracket {
-      font-size: 0.85rem;
-      font-weight: 700;
-      letter-spacing: 0.5px;
-      text-transform: uppercase;
-    }
-    .leaderboard-gpu {
-      font-size: 0.95rem;
-      font-weight: 600;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-    .leaderboard-meta {
-      font-size: 0.78rem;
-      color: var(--text-muted);
-      margin-top: 0.15rem;
-    }
-
-    @media (max-width: 600px) {
-      .leaderboard-row {
-        grid-template-columns: 40px 80px 1fr;
+    try {
+      const res = await fetch(`/api/top?limit=50&period=${period}`);
+      if (!res.ok) {
+        const errBody = await res.json().catch(() => ({}));
+        throw new Error((errBody as any).error || `HTTP ${res.status}`);
       }
-      .leaderboard-bracket { display: none; }
+      const data = await res.json() as any;
+      if (!data.ok) throw new Error(data.error || 'Unknown error');
+
+      const results = data.results || [];
+      $('#loading')!.setAttribute('hidden', '');
+
+      // Empty state when period has zero results
+      if (results.length === 0) {
+        $('#empty')!.removeAttribute('hidden');
+        return;
+      }
+
+      // Render rows
+      const tbody = $('#leaderboard-rows')!;
+      tbody.innerHTML = results.map((r: any) => `
+        <tr data-href="/r/${r.id}/">
+          <td class="rank-cell">#${String(r.rank).padStart(2, '0')}</td>
+          <td class="score-cell tnum">${fmt(r.scores.overall)}</td>
+          <td>${shortCpu(r.cpu.cores)}</td>
+          <td class="gpu-cell" title="${r.gpu.name || ''}">${shortGpu(r.gpu.name)}</td>
+          <td class="hash-cell">-${r.id.slice(0, 6)}-</td>
+          <td class="date-cell num tnum">${shortDate(r.createdAt)}</td>
+        </tr>
+      `).join('');
+
+      // Make rows clickable
+      tbody.querySelectorAll<HTMLElement>('tr[data-href]').forEach((tr) => {
+        tr.addEventListener('click', () => {
+          window.location.href = tr.dataset.href!;
+        });
+      });
+
+      // Meta line
+      const total = data.total ?? results.length;
+      $('#leaderboard-meta')!.textContent =
+        `Showing ${results.length} of ${fmt(total)} submitted runs · period: ${periodLabel[period]}.`;
+
+      // Filter meta on top filter row
+      $('#filter-meta')!.textContent = `${fmt(total)} TESTS · LIVE`;
+
+      $('#leaderboard-wrap')!.removeAttribute('hidden');
+    } catch (e: any) {
+      console.error('top failed', e);
+      $('#loading')!.setAttribute('hidden', '');
+      $('#error')!.removeAttribute('hidden');
+      const msg = $('#error-message');
+      if (msg) msg.textContent = e?.message || 'Network error';
     }
-  </style>
-</BaseLayout>
+  }
+
+  // Wire filter buttons
+  document.querySelectorAll<HTMLButtonElement>('.filter-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const period = btn.dataset.period as 'week' | 'month' | 'all';
+      if (period && period !== currentPeriod) loadPeriod(period);
+    });
+  });
+
+  // Initial load
+  loadPeriod('week');
+</script>

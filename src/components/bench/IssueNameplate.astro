@@ -1,0 +1,41 @@
+---
+/**
+ * IssueNameplate — V2 Editorial Magazine strip.
+ *
+ * Format: VOL. III · ISSUE 04 · APR 2026   TRUTH SERIES — HARDWARE EDITION   FREE · BROWSER · 8 MB
+ *
+ * Establishes magazine-authority for the Landing page. Auto-derives
+ * volume + issue from current date so it always matches when shown.
+ * (Volume = year - 2024, capped at sensible value. Issue = month.)
+ *
+ * Source: V2Landing in 9bench-v2-editorial.jsx.
+ */
+interface Props {
+  middle?: string;
+  right?: string;
+  class?: string;
+}
+
+const now = new Date();
+// Volume tracks years since project start (Apr 2026 = Vol III for narrative).
+// Issue is the month — keeps fresh feeling, easy to verify against date.
+const VOLUME_OFFSET = 2024; // 2024 → Vol I, 2025 → Vol II, 2026 → Vol III
+const vol = Math.max(1, now.getFullYear() - VOLUME_OFFSET);
+const issue = now.getMonth() + 1;
+const monthShort = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'][now.getMonth()];
+const year = now.getFullYear();
+const romanVol = ['', 'I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'][vol] ?? String(vol);
+const issueStr = String(issue).padStart(2, '0');
+
+const left = `Vol. ${romanVol} · Issue ${issueStr} · ${monthShort} ${year}`;
+const {
+  middle = 'Truth Series — Hardware Edition',
+  right = 'Free · Browser · 8 MB',
+  class: className = ''
+} = Astro.props;
+---
+<div class:list={['nameplate', className]}>
+  <span>{left}</span>
+  <span>{middle}</span>
+  <span>{right}</span>
+</div>

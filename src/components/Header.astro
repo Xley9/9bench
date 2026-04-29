@@ -1,4 +1,6 @@
 ---
+import AccentToggle from './bench/AccentToggle.astro';
+
 const path = Astro.url.pathname;
 function isActive(p: string) {
   if (p === '/' && path === '/') return true;
@@ -8,39 +10,31 @@ function isActive(p: string) {
 ---
 
 <header class="site-header">
-  <div class="site-header-inner">
+  <div class="container site-header__inner">
     <a href="/" class="site-logo" aria-label="9bench home">
-      <svg width="32" height="32" viewBox="0 0 64 64" aria-hidden="true">
-        <defs>
-          <linearGradient id="hdr-grad" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stop-color="#10B981"/>
-            <stop offset="100%" stop-color="#4F46E5"/>
-          </linearGradient>
-        </defs>
-        <rect width="64" height="64" rx="14" fill="url(#hdr-grad)"/>
-        <text x="32" y="46" text-anchor="middle"
-              font-family="ui-rounded, system-ui, sans-serif"
-              font-size="44" font-weight="900" fill="#FFFFFF">9</text>
-      </svg>
-      <span>9bench</span>
+      <span class="site-logo__mark" aria-hidden="true">9</span>
+      <span class="site-logo__name">9bench</span>
     </a>
 
-    <nav class="site-nav" aria-label="Main">
-      <a href="/" class={isActive('/') ? 'active' : ''}>Test</a>
-      <a href="/top" class={isActive('/top') ? 'active' : ''}>Top</a>
-      <a href="/compare" class={isActive('/compare') ? 'active' : ''}>Compare</a>
-      <a href="/articles" class={isActive('/articles') ? 'active' : ''}>Articles</a>
-      <a href="/methodology" class={isActive('/methodology') ? 'active' : ''}>How</a>
-      <a href="/faq" class={isActive('/faq') ? 'active' : ''}>FAQ</a>
+    <nav class="site-nav" aria-label="Primary">
+      <a href="/"            class:list={['site-nav__link', isActive('/')            && 'is-active']}>Test</a>
+      <a href="/top"         class:list={['site-nav__link', isActive('/top')         && 'is-active']}>Top</a>
+      <a href="/compare"     class:list={['site-nav__link', isActive('/compare')     && 'is-active']}>Compare</a>
+      <a href="/articles"    class:list={['site-nav__link', isActive('/articles')    && 'is-active']}>Articles</a>
+      <a href="/methodology" class:list={['site-nav__link', isActive('/methodology') && 'is-active']}>How</a>
+      <a href="/faq"         class:list={['site-nav__link', isActive('/faq')         && 'is-active']}>FAQ</a>
     </nav>
 
-    <button class="site-nav-burger" id="site-nav-burger" aria-label="Open menu">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-        <line x1="4" y1="6" x2="20" y2="6"/>
-        <line x1="4" y1="12" x2="20" y2="12"/>
-        <line x1="4" y1="18" x2="20" y2="18"/>
-      </svg>
-    </button>
+    <div class="site-header__right">
+      <AccentToggle />
+      <button class="site-nav-burger" id="site-nav-burger" aria-label="Open menu">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
+          <line x1="4" y1="7" x2="20" y2="7"/>
+          <line x1="4" y1="12" x2="20" y2="12"/>
+          <line x1="4" y1="17" x2="20" y2="17"/>
+        </svg>
+      </button>
+    </div>
   </div>
 
   <div class="site-nav-drawer" id="site-nav-drawer" hidden>
@@ -61,82 +55,105 @@ function isActive(p: string) {
     position: sticky;
     top: 0;
     z-index: 50;
-    background: rgba(11, 17, 32, 0.85);
-    backdrop-filter: blur(12px);
-    border-bottom: 1px solid var(--border);
+    background: rgba(10, 10, 10, 0.88);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line);
   }
-  .site-header-inner {
-    max-width: 1080px;
-    margin: 0 auto;
-    padding: 0.7rem 1rem;
+  .site-header__inner {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 1rem;
+    gap: 16px;
+    padding: 12px 0;
   }
+
+  /* Logo: small accent square + mono name (matches Toololis brand-family logic) */
   .site-logo {
     display: inline-flex;
     align-items: center;
-    gap: 0.5rem;
-    font-weight: 800;
-    font-size: 1.1rem;
-    color: var(--text);
+    gap: 10px;
     text-decoration: none;
+    color: var(--fg);
   }
-  .site-logo svg {
-    border-radius: 0.5rem;
+  .site-logo__mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    background: var(--accent);
+    color: #000;
+    font-family: var(--sans);
+    font-weight: 800;
+    font-size: 16px;
+    line-height: 1;
   }
+  .site-logo__name {
+    font-family: var(--sans);
+    font-weight: 800;
+    font-size: 16px;
+    letter-spacing: -0.01em;
+  }
+
+  /* Nav links — small uppercase mono */
   .site-nav {
     display: none;
-    gap: 0.25rem;
+    gap: 8px;
   }
-  .site-nav a {
-    padding: 0.45rem 0.85rem;
-    border-radius: 0.5rem;
-    color: var(--text-muted);
+  .site-nav__link {
+    padding: 6px 12px;
+    color: var(--fg-2);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
     text-decoration: none;
-    font-weight: 600;
-    font-size: 0.9rem;
-    transition: all 0.15s;
+    border-bottom: 1px solid transparent;
+    transition: color 0.15s, border-color 0.15s;
   }
-  .site-nav a:hover { color: var(--text); background: var(--bg-elevated); }
-  .site-nav a.active { color: var(--brand); background: var(--bg-elevated); }
-  @media (min-width: 768px) {
-    .site-nav { display: flex; }
-  }
+  .site-nav__link:hover     { color: var(--fg); }
+  .site-nav__link.is-active { color: var(--accent); border-color: var(--accent); }
 
+  @media (min-width: 768px) { .site-nav { display: flex; } }
+
+  /* Right cluster: accent toggle + burger */
+  .site-header__right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
   .site-nav-burger {
-    background: none;
-    border: none;
-    color: var(--text);
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--fg);
+    padding: 6px 8px;
     cursor: pointer;
-    padding: 0.4rem;
-    border-radius: 0.4rem;
+    transition: border-color 0.15s;
   }
-  .site-nav-burger:hover { background: var(--bg-elevated); }
-  @media (min-width: 768px) {
-    .site-nav-burger { display: none; }
-  }
+  .site-nav-burger:hover { border-color: var(--accent); color: var(--accent); }
+  @media (min-width: 768px) { .site-nav-burger { display: none; } }
 
+  /* Drawer (mobile only) */
   .site-nav-drawer {
     display: none;
     flex-direction: column;
-    background: var(--bg-card);
-    border-bottom: 1px solid var(--border);
-    padding: 0.5rem 1rem;
+    background: var(--bg-2);
+    border-bottom: 1px solid var(--line);
   }
   .site-nav-drawer.is-open { display: flex; }
   .site-nav-drawer a {
-    padding: 0.85rem 0.5rem;
-    color: var(--text);
+    padding: 12px 20px;
+    color: var(--fg);
     text-decoration: none;
-    font-weight: 600;
-    border-bottom: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--line-2);
   }
+  .site-nav-drawer a:hover    { background: var(--bg-3); color: var(--accent); }
   .site-nav-drawer a:last-child { border-bottom: none; }
-  @media (min-width: 768px) {
-    .site-nav-drawer { display: none !important; }
-  }
+  @media (min-width: 768px) { .site-nav-drawer { display: none !important; } }
 </style>
 
 <script is:inline>
@@ -144,9 +161,7 @@ function isActive(p: string) {
     const burger = document.getElementById('site-nav-burger');
     const drawer = document.getElementById('site-nav-drawer');
     if (burger && drawer) {
-      burger.addEventListener('click', () => {
-        drawer.classList.toggle('is-open');
-      });
+      burger.addEventListener('click', () => drawer.classList.toggle('is-open'));
       drawer.querySelectorAll('a').forEach(a => {
         a.addEventListener('click', () => drawer.classList.remove('is-open'));
       });

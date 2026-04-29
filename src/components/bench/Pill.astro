@@ -1,0 +1,23 @@
+---
+/**
+ * Pill — uppercase mono badge.
+ * Variants: default | accent | warn | good
+ *
+ * Usage:
+ *   <Pill>Truth Series</Pill>
+ *   <Pill variant="accent">Live</Pill>
+ *   <Pill variant="warn">Disclaimer</Pill>
+ */
+interface Props {
+  variant?: 'default' | 'accent' | 'warn' | 'good';
+  class?: string;
+}
+const { variant = 'default', class: className = '' } = Astro.props;
+const variantClass =
+  variant === 'accent' ? 'pill--accent' :
+  variant === 'warn'   ? 'pill--warn'   :
+  variant === 'good'   ? 'pill--good'   : '';
+---
+<span class:list={['pill', variantClass, className]}>
+  <slot />
+</span>

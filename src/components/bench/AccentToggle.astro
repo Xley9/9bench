@@ -1,0 +1,76 @@
+---
+/**
+ * AccentToggle — Cyan ⇄ Orange swap, persisted in localStorage.
+ *
+ * Why: Hardware audience splits hot-or-cool. Cyan is the brand default
+ * (matches Truth-Series voice + differentiates from Promptolis/Toololis
+ * orange). Orange is the user-preference fallback for those who prefer
+ * warmth. Brand-family integrity preserved either way.
+ *
+ * Implementation:
+ *   - Reads/writes localStorage key '9bench-accent' = 'cyan' | 'orange'
+ *   - Sets data-accent attribute on <html> root
+ *   - global.css :root[data-accent="orange"] block flips --accent vars
+ *   - No-flash script in BaseLayout sets attribute before paint
+ *
+ * Usage: drop into Header or Footer.
+ *   <AccentToggle />
+ */
+---
+<button
+  type="button"
+  id="accent-toggle"
+  class="accent-toggle"
+  aria-label="Toggle accent color (cyan or orange)"
+  title="Toggle accent color"
+>
+  <span class="accent-toggle__swatch accent-toggle__swatch--cyan" aria-hidden="true"></span>
+  <span class="accent-toggle__swatch accent-toggle__swatch--orange" aria-hidden="true"></span>
+</button>
+
+<style>
+  .accent-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 8px;
+    background: transparent;
+    border: 1px solid var(--line);
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .accent-toggle:hover { border-color: var(--accent); }
+  .accent-toggle__swatch {
+    width: 12px;
+    height: 12px;
+    border: 1px solid var(--line);
+    transition: opacity 0.15s, border-color 0.15s;
+    opacity: 0.4;
+  }
+  .accent-toggle__swatch--cyan   { background: #00D9FF; }
+  .accent-toggle__swatch--orange { background: #FF6B2B; }
+
+  /* Active swatch reflects current accent (data-accent on <html>) */
+  :root:not([data-accent="orange"]) .accent-toggle__swatch--cyan,
+  :root[data-accent="orange"]      .accent-toggle__swatch--orange {
+    opacity: 1;
+    border-color: currentColor;
+  }
+</style>
+
+<script>
+  // Toggle handler — runs after page load (DOMContentLoaded equivalent for Astro).
+  // Updates: localStorage + html data-accent attribute. CSS variables flip
+  // automatically via the [data-accent="orange"] selector in global.css.
+  document.getElementById('accent-toggle')?.addEventListener('click', () => {
+    const html = document.documentElement;
+    const current = html.getAttribute('data-accent') === 'orange' ? 'orange' : 'cyan';
+    const next = current === 'orange' ? 'cyan' : 'orange';
+    if (next === 'orange') {
+      html.setAttribute('data-accent', 'orange');
+    } else {
+      html.removeAttribute('data-accent');
+    }
+    try { localStorage.setItem('9bench-accent', next); } catch (e) {}
+  });
+</script>

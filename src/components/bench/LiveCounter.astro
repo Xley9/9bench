@@ -1,0 +1,58 @@
+---
+/**
+ * LiveCounter — animated tabular counter for stats.
+ *
+ * Wired to /api/stats values like:
+ *   - total_runs
+ *   - vendor_payments (always 0 — by design)
+ *   - last_24h
+ *
+ * Renders as: ● 12,847 RUNS SUBMITTED
+ * Tabular numerals so widening width doesn't cause layout shift.
+ *
+ * Behavior: starts at `value`, occasionally increments via JS
+ * (visual energy only — does not reflect real-time changes; for
+ * actual fresh data, refetch /api/stats).
+ *
+ * For "always-0" counters (vendor_payments), pass static={true}
+ * to disable the animation — a counter that ticks is dishonest
+ * if the underlying value never changes.
+ */
+interface Props {
+  value: number;
+  label: string;
+  static?: boolean;
+  class?: string;
+}
+const { value, label, static: isStatic = false, class: className = '' } = Astro.props;
+---
+<span
+  class:list={['live-counter', className]}
+  data-live-counter
+  data-value={value}
+  data-static={isStatic ? 'true' : 'false'}
+>
+  <span class="live-counter__dot"></span>
+  <span class="live-counter__num tnum">{value.toLocaleString()}</span>
+  <span class="live-counter__label">{label}</span>
+</span>
+
+<script>
+  // Subtle tick animation — only on counters that aren't structurally static
+  // (vendor_payments=0 has static=true; total_runs animates to feel alive).
+  // We only nudge by 0-1 every 2-4 seconds; this is a vibe effect, not data.
+  document.querySelectorAll<HTMLElement>('[data-live-counter]').forEach((el) => {
+    if (el.dataset.static === 'true') return;
+    const numEl = el.querySelector<HTMLElement>('.live-counter__num');
+    if (!numEl) return;
+    let v = parseInt(el.dataset.value ?? '0', 10);
+    setInterval(() => {
+      // Probability ~25% per tick of nudging by 1 — gives the counter
+      // a sense of liveness without making it look fake-fast.
+      if (Math.random() < 0.25) {
+        v += 1;
+        numEl.textContent = v.toLocaleString();
+      }
+    }, 2200 + Math.random() * 2000);
+  });
+</script>
