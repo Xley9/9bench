@@ -18,7 +18,15 @@ CREATE TABLE IF NOT EXISTS results (
   ram_write_gbs REAL NOT NULL,
   ram_latency_ns REAL NOT NULL,
   ua_short TEXT,
-  fingerprint TEXT
+  fingerprint TEXT,
+  -- ── Phase G — AI capabilities (added 2026-04-29) ───────────────────
+  -- Stored alongside the main result so visitors of /r/[id] see the
+  -- ORIGINAL machine's AI capabilities, not their own. Critical for
+  -- shareable links. Nullable so old rows (pre-Phase-G) still work.
+  ai_score        INTEGER,    -- 0-3000+ AI Capability composite
+  ai_tier         TEXT,       -- 'AI-S' | 'AI-A' | 'AI-B' | 'AI-Workstation' | 'AI-Office' | 'AI-Limited'
+  ai_max_alloc_gb REAL,       -- Largest single TypedArray allocation in GB
+  ai_fp16         INTEGER     -- WebGPU shader-f16 supported (0 or 1, nullable for unknown)
 );
 
 CREATE INDEX IF NOT EXISTS idx_score_overall ON results(score_overall);

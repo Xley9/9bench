@@ -15,6 +15,7 @@ import { runWebGPUBench, type WebGPUResult } from './webgpu-test';
 import { runCPUBench, type CPUResult } from './cpu-test';
 import { runRAMBench, type RAMResult } from './ram-test';
 import { detectHardware, type HardwareInfo } from './hardware-detect';
+import { probeAICapabilities, type AICapabilities } from './ai-capabilities';
 
 export interface BenchResult {
   timestamp: number;
@@ -30,6 +31,8 @@ export interface BenchResult {
   gpu: WebGPUResult;
   cpu: CPUResult;
   ram: RAMResult;
+  /** AI workload capabilities (Phase G — local-AI differentiator vs UserBenchmark/Geekbench) */
+  ai?: AICapabilities;
   scores: {
     gpu: number;
     cpuSingle: number;
@@ -67,6 +70,19 @@ export async function runFullBench(onProgress?: ProgressCallback): Promise<Bench
   onProgress?.('ram', 0, 'Pumping memory…');
   const ram = await runRAMBench(256);
   onProgress?.('ram', 100, `RAM ${ram.readBandwidthGBs.toFixed(1)} GB/s read`);
+
+  // ── AI capabilities probe (Phase G) ────────────────────────────────
+  // Quick (<1s) capability scan that produces "what your PC can run
+  // locally" predictions — Llama 7B/13B/70B, SDXL, SD 1.5, Whisper.
+  // This is the differentiator vs UserBenchmark/Geekbench for 2026.
+  // Failures here must NOT break the main bench result — wrap defensively.
+  let ai: AICapabilities | undefined;
+  try {
+    ai = await probeAICapabilities(gpu.gflops || 0, ram.readBandwidthGBs || 0);
+  } catch (e) {
+    console.warn('AI capabilities probe failed (non-fatal):', e);
+    ai = undefined;
+  }
 
   // ── Calibrated scoring (v3, browser-API-aware) ───────────────────────
   // Browser APIs cap real measurable performance (Web Crypto serialization,
@@ -113,6 +129,7 @@ export async function runFullBench(onProgress?: ProgressCallback): Promise<Bench
     gpu,
     cpu,
     ram,
+    ai,
     scores: {
       gpu: scoreGpu,
       cpuSingle: scoreCpuS,

@@ -656,6 +656,17 @@ import TruthDisclaimer from '../components/bench/TruthDisclaimer.astro';
           ram: result.ram,
           hardware: result.hardware,
           durationMs: result.durationMs,
+          // ── Phase G: AI capabilities snapshot ──
+          // We send only the small subset needed to reproduce predictions
+          // for visitors of /r/[id] (score, tier, memory headroom, FP16).
+          // Full predictions are regenerated client-side from these +
+          // gpu_gflops + ram_read_gbs (already in main result).
+          ai: result.ai ? {
+            score: result.ai.score,
+            tier:  result.ai.tier,
+            memory: { largestAllocatableGB: result.ai.memory.largestAllocatableGB },
+            webgpu: { fp16: result.ai.webgpu.fp16 },
+          } : undefined,
         }),
       });
       if (submitRes.ok) {

@@ -67,6 +67,18 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
         </div>
       </section>
 
+      <!-- ── Component imbalance callout (Phase G.4) ─────────────── -->
+      <!-- Visible only when an imbalance is detected (RAM browser-cap excluded).
+           Tells the user which component is bottlenecking — actionable
+           upgrade guidance UserBenchmark/Geekbench don't provide. -->
+      <aside id="imbalance-callout" class="imbalance-callout" hidden>
+        <span class="imbalance-callout__icon" aria-hidden="true">⚡</span>
+        <div class="imbalance-callout__body">
+          <strong id="imbalance-title">—</strong>
+          <p id="imbalance-detail">—</p>
+        </div>
+      </aside>
+
       <!-- Component breakdown (4-card grid) -->
       <section class="component-grid">
         <article class="component-card">
@@ -89,6 +101,77 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
           <div class="component-card__value tnum" id="comp-ram">—</div>
           <div class="component-card__sub" id="comp-ram-sub">—</div>
         </article>
+      </section>
+
+      <!-- ── AI Capabilities Section (Phase G — differentiator) ──────
+           This is the section UserBenchmark / Geekbench / Cinebench do not
+           have. 2026 hardware purchase is increasingly driven by "can it
+           run Llama 13B?" — 9bench answers concretely, with reasoning. -->
+      <section class="ai-section" id="ai-section" hidden>
+        <header class="ai-section__head">
+          <div class="eyebrow eyebrow--accent">// LOCAL AI · WHAT YOUR PC CAN RUN</div>
+          <div class="ai-section__head-row">
+            <h2 class="ai-section__h2" id="ai-tier-letter">—</h2>
+            <div class="ai-section__head-text">
+              <p class="ai-section__tier-sub" id="ai-tier-sub">—</p>
+              <p class="ai-section__score">
+                AI Capability Score · <span class="text-fg tnum" id="ai-score">—</span>
+              </p>
+            </div>
+          </div>
+        </header>
+
+        <!-- WebGPU feature inventory — proof the score is grounded -->
+        <div class="ai-section__features">
+          <div class="ai-feat" id="ai-feat-fp16">
+            <span class="ai-feat__icon">—</span>
+            <div>
+              <strong>FP16 (shader-f16)</strong>
+              <span class="ai-feat__sub" id="ai-feat-fp16-sub">—</span>
+            </div>
+          </div>
+          <div class="ai-feat" id="ai-feat-buffer">
+            <span class="ai-feat__icon">—</span>
+            <div>
+              <strong>Memory headroom</strong>
+              <span class="ai-feat__sub" id="ai-feat-buffer-sub">—</span>
+            </div>
+          </div>
+          <div class="ai-feat" id="ai-feat-webgpu">
+            <span class="ai-feat__icon">—</span>
+            <div>
+              <strong>WebGPU compute</strong>
+              <span class="ai-feat__sub" id="ai-feat-webgpu-sub">—</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Predictions — concrete workload outcomes -->
+        <div class="ai-predictions" id="ai-predictions">
+          <!-- populated by JS -->
+        </div>
+
+        <!-- Methodology footnote -->
+        <p class="ai-section__note">
+          <strong>How these predictions work:</strong>
+          We measure GPU compute (browser ≈ 35% of native), memory bandwidth
+          (browser ≈ 40% of native), and largest allocatable buffer. Predictions
+          extrapolate to native performance using documented scaling.
+          <a href="/methodology#ai">Read the AI methodology →</a>
+        </p>
+      </section>
+
+      <!-- Pre-Phase-G fallback: result was captured before AI probe existed -->
+      <section class="ai-section ai-section--legacy" id="ai-section-legacy" hidden>
+        <header class="ai-section__head">
+          <div class="eyebrow eyebrow--accent">// LOCAL AI</div>
+          <h2 class="ai-section__legacy-h2">AI capability not measured for this run</h2>
+          <p class="ai-section__legacy-p">
+            This result was captured before 9bench added local-AI capability
+            scoring. <a href="/test/" class="text-accent">Run a fresh test</a>
+            to see what your machine can run locally — Llama, SDXL, Whisper.
+          </p>
+        </header>
       </section>
 
       <!-- Two-column: detected hardware + trading card -->
@@ -567,6 +650,220 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
     padding: 32px 0;
     border-top: 1px solid var(--line);
   }
+
+  /* ── Component Imbalance Callout (Phase G.4) ─────────────────── */
+  .imbalance-callout {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    padding: 16px 20px;
+    margin: 0 0 32px 0;
+    border-left: 3px solid var(--accent);
+    background: rgba(0, 217, 255, 0.04);
+  }
+  :root[data-accent="orange"] .imbalance-callout {
+    background: rgba(255, 107, 43, 0.04);
+  }
+  .imbalance-callout--warn {
+    border-left-color: var(--warn);
+    background: rgba(255, 87, 34, 0.04);
+  }
+  .imbalance-callout__icon {
+    font-size: 22px;
+    flex: 0 0 auto;
+    color: var(--accent);
+  }
+  .imbalance-callout--warn .imbalance-callout__icon { color: var(--warn); }
+  .imbalance-callout__body strong {
+    display: block;
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 4px;
+  }
+  .imbalance-callout--warn .imbalance-callout__body strong { color: var(--warn); }
+  .imbalance-callout__body p {
+    margin: 0;
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--fg-2);
+  }
+
+  /* ── AI Capabilities Section (Phase G) ───────────────────────── */
+  .ai-section {
+    padding: 48px 0;
+    margin: 56px 0 0;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+  .ai-section__head { margin-bottom: 32px; }
+  .ai-section__head-row {
+    display: flex;
+    gap: 24px;
+    align-items: center;
+    margin-top: 16px;
+    flex-wrap: wrap;
+  }
+  .ai-section__h2 {
+    font-family: var(--sans);
+    font-weight: 800;
+    font-size: clamp(64px, 10vw, 120px);
+    line-height: 0.85;
+    letter-spacing: -0.04em;
+    margin: 0;
+    color: var(--accent);
+    flex: 0 0 auto;
+  }
+  .ai-section__head-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .ai-section__tier-sub {
+    font-family: var(--sans);
+    font-size: 18px;
+    color: var(--fg);
+    margin: 0;
+    line-height: 1.3;
+  }
+  .ai-section__score {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--fg-3);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin: 0;
+  }
+  .ai-section__score .text-fg {
+    font-weight: 700;
+    font-size: 14px;
+  }
+
+  /* WebGPU feature inventory — 3-card grid */
+  .ai-section__features {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    margin-bottom: 32px;
+  }
+  @media (min-width: 768px) {
+    .ai-section__features { grid-template-columns: repeat(3, 1fr); }
+  }
+  .ai-feat {
+    background: var(--bg-2);
+    padding: 16px 18px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .ai-feat__icon {
+    font-size: 18px;
+    color: var(--accent);
+    flex: 0 0 auto;
+    line-height: 1;
+  }
+  .ai-feat--ok    .ai-feat__icon { color: var(--good); }
+  .ai-feat--warn  .ai-feat__icon { color: var(--warn); }
+  .ai-feat--limit .ai-feat__icon { color: var(--fg-3); }
+  .ai-feat strong {
+    display: block;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--fg);
+    margin-bottom: 4px;
+  }
+  .ai-feat__sub {
+    display: block;
+    font-family: var(--sans);
+    font-size: 12px;
+    color: var(--fg-2);
+    line-height: 1.5;
+  }
+
+  /* Predictions list */
+  .ai-predictions {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    border: 1px solid var(--line);
+    background: var(--bg-2);
+  }
+  .ai-pred {
+    display: grid;
+    grid-template-columns: 24px 1fr;
+    gap: 14px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--line-2);
+    align-items: start;
+  }
+  .ai-pred:last-child { border-bottom: 0; }
+  .ai-pred__verdict {
+    font-family: var(--sans);
+    font-weight: 800;
+    font-size: 18px;
+    line-height: 1;
+    flex: 0 0 auto;
+  }
+  .ai-pred--yes   .ai-pred__verdict { color: var(--good); }
+  .ai-pred--maybe .ai-pred__verdict { color: var(--accent); }
+  .ai-pred--no    .ai-pred__verdict { color: var(--fg-3); }
+  .ai-pred__body { display: flex; flex-direction: column; gap: 4px; }
+  .ai-pred__name {
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 15px;
+    color: var(--fg);
+  }
+  .ai-pred__perf {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .ai-pred--no .ai-pred__perf { color: var(--fg-3); text-decoration: line-through; }
+  .ai-pred__reason {
+    font-family: var(--sans);
+    font-size: 12px;
+    color: var(--fg-3);
+    line-height: 1.55;
+    margin-top: 2px;
+  }
+
+  .ai-section__note {
+    margin-top: 24px;
+    padding: 14px 18px;
+    border: 1px dashed var(--line);
+    font-family: var(--mono);
+    font-size: 11px;
+    line-height: 1.6;
+    color: var(--fg-3);
+  }
+  .ai-section__note strong { color: var(--fg-2); }
+  .ai-section__note a { color: var(--accent); }
+
+  /* Legacy fallback when row predates Phase G */
+  .ai-section--legacy { padding: 32px 0; }
+  .ai-section__legacy-h2 {
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 22px;
+    color: var(--fg-2);
+    margin: 12px 0 8px 0;
+  }
+  .ai-section__legacy-p {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--fg-3);
+    margin: 0;
+  }
+  .ai-section__legacy-p a { text-decoration: underline; }
 </style>
 
 <script>
@@ -576,6 +873,125 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
 
   import { tierFor, PERCENTILE_MIN_N, shareText } from '../../components/bench/tier-system';
   import { toPng } from 'html-to-image';
+
+  // AI tier label + color helper. Inlined here (rather than importing
+  // the full ai-capabilities module) because Astro tree-shakes the
+  // server-side `probeAICapabilities` away — we only need the visual
+  // labels for previously-stored ai_tier strings.
+  function aiTierLabel(tier: string): { letter: string; sub: string; color: string } {
+    switch (tier) {
+      case 'AI-S':           return { letter: 'S', sub: 'AI workstation — runs 13B LLMs and SDXL comfortably', color: 'var(--accent)' };
+      case 'AI-A':           return { letter: 'A', sub: 'Strong local AI — 7-13B LLMs, SD 1.5 image generation', color: 'var(--good)' };
+      case 'AI-B':           return { letter: 'B', sub: 'Capable — 7B LLMs, SD 1.5, smaller image models', color: 'var(--fg)' };
+      case 'AI-Workstation': return { letter: '◯', sub: 'Limited — 7B Q4 marginal, smaller models work', color: 'var(--fg-2)' };
+      case 'AI-Office':      return { letter: '◯', sub: 'Cloud-first — local AI is impractical on this hardware', color: 'var(--fg-3)' };
+      case 'AI-Limited':     return { letter: '⚠', sub: 'Cloud-only — not a local-AI machine', color: 'var(--warn)' };
+      default:               return { letter: '?', sub: 'Unknown AI tier', color: 'var(--fg-3)' };
+    }
+  }
+
+  /**
+   * Reproduce predictions client-side from stored result + AI metadata.
+   * Mirrors generatePredictions() in src/bench/ai-capabilities.ts so the
+   * source of truth lives next to the original probe.
+   * Why duplicate: original lives in /src/bench/ which gets tree-shaken
+   * server-side; importing it would pull in WebGPU probe code we don't
+   * need on the result page.
+   */
+  function generatePredictionsClient(
+    gpuGflops: number,
+    ramReadGBs: number,
+    largestAllocatableGB: number,
+    fp16: boolean
+  ): Array<{name: string; description: string; verdict: 'yes' | 'maybe' | 'no'; performance: string | null; reasoning: string; category: string}> {
+    const NATIVE_RATIO = 0.35;
+    const estimatedNativeGFLOPS = gpuGflops / NATIVE_RATIO;
+    const estimatedNativeRAM = ramReadGBs / 0.4;
+    const out: any[] = [];
+
+    // Llama 7B Q4
+    {
+      const memT = (estimatedNativeRAM * 0.7) / 4;
+      const compT = estimatedNativeGFLOPS / 50;
+      const tps = Math.min(memT, compT);
+      if (largestAllocatableGB < 4) {
+        out.push({ name: 'Llama 7B (Q4)', description: 'Local LLM, 7B params, 4-bit quantized', verdict: 'no', performance: null,
+          reasoning: `Browser memory headroom is ${largestAllocatableGB.toFixed(1)} GB; 7B Q4 needs ~4 GB just for weights.`, category: 'llm' });
+      } else if (tps >= 15) {
+        out.push({ name: 'Llama 7B (Q4)', description: 'Local LLM, 7B params, 4-bit quantized', verdict: 'yes',
+          performance: `~${Math.round(tps - 5)}–${Math.round(tps + 10)} tokens/s`,
+          reasoning: `Memory bandwidth (${ramReadGBs.toFixed(1)} GB/s browser ≈ ${estimatedNativeRAM.toFixed(0)} GB/s native est.) supports comfortable inference.`, category: 'llm' });
+      } else {
+        out.push({ name: 'Llama 7B (Q4)', description: 'Local LLM, 7B params, 4-bit quantized', verdict: 'maybe',
+          performance: `~${Math.max(2, Math.round(tps - 3))}–${Math.round(tps + 5)} tokens/s`,
+          reasoning: 'Will run but slowly — bandwidth-bound. RAM upgrade or faster storage helps.', category: 'llm' });
+      }
+    }
+    // Llama 13B Q4
+    {
+      const tps = (estimatedNativeRAM * 0.7) / 8;
+      if (largestAllocatableGB < 8) {
+        out.push({ name: 'Llama 13B (Q4)', description: 'Local LLM, 13B params, 4-bit quantized', verdict: 'no', performance: null,
+          reasoning: `Needs ~8 GB for weights; browser allocated only ${largestAllocatableGB.toFixed(1)} GB max.`, category: 'llm' });
+      } else if (tps >= 8) {
+        out.push({ name: 'Llama 13B (Q4)', description: 'Local LLM, 13B params, 4-bit quantized', verdict: 'yes',
+          performance: `~${Math.max(3, Math.round(tps - 3))}–${Math.round(tps + 5)} tokens/s`,
+          reasoning: 'Bandwidth supports usable inference. Suitable for chatbot use cases.', category: 'llm' });
+      } else {
+        out.push({ name: 'Llama 13B (Q4)', description: 'Local LLM, 13B params, 4-bit quantized', verdict: 'maybe',
+          performance: `~${Math.max(2, Math.round(tps - 1))}–${Math.round(tps + 2)} tokens/s`,
+          reasoning: 'Functional but slow. OK for batch jobs, not interactive chat.', category: 'llm' });
+      }
+    }
+    // Llama 70B — always no for browser
+    out.push({ name: 'Llama 70B (Q4)', description: 'Large flagship LLM, 70B params', verdict: 'no', performance: null,
+      reasoning: 'Needs ~40 GB just for weights. Browser memory model caps allocation well below this. Use a native llama.cpp setup with 64 GB+ RAM.', category: 'llm' });
+
+    // SDXL
+    {
+      if (!fp16) {
+        out.push({ name: 'Stable Diffusion XL (1024×1024)', description: 'High-resolution image generation', verdict: 'maybe',
+          performance: 'No estimate — FP16 unsupported',
+          reasoning: "Your WebGPU adapter doesn't expose shader-f16. SDXL works in FP32 but is ~3× slower and may exceed memory limits.", category: 'image' });
+      } else if (gpuGflops >= 800) {
+        out.push({ name: 'Stable Diffusion XL (1024×1024)', description: 'High-resolution image generation', verdict: 'yes',
+          performance: '~20-40s per image',
+          reasoning: `GPU compute (${gpuGflops.toFixed(0)} GFLOPS browser) and FP16 support give you usable SDXL throughput.`, category: 'image' });
+      } else if (gpuGflops >= 400) {
+        out.push({ name: 'Stable Diffusion XL (1024×1024)', description: 'High-resolution image generation', verdict: 'maybe',
+          performance: '~60-120s per image',
+          reasoning: 'Will run but expect minute-plus generation times. Consider SD 1.5 (512×512) for faster results.', category: 'image' });
+      } else {
+        out.push({ name: 'Stable Diffusion XL (1024×1024)', description: 'High-resolution image generation', verdict: 'no', performance: null,
+          reasoning: `GPU compute (${gpuGflops.toFixed(0)} GFLOPS) is below the practical floor for SDXL. Use cloud or a more powerful GPU.`, category: 'image' });
+      }
+    }
+    // SD 1.5
+    {
+      if (gpuGflops >= 200) {
+        out.push({ name: 'Stable Diffusion 1.5 (512×512)', description: 'Standard image generation', verdict: 'yes',
+          performance: gpuGflops >= 500 ? '~5-15s per image' : '~15-30s per image',
+          reasoning: 'Light enough to run smoothly on your hardware. Good for ideation.', category: 'image' });
+      } else {
+        out.push({ name: 'Stable Diffusion 1.5 (512×512)', description: 'Standard image generation', verdict: 'maybe',
+          performance: '~30-60s per image',
+          reasoning: 'Functional but slow — usable for occasional generation, not iterative work.', category: 'image' });
+      }
+    }
+    // Whisper
+    {
+      if (gpuGflops >= 150 && largestAllocatableGB >= 1) {
+        out.push({ name: 'Whisper Small (audio→text)', description: 'Real-time speech-to-text', verdict: 'yes',
+          performance: gpuGflops >= 400 ? 'Faster than real-time (~3-5×)' : 'Near real-time (~1-2×)',
+          reasoning: 'Whisper is light (~244M params); your hardware handles it comfortably.', category: 'audio' });
+      } else {
+        out.push({ name: 'Whisper Small (audio→text)', description: 'Real-time speech-to-text', verdict: 'maybe',
+          performance: 'Slower than real-time',
+          reasoning: 'Will run but transcription will lag the audio. Consider Whisper Tiny for faster pace.', category: 'audio' });
+      }
+    }
+    return out;
+  }
 
   const $ = <T extends HTMLElement = HTMLElement>(sel: string) =>
     document.querySelector(sel) as T | null;
@@ -736,6 +1152,15 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
       setText('#permalink-url',     url);
       ($('#share-beat')! as HTMLAnchorElement).href = url;
 
+      // ── Component imbalance callout (Phase G.4) ──────────────
+      // Identify the weakest non-RAM component (RAM is excluded because
+      // it's structurally low in browsers — the disclaimer covers that).
+      // If GPU or CPU is significantly behind the others, point it out.
+      renderImbalanceCallout(r);
+
+      // ── AI Capabilities section (Phase G.3) ──────────────────
+      renderAISection(r);
+
       // ── Show result, hide loading ────────────────────────────
       loadingEl.hidden = true;
       resultEl.hidden = false;
@@ -835,6 +1260,137 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
       a.click();
       URL.revokeObjectURL(a.href);
     });
+  }
+
+  /**
+   * Render component imbalance callout when one of GPU/CPU lags
+   * significantly behind the others. RAM is excluded (browser-cap).
+   */
+  function renderImbalanceCallout(r: any) {
+    const components: Array<[string, number]> = [
+      ['GPU',         r.scores.gpu],
+      ['CPU·1 (single-core)', r.scores.cpuSingle],
+      ['CPU·M (multi-core)',  r.scores.cpuMulti],
+    ];
+    // Find min and max non-RAM scores
+    const max = Math.max(...components.map(c => c[1]));
+    const min = Math.min(...components.map(c => c[1]));
+    const ratio = min / Math.max(max, 1);
+
+    // Only flag if min is < 50% of max (meaningful imbalance)
+    if (ratio >= 0.5) {
+      // Also check RAM is not under 30% of CPU·M (browser cap is well-known
+      // but extreme RAM gaps still useful to mention)
+      const ramRatio = r.scores.ram / Math.max(r.scores.cpuMulti, 1);
+      if (ramRatio < 0.20) {
+        const callout = $('#imbalance-callout');
+        if (callout) {
+          callout.classList.remove('imbalance-callout--warn');
+          $('#imbalance-title')!.textContent = 'Memory bandwidth is your floor';
+          $('#imbalance-detail')!.textContent =
+            `RAM scored ${(r.scores.cpuMulti / Math.max(r.scores.ram, 1)).toFixed(1)}× lower than CPU multi-core. ` +
+            `Partly browser-sandbox cap (typical 30-50% of native), but if native benchmarks show similar gap, RAM upgrade gives you the biggest practical speedup.`;
+          callout.removeAttribute('hidden');
+        }
+      }
+      return;
+    }
+
+    const weakest = components.find(c => c[1] === min)!;
+    const callout = $('#imbalance-callout');
+    if (!callout) return;
+
+    callout.classList.add('imbalance-callout--warn');
+    $('#imbalance-title')!.textContent = `Bottleneck identified: ${weakest[0]}`;
+    $('#imbalance-detail')!.textContent =
+      `${weakest[0]} scored ${(max / Math.max(min, 1)).toFixed(1)}× lower than your strongest component. ` +
+      `Likely your most actionable upgrade target — would unlock more performance from the rest of your machine.`;
+    callout.removeAttribute('hidden');
+  }
+
+  /**
+   * Render the AI Capabilities section. Two paths:
+   *   - r.ai != null  → Phase-G result, full AI section with predictions
+   *   - r.ai == null  → Pre-Phase-G result, legacy notice + re-test prompt
+   */
+  function renderAISection(r: any) {
+    const ai = r.ai;
+    if (!ai) {
+      // Legacy result, no AI block — show "test again" prompt
+      $('#ai-section-legacy')!.removeAttribute('hidden');
+      return;
+    }
+
+    const tier = aiTierLabel(ai.tier);
+
+    // Tier letter + sub
+    $('#ai-tier-letter')!.textContent = tier.letter;
+    $('#ai-tier-letter')!.setAttribute('style', `color: ${tier.color};`);
+    $('#ai-tier-sub')!.textContent = tier.sub;
+    $('#ai-tier-sub')!.setAttribute('style', `color: ${tier.color};`);
+    $('#ai-score')!.textContent = ai.score.toLocaleString();
+
+    // Feature inventory
+    const fp16 = !!ai.webgpu?.fp16;
+    const maxAlloc = ai.memory?.largestAllocatableGB ?? 0;
+    const webgpuOk = ai.webgpu !== null && ai.webgpu !== undefined;
+
+    setFeature('fp16', fp16, fp16 ? 'shader-f16' : 'not exposed', fp16
+      ? 'Modern LLMs use FP16/BF16. Your adapter supports it.'
+      : 'FP16 unsupported — LLM/SDXL run in FP32 (slower, more memory).');
+
+    const memColor = maxAlloc >= 4 ? 'ok' : maxAlloc >= 1 ? 'warn' : 'limit';
+    setFeature('buffer', memColor === 'ok', `${maxAlloc.toFixed(1)} GB max allocation`,
+      maxAlloc >= 4 ? 'Enough headroom for 7B-13B quantized models.' :
+      maxAlloc >= 2 ? 'Tight — fits 7B Q4 but with little overhead.' :
+      'Below practical floor for local LLMs.');
+
+    setFeature('webgpu', webgpuOk, webgpuOk ? 'WebGPU compute available' : 'no WebGPU',
+      webgpuOk ? 'Required for GPU-accelerated AI inference.' :
+      'CPU-only fallback — much slower for ML workloads.');
+
+    // Predictions — regenerated client-side from stored fields
+    const predictions = generatePredictionsClient(
+      r.gpu.gflops || 0,
+      r.ram.readGBs || 0,
+      maxAlloc,
+      fp16
+    );
+
+    const predHtml = predictions.map((p) => {
+      const verdictIcon = p.verdict === 'yes' ? '✓' : p.verdict === 'maybe' ? '~' : '✗';
+      const perfHtml = p.performance ? `<span class="ai-pred__perf">${p.performance}</span>` : '';
+      return `
+        <article class="ai-pred ai-pred--${p.verdict}">
+          <span class="ai-pred__verdict">${verdictIcon}</span>
+          <div class="ai-pred__body">
+            <span class="ai-pred__name">${p.name}</span>
+            ${perfHtml}
+            <p class="ai-pred__reason">${p.reasoning}</p>
+          </div>
+        </article>
+      `;
+    }).join('');
+    $('#ai-predictions')!.innerHTML = predHtml;
+
+    $('#ai-section')!.removeAttribute('hidden');
+  }
+
+  function setFeature(id: string, ok: boolean, value: string, sub: string) {
+    const el = $(`#ai-feat-${id}`);
+    if (!el) return;
+    el.classList.remove('ai-feat--ok', 'ai-feat--warn', 'ai-feat--limit');
+    el.classList.add(ok ? 'ai-feat--ok' : 'ai-feat--warn');
+    const icon = el.querySelector<HTMLElement>('.ai-feat__icon');
+    if (icon) icon.textContent = ok ? '✓' : '⚠';
+    const subEl = $(`#ai-feat-${id}-sub`);
+    if (subEl) subEl.textContent = sub;
+    // Append the value to the strong label
+    const strong = el.querySelector<HTMLElement>('strong');
+    if (strong && !strong.dataset.augmented) {
+      strong.textContent = `${strong.textContent} · ${value}`;
+      strong.dataset.augmented = 'true';
+    }
   }
 
   /**

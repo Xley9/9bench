@@ -31,6 +31,17 @@ interface Submission {
   hardware: { gpu: string; cores: number; ua: string };
   durationMs: number;
   fingerprint?: string;
+  /**
+   * AI capability snapshot from probeAICapabilities (Phase G).
+   * Optional — pre-Phase-G clients don't send this; submission still
+   * succeeds with NULL ai_* fields. Empty object also accepted.
+   */
+  ai?: {
+    score?: number;
+    tier?: string;
+    memory?: { largestAllocatableGB?: number };
+    webgpu?: { fp16?: boolean };
+  };
 }
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
@@ -59,12 +70,27 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     const ua = (request.headers.get('user-agent') || '').slice(0, 200);
     const ua_short = clean(ua, 200);
 
+    // ── AI capability fields (Phase G — optional) ───────────────────
+    // Defensive coercion: legitimately-missing fields → NULL, malformed
+    // values (negative, NaN) → NULL. Never insert nonsense.
+    const aiScore       = typeof body.ai?.score === 'number' && body.ai.score >= 0 && body.ai.score < 100000
+                          ? Math.round(body.ai.score) : null;
+    const aiTier        = typeof body.ai?.tier === 'string' && body.ai.tier.length <= 30
+                          ? clean(body.ai.tier, 30) : null;
+    const aiMaxAllocGB  = typeof body.ai?.memory?.largestAllocatableGB === 'number'
+                          && body.ai.memory.largestAllocatableGB >= 0
+                          && body.ai.memory.largestAllocatableGB < 1000
+                          ? body.ai.memory.largestAllocatableGB : null;
+    const aiFp16        = typeof body.ai?.webgpu?.fp16 === 'boolean'
+                          ? (body.ai.webgpu.fp16 ? 1 : 0) : null;
+
     await env.DB.prepare(`
       INSERT INTO results
         (id, created_at, score_overall, score_gpu, score_cpu_single, score_cpu_multi, score_ram,
          gpu_gflops, gpu_name, cpu_cores, cpu_hashes_single, cpu_hashes_multi,
-         ram_read_gbs, ram_write_gbs, ram_latency_ns, ua_short, fingerprint)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ram_read_gbs, ram_write_gbs, ram_latency_ns, ua_short, fingerprint,
+         ai_score, ai_tier, ai_max_alloc_gb, ai_fp16)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       id,
       Date.now(),
@@ -82,7 +108,11 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       body.ram.writeBandwidthGBs,
       body.ram.randomAccessLatencyNs,
       ua_short,
-      clean(body.fingerprint || '', 64)
+      clean(body.fingerprint || '', 64),
+      aiScore,
+      aiTier,
+      aiMaxAllocGB,
+      aiFp16
     ).run();
 
     // Compute percentile: count rows with score < this user's overall, divide by total

@@ -17,7 +17,8 @@ export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => {
     const row = await env.DB.prepare(`
       SELECT id, created_at, score_overall, score_gpu, score_cpu_single, score_cpu_multi, score_ram,
              gpu_gflops, gpu_name, cpu_cores, cpu_hashes_single, cpu_hashes_multi,
-             ram_read_gbs, ram_write_gbs, ram_latency_ns
+             ram_read_gbs, ram_write_gbs, ram_latency_ns,
+             ai_score, ai_tier, ai_max_alloc_gb, ai_fp16
       FROM results WHERE id = ?
     `).bind(id).first<any>();
 
@@ -38,6 +39,16 @@ export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => {
     const lower = lowerRow?.c || 0;
     const percentile = Math.round((lower / total) * 100);
 
+    // AI block is included only when this row was captured post-Phase-G
+    // (older rows have NULL ai_* columns). UI should treat null as
+    // "AI capability not measured for this run" and offer a re-test prompt.
+    const aiBlock = row.ai_score != null ? {
+      score: row.ai_score as number,
+      tier: row.ai_tier as string,
+      memory: { largestAllocatableGB: row.ai_max_alloc_gb as number | null },
+      webgpu: { fp16: row.ai_fp16 === 1 },
+    } : null;
+
     return new Response(JSON.stringify({
       ok: true,
       result: {
@@ -52,7 +63,8 @@ export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => {
         },
         gpu: { gflops: row.gpu_gflops, name: row.gpu_name },
         cpu: { cores: row.cpu_cores, hashesSingle: row.cpu_hashes_single, hashesMulti: row.cpu_hashes_multi },
-        ram: { readGBs: row.ram_read_gbs, writeGBs: row.ram_write_gbs, latencyNs: row.ram_latency_ns }
+        ram: { readGBs: row.ram_read_gbs, writeGBs: row.ram_write_gbs, latencyNs: row.ram_latency_ns },
+        ai: aiBlock,
       },
       percentile,
       total
