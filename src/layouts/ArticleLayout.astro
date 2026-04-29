@@ -16,6 +16,7 @@ export interface Props {
   heroGradientTo?: string;
   faqs?: { q: string; a: string }[];
   howToSteps?: { name: string; text: string }[];
+  relatedArticles?: { slug: string; title: string; emoji?: string }[];
 }
 
 const {
@@ -25,7 +26,8 @@ const {
   heroGradientFrom = '#10B981',
   heroGradientTo = '#4F46E5',
   faqs = [],
-  howToSteps = []
+  howToSteps = [],
+  relatedArticles = []
 } = Astro.props;
 
 const SITE = 'https://9bench.com';
@@ -83,6 +85,16 @@ const howToSchema = howToSteps.length ? {
     text: s.text
   }))
 } : null;
+
+const breadcrumbSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: '9bench', item: SITE },
+    { '@type': 'ListItem', position: 2, name: 'Articles', item: `${SITE}/articles/` },
+    { '@type': 'ListItem', position: 3, name: title, item: canonical }
+  ]
+};
 ---
 
 <BaseLayout
@@ -90,8 +102,10 @@ const howToSchema = howToSteps.length ? {
   description={description}
   keywords={allKeywords}
   schemaType="Article"
+  ogImage={`https://9bench.com/og?p=${slug}`}
 >
   <script slot="head" type="application/ld+json" set:html={JSON.stringify(articleSchema)} />
+  <script slot="head" type="application/ld+json" set:html={JSON.stringify(breadcrumbSchema)} />
   {faqSchema && <script slot="head" type="application/ld+json" set:html={JSON.stringify(faqSchema)} />}
   {howToSchema && <script slot="head" type="application/ld+json" set:html={JSON.stringify(howToSchema)} />}
 
@@ -137,6 +151,20 @@ const howToSchema = howToSteps.length ? {
           <p>{f.a}</p>
         </details>
       ))}
+    </section>
+  )}
+
+  {relatedArticles.length > 0 && (
+    <section class="article-related">
+      <h2>Related articles</h2>
+      <div class="article-related-grid">
+        {relatedArticles.map(r => (
+          <a href={`/articles/${r.slug}/`} class="article-related-card">
+            {r.emoji && <span class="article-related-emoji">{r.emoji}</span>}
+            <span>{r.title}</span>
+          </a>
+        ))}
+      </div>
     </section>
   )}
 
@@ -374,6 +402,41 @@ const howToSchema = howToSteps.length ? {
       margin: 0;
       color: var(--text-muted);
     }
+
+    .article-related {
+      max-width: 720px;
+      margin: 2.5rem auto 0;
+      padding: 0 1.25rem;
+    }
+    .article-related h2 {
+      font-size: 1.3rem;
+      font-weight: 800;
+      margin-bottom: 0.85rem;
+      color: var(--text);
+    }
+    .article-related-grid {
+      display: grid;
+      gap: 0.65rem;
+    }
+    .article-related-card {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.85rem 1.15rem;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 0.65rem;
+      color: var(--text);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.95rem;
+      transition: all 0.15s;
+    }
+    .article-related-card:hover {
+      border-color: var(--brand);
+      transform: translateX(4px);
+    }
+    .article-related-emoji { font-size: 1.3rem; flex-shrink: 0; }
 
     .article-back {
       max-width: 720px;

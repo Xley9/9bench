@@ -28,6 +28,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         <span id="run-btn-text">Test my hardware</span>
       </button>
       <p class="text-xs text-slate-500 mt-3">~15 seconds · No login · Privacy-first</p>
+      <div id="bench-warnings" class="mt-4 max-w-md mx-auto text-left space-y-2"></div>
     </div>
 
     <!-- Progress Stages (hidden until test starts) -->
@@ -160,8 +161,48 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         <span>${hasWebWorkers ? '✓' : '✗'} Workers</span>
         <span>${hasCrypto ? '✓' : '✗'} Web Crypto</span>
         <span>${cores} cores reported</span>
+        <a href="/methodology" class="text-brand underline">Methodology</a>
       </div>
     `;
+
+    // ── Pre-bench transparency warnings ──────────────────────────
+    // Detect conditions that will distort the score and tell the user
+    // before they hit "Test my hardware". Truth Series principle:
+    // tell the user what's affecting their result, don't pretend it's clean.
+    const warningsEl = document.getElementById('bench-warnings')!;
+    function pushWarn(msg: string, severity: 'info' | 'warn' = 'warn') {
+      const cls = severity === 'warn'
+        ? 'text-amber-300 bg-amber-500/10 border-amber-500/30'
+        : 'text-sky-300 bg-sky-500/10 border-sky-500/30';
+      const div = document.createElement('div');
+      div.className = `px-3 py-2 rounded-lg border ${cls} text-xs`;
+      div.innerHTML = msg;
+      warningsEl.appendChild(div);
+    }
+
+    // 1. Browser-vendor note
+    const ua = navigator.userAgent;
+    const isFirefox = /Firefox\//.test(ua);
+    const isSafari = /Safari\//.test(ua) && !/Chrome|Chromium|Edg/.test(ua);
+    if (isFirefox) {
+      pushWarn('🦊 <strong>Firefox detected.</strong> Same hardware typically scores 10–20% lower in Firefox vs Chrome (V8 is faster than SpiderMonkey for our workloads). For comparable scores, use Chrome.', 'info');
+    } else if (isSafari) {
+      pushWarn('🧭 <strong>Safari detected.</strong> WebGPU support varies by Safari version. Some compute paths fall back to slower Metal-via-WebGL emulation. For comparable scores, use Chrome.', 'info');
+    }
+
+    // 2. Battery / power-state warning (async — doesn't block button)
+    if ('getBattery' in navigator) {
+      (navigator as any).getBattery().then((battery: any) => {
+        if (!battery.charging) {
+          pushWarn('🔋 <strong>Running on battery.</strong> Most laptops cap CPU/GPU performance 30–50% on battery to save power. For your real performance ceiling, plug in and re-run.', 'warn');
+        }
+      }).catch(() => { /* getBattery deprecated in some browsers */ });
+    }
+
+    // 3. WebGPU absence
+    if (!hasWebGPU) {
+      pushWarn('⚠️ <strong>WebGPU not available</strong> — GPU score will be 0. Enable in <code>chrome://flags</code> or use Chrome 113+ / Edge / Safari 17+.');
+    }
 
     // Rotating status messages per stage — gives impression of multi-step computation
     // Even though the actual bench function is one blocking call, the user sees

@@ -23,6 +23,11 @@ const props = {
     { q: 'Why does UserBenchmark hate AMD?', a: 'Their public statements claim methodology choices, but the math is clear: their scoring formula puts 60% weight on single-thread performance and only 30% on quad-core performance. This was reasonable in 2010 when most apps were single-threaded. In 2026, with virtually all modern apps being multi-threaded, this weighting is roughly two generations behind reality. AMD\'s strength has historically been multi-core; this scoring punishes that.' },
     { q: 'Can I trust browser-based benchmarks?', a: 'For relative comparison between machines: yes, very reliable. For absolute peak measurement vs native tools: no, browser APIs add 5-15% overhead. The honest answer: use browser benchmarks for instant triage and shareability; use native tools (Geekbench, Cinebench) when you need definitive numbers for review or comparison to manufacturer claims.' },
     { q: 'Is there a totally free, install-free PC benchmark?', a: 'Yes — 9bench.com (this site) runs entirely in your browser via WebGPU + WebAssembly + Web Workers. No download, no account, no upload. Tests CPU, GPU, and RAM in 15 seconds. Open methodology, transparent scoring. The score is most useful for relative comparison + quick triage, not for replacing Geekbench-grade measurements.' }
+  ],
+  relatedArticles: [
+    { slug: 'geekbench-vs-cinebench-vs-9bench', title: 'Geekbench vs Cinebench vs 9bench', emoji: '⚖️' },
+    { slug: 'how-to-test-cpu-gpu-ram-online-no-download', title: 'How to Test CPU, GPU, RAM Online', emoji: '🛠️' },
+    { slug: 'complete-guide-online-hardware-benchmarking-2026', title: 'Complete Guide to Online Benchmarking', emoji: '📚' }
   ]
 };
 ---

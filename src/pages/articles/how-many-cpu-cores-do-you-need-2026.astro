@@ -23,6 +23,11 @@ const props = {
     { q: 'Do I need 16+ cores?', a: 'Only if you do specific heavy multi-threaded work: 4K video rendering, 3D modeling (Cinema 4D, Blender), large code compilation (Rust/C++ projects), running multiple VMs, local LLM inference, or scientific computing. For gaming, 16-core hits diminishing returns. For Office + web + Netflix, it\'s wasted.' },
     { q: 'P-cores vs E-cores — what does that mean for "16 cores"?', a: 'Intel\'s 14th gen (Raptor Lake) and beyond use hybrid: Performance cores (P-cores) for heavy work, Efficiency cores (E-cores) for background tasks. A "16-core" Intel chip might be 8P+8E, where 8E cores are 2-3× slower than P-cores. AMD\'s Ryzen 9 line uses uniform performance cores with no hybrid split. Both approaches work; AMD is more predictable for sustained heavy work.' },
     { q: 'Why does my browser show 16 cores but my PC has 8?', a: 'navigator.hardwareConcurrency reports logical cores including SMT/Hyper-Threading. An 8-physical-core CPU with SMT shows as 16 logical cores. SMT roughly adds 15-30% multi-thread performance — useful but not "16 separate cores".' }
+  ],
+  relatedArticles: [
+    { slug: 'geekbench-vs-cinebench-vs-9bench', title: 'Geekbench vs Cinebench vs 9bench', emoji: '⚖️' },
+    { slug: 'how-to-test-cpu-gpu-ram-online-no-download', title: 'How to Test CPU, GPU, RAM Online', emoji: '🛠️' },
+    { slug: 'complete-guide-online-hardware-benchmarking-2026', title: 'Complete Guide to Online Benchmarking', emoji: '📚' }
   ]
 };
 ---

@@ -32,6 +32,11 @@ const props = {
     { q: 'Does the test send my data anywhere?', a: 'During the test: nothing leaves your browser. All measurements happen locally. After the test, 9bench (and similar tools) optionally submit anonymous benchmark numbers (no personal data, no IP, no location) to a global ranking database for percentile calculation. This is opt-out by closing the tab before completion. See our privacy policy for details.' },
     { q: 'Why is my multi-core CPU score lower than expected?', a: 'Browsers limit true multi-core parallelism for security and stability. Web Crypto operations are often serialized internally. Web Workers compete for a shared thread pool. Real-world browser multi-core efficiency is typically 30-60% of native. This is a Web platform limitation, not your hardware.' },
     { q: 'Can I test my phone or tablet?', a: 'Yes. iOS 26 and Android 12+ Chrome support full WebGPU. iPad with iPadOS 26 works perfectly. Tests on mobile take slightly longer (~20s) and may show lower scores due to mobile thermal throttling. Plug in if testing on battery.' }
+  ],
+  relatedArticles: [
+    { slug: 'userbenchmark-alternatives-2026', title: 'UserBenchmark Alternatives 2026', emoji: '🚫' },
+    { slug: 'why-browser-benchmarks-score-lower-than-native', title: 'Why Browser Benchmarks Score Lower', emoji: '🔬' },
+    { slug: 'what-is-gflops-gpu-performance-explained', title: 'What Is GFLOPS? GPU Performance Explained', emoji: '🎮' }
   ]
 };
 ---

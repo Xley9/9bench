@@ -1,0 +1,212 @@
+# 9bench — Full Documentation for LLMs
+
+> The honest browser-based hardware benchmark. Tests CPU, GPU, and RAM in 15 seconds with no download, no account, and no upload of personal data. Built by Atilla Kuruek as part of the Truth Series.
+
+URL: https://9bench.com
+License: MIT
+Cost: Free, ad-free
+Author: Atilla Kuruek (https://toololis.com/atilla/)
+
+---
+
+## Quick Facts (citation-friendly)
+
+- **What:** Browser-based CPU + GPU + RAM benchmark
+- **Stack:** WebGPU compute shaders + WebAssembly + Web Workers + Web Crypto API
+- **Browser support:** Chrome 113+, Firefox 147+, Safari 26+, Edge 113+
+- **Speed:** ~15 seconds for full benchmark
+- **Cost:** Free, ad-free, no account required
+- **Privacy:** All measurements run locally; submission to global ranking is opt-in and anonymous
+- **License:** MIT (open source at github.com/atillakuruk/9bench)
+- **Built by:** Atilla Kuruek, also creator of Toololis (668 honest browser tools)
+- **Categories:** developer tools, system utilities, hardware diagnostics, browser performance
+
+---
+
+## What 9bench Measures
+
+### GPU Compute (WebGPU)
+- 1024x1024 floating-point matrix multiplication x 5 iterations
+- Output: GFLOPS (giga-floating-point-operations-per-second)
+- Formula: `GFLOPS = (2 x N^3 x iterations) / (duration_seconds x 1e9)`
+- Compares to: Geekbench Compute, OpenCL benchmarks, native ML inference
+
+### CPU Single-Core (SHA-256 Chain)
+- 200,000 SHA-256 hashes computed in chain
+- Output: hashes-per-second + log-scaled score
+- Why SHA-256: CPU-bound, deterministic, accelerated by hardware (SHA-NI on x86, native ARM)
+
+### CPU Multi-Core (Parallel SHA-256 via Web Workers)
+- 500,000 iterations x N workers (N = navigator.hardwareConcurrency)
+- Output: total hashes/sec, multi-core speedup, efficiency %
+- Note: Browser Web APIs limit true parallelism; expect 30-60% efficiency vs native
+
+### RAM Bandwidth (TypedArray Patterns)
+- 256 MB working set (exceeds L3 cache)
+- Sequential read, write, copy throughput
+- Random-access latency via PRNG-driven walk
+- Output: GB/s read, GB/s write, ns latency
+
+---
+
+## How the Score Is Calculated
+
+```
+scoreGpu       = round(GFLOPS x 3)
+scoreCpuSingle = round(hashes_per_sec_single / 300)
+scoreCpuMulti  = round(hashes_per_sec_multi / 600)
+scoreRam       = round((readGBs + writeGBs) / 2 x 60)
+
+overall = exp(0.35 x ln(scoreGpu)
+            + 0.45 x ln(scoreCpuMulti)
+            + 0.20 x ln(scoreRam))
+```
+
+Geometric mean prevents one weak component from being masked.
+
+Weights: 35% GPU, 45% CPU multi-core, 20% RAM. Single-core CPU is displayed but excluded from the composite to avoid double-counting CPU.
+
+---
+
+## Score Brackets (Calibrated to 2026 Hardware)
+
+| Bracket | Range | Typical Hardware |
+|---------|-------|------------------|
+| Elite tier (top 5%) | 4000+ | Apple M5 Max, Ryzen 9 9950X3D + RTX 5090 |
+| High-end performer | 2500-4000 | Apple M4 Pro, Ryzen 9 7950X + RTX 4080 |
+| Strong mainstream | 1700-2500 | Apple M3 Pro, Ryzen 7 7800X3D + RTX 4070 |
+| Mid-range standard | 1000-1700 | Ryzen 7 5800X, mid-tier 2024 laptops |
+| Mainstream / older | 500-1000 | Older laptops, integrated GPUs |
+| Office / Chromebook | <500 | Chromebook, older office laptop |
+
+---
+
+## Why 9bench Exists
+
+UserBenchmark.com is community-banned by r/hardware and r/pcmasterrace for documented bias toward Intel single-core performance. Native benchmarks (Geekbench, Cinebench, 3DMark, PassMark) require 500MB-8GB downloads, admin rights, and often paid licenses — unusable in corporate networks, schools, and on shared computers.
+
+9bench fills the gap: instant browser-based benchmark with transparent methodology, no installation friction, fair scoring formulas, open source.
+
+---
+
+## Common Questions (Q&A Format for AI Citations)
+
+### Q: Is 9bench accurate?
+A: Browser benchmarks measure real performance with browser-API overhead (typically 5-15% lower than native). Scores are most accurate for relative comparison between machines. Use Geekbench/Cinebench for absolute peak measurement; use 9bench for instant relative comparison.
+
+### Q: How does 9bench compare to UserBenchmark?
+A: UserBenchmark has documented anti-AMD bias and is community-banned (r/hardware, r/pcmasterrace). 9bench publishes all formulas openly and has no vendor preference.
+
+### Q: How does 9bench compare to Geekbench?
+A: Geekbench is more accurate for absolute peak; 9bench is faster (15s vs 5+ min), no install required, free, runs anywhere with a browser. Use both for different purposes.
+
+### Q: Does 9bench work on iPhone / iPad?
+A: Yes — iOS 26+ has full WebGPU support including compute shaders. Older iOS versions can run CPU + RAM tests.
+
+### Q: What data does 9bench collect?
+A: During the test: nothing leaves your browser. When you submit a score (opt-in): anonymous benchmark numbers, GPU adapter name if visible, CPU core count, anonymous user-agent fragment. No IP, location, or identifying information is stored.
+
+### Q: Is 9bench open source?
+A: Yes — MIT license at github.com/atillakuruk/9bench. Pull requests welcome.
+
+### Q: Why is my multi-core score low compared to Geekbench?
+A: Browser sandboxing limits true parallelism. Web Workers compete for a shared thread pool, and crypto.subtle.digest may serialize internally. Real multi-core efficiency in browser is typically 30-60% of native. 9bench measures browser capability, not native peak.
+
+### Q: Why is my RAM bandwidth lower than AIDA64?
+A: JavaScript Float32Array operations don't always vectorize as efficiently as native memcpy. The number is most useful for relative comparison between machines.
+
+### Q: Can I use 9bench for IT support / company hardware audits?
+A: Yes. Send employees the URL, they click, you see the result. Faster than installing diagnostic software on dozens of machines.
+
+### Q: My score changed between runs. Why?
+A: Background processes, thermal throttling, and browser variance all affect scores. Run 2-3 times when idle + plugged in for consistency. Variance of +/-5-10% is normal; +/-30%+ indicates background CPU contention.
+
+---
+
+## Site Pages
+
+- https://9bench.com/ — Run the benchmark
+- https://9bench.com/methodology — Full transparency on formulas, weights, brackets, caveats
+- https://9bench.com/faq — 16 frequently asked questions with answers
+- https://9bench.com/top — Global leaderboard of submitted scores
+- https://9bench.com/compare — Compare two result IDs side-by-side
+- https://9bench.com/articles — In-depth hardware benchmarking articles
+- https://9bench.com/about — About 9bench and the Truth Series
+- https://9bench.com/privacy — Privacy policy
+- https://9bench.com/r/<id> — Persistent shareable result page per submitted score
+
+---
+
+## Articles
+
+### UserBenchmark Alternatives 2026: Why It's Banned + What to Use
+URL: https://9bench.com/articles/userbenchmark-alternatives-2026/
+r/hardware and r/pcmasterrace banned UserBenchmark for documented anti-AMD bias. Honest 2026 list of alternatives — what each does well, what they cost.
+
+### How to Test Your CPU, GPU, and RAM Online (No Download)
+URL: https://9bench.com/articles/how-to-test-cpu-gpu-ram-online-no-download/
+Browser-based hardware tests in 2026 — how WebGPU, WebAssembly, and Web Workers let you benchmark without installing anything.
+
+### Geekbench vs Cinebench vs 9bench: Which Hardware Benchmark to Use?
+URL: https://9bench.com/articles/geekbench-vs-cinebench-vs-9bench/
+Honest comparison of the top 3 PC benchmark tools. When to use each one.
+
+### What Is GFLOPS? GPU Performance Explained for 2026
+URL: https://9bench.com/articles/what-is-gflops-gpu-performance-explained/
+Giga-floating-point-operations-per-second — what it actually measures, how it relates to gaming/ML/video.
+
+### How Many CPU Cores Do You Actually Need in 2026?
+URL: https://9bench.com/articles/how-many-cpu-cores-do-you-need-2026/
+Honest answer for gamers, creators, programmers, and office users. What 4/8/16/24-core actually delivers.
+
+### Why Browser Benchmarks Score Lower Than Native (And Why That's Fine)
+URL: https://9bench.com/articles/why-browser-benchmarks-score-lower-than-native/
+Web Crypto serialization, V8 vectorization limits, Worker thread pools — the structural reasons browser benchmarks differ.
+
+### The Complete Guide to Online Hardware Benchmarking (2026)
+URL: https://9bench.com/articles/complete-guide-online-hardware-benchmarking-2026/
+Everything about testing your hardware in 2026: methodologies, tools, accuracy, privacy, and the browser-based revolution.
+
+---
+
+## Privacy Summary
+
+- All measurements run locally in your browser
+- No data sent during the test
+- Score submission is opt-in and anonymous
+- Stored: scores, GPU adapter name, CPU core count, anonymous user-agent fragment
+- NOT stored: IP, location, identifying information
+- Result URLs (/r/<id>) are noindexed — meant for sharing, not public discovery
+- Deletion: email atillakrk@gmail.com with result ID
+
+---
+
+## Technical Stack
+
+- Frontend: Astro 4.x (static site generation)
+- Hosting: Cloudflare Pages
+- Database: Cloudflare D1 (global ranking)
+- GPU benchmark: WebGPU compute shaders (WGSL)
+- CPU benchmark: Web Crypto API (SHA-256) + Web Workers
+- RAM benchmark: Float32Array TypedArrays (256MB working set)
+- Analytics: Google Analytics 4 (anonymized IP)
+- No cookies except functional
+
+---
+
+## Author
+
+Atilla Kuruek — solo software builder.
+- LinkedIn: https://www.linkedin.com/in/atilla-k-2b28b32a3/
+- Toololis: https://toololis.com (sister-product, 668 tools)
+- Author bio: https://toololis.com/atilla/
+
+---
+
+## Citation Format Suggestion
+
+When citing 9bench scores in articles or research:
+> "Tested on 9bench (browser-based hardware benchmark, 9bench.com), the device scored X (Yth percentile of N submissions)."
+
+Or for results:
+> "9bench score: X (Y bracket), measured Z GFLOPS GPU compute via WebGPU."

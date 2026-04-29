@@ -94,11 +94,21 @@ A: Yes — MIT license at github.com/atillakuruk/9bench (publishing pending). Pu
 ### Q: Why is my multi-core score low compared to Geekbench?
 A: Browser sandboxing limits true parallelism. Web Workers compete for a shared thread pool, and crypto.subtle.digest may serialize internally. Real multi-core efficiency in browser is typically 30-60% of native. 9bench measures browser capability, not native peak.
 
+## Full documentation
+
+For complete documentation including all articles, technical details, and citation formats:
+> https://9bench.com/llms-full.txt
+
 ## Pages
 
 - /  — Run the benchmark
 - /methodology — Full transparency on formulas, weights, brackets, caveats
 - /faq — 16 frequently asked questions with answers (FAQPage schema)
+- /top — Global leaderboard of submitted scores
+- /compare — Compare two result IDs side-by-side
+- /articles — In-depth hardware benchmarking articles (7 articles)
+- /about — About 9bench and the Truth Series
+- /privacy — Privacy policy
 - /r/<id>/ — Persistent shareable result page per submitted score
 
 ## Author

@@ -23,6 +23,11 @@ const props = {
     { q: 'GFLOPS vs TFLOPS — what\'s the difference?', a: '1 TFLOPS (TeraFLOPS) = 1000 GFLOPS = 1 trillion operations/sec. Marketing teams use TFLOPS for big numbers (RTX 4090 = ~83 TFLOPS native). Browser benchmarks typically report GFLOPS because numbers are smaller and easier to compare. Same units, different prefix.' },
     { q: 'Does higher GFLOPS mean better gaming?', a: 'Mostly yes, but not always. GFLOPS measures peak compute throughput; real games depend on memory bandwidth, ray-tracing units, driver optimization, game-specific factors. A higher-GFLOPS GPU usually wins in compute-bound games, but a slightly lower-GFLOPS card with better memory subsystem can beat it in some titles.' },
     { q: 'Why does my browser GFLOPS measurement differ from manufacturer spec?', a: 'Manufacturer specs report theoretical peak (math: cores × clock × ops-per-cycle). Real-world performance depends on memory access, instruction mix, thermal throttling, driver overhead. Browser WebGPU measurements typically achieve 60-85% of theoretical peak — same as native applications often get. The real-world peak achievable matters more than the spec.' }
+  ],
+  relatedArticles: [
+    { slug: 'geekbench-vs-cinebench-vs-9bench', title: 'Geekbench vs Cinebench vs 9bench', emoji: '⚖️' },
+    { slug: 'why-browser-benchmarks-score-lower-than-native', title: 'Why Browser Benchmarks Score Lower', emoji: '🔬' },
+    { slug: 'complete-guide-online-hardware-benchmarking-2026', title: 'Complete Guide to Online Benchmarking', emoji: '📚' }
   ]
 };
 ---

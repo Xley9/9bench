@@ -24,6 +24,11 @@ const props = {
     { q: 'Why is my RAM bandwidth so low in browser tests?', a: 'V8 (Chrome\'s JS engine) doesn\'t fully vectorize Float32Array operations the way native C/C++ memcpy does. Browser RAM measurements typically show 30-50% of native bandwidth. Modern DDR5 native: 45 GB/s. Same hardware in browser: 12-20 GB/s. Both correct — browser is the actual web-platform limit.' },
     { q: 'Will browser benchmark accuracy improve over time?', a: 'Yes, but slowly. WebGPU is converging on native performance (now ~85-95%). Web Crypto could theoretically use SIMD instructions but adds complexity. Worker thread pool scaling is mostly a design choice for security, unlikely to change much. Expect browser benchmarks to remain 80-95% of native peak for the foreseeable future.' },
     { q: 'How is 9bench supposed to be useful then?', a: '9bench is honest about being a relative comparison tool, not an absolute peak measurement. The score is most useful for: (1) ranking yourself against other 9bench users, (2) comparing two of your own devices, (3) quick triage when native install isn\'t possible. For absolute hardware specs, use Geekbench 6.' }
+  ],
+  relatedArticles: [
+    { slug: 'what-is-gflops-gpu-performance-explained', title: 'What Is GFLOPS? GPU Performance Explained', emoji: '🎮' },
+    { slug: 'geekbench-vs-cinebench-vs-9bench', title: 'Geekbench vs Cinebench vs 9bench', emoji: '⚖️' },
+    { slug: 'how-to-test-cpu-gpu-ram-online-no-download', title: 'How to Test CPU, GPU, RAM Online', emoji: '🛠️' }
   ]
 };
 ---

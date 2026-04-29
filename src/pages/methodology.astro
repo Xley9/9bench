@@ -5,6 +5,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 <BaseLayout
   title="Methodology — 9bench"
   description="How 9bench measures CPU, GPU, and RAM performance in the browser. Full transparency on benchmarks, formulas, and score brackets."
+  schemaType="WebPage"
+  ogImage="https://9bench.com/og?p=methodology"
 >
   <main class="max-w-3xl mx-auto px-5 py-12">
     <header class="text-center mb-10">
@@ -128,6 +130,101 @@ overall = exp(0.35×ln(scoreGpu) + 0.45×ln(scoreCpuMulti) + 0.20×ln(scoreRam))
       </section>
 
       <section>
+        <h2>What 9bench cannot measure (be aware of these)</h2>
+        <p>
+          The browser sandbox has hard limits. These are real constraints on every web-based benchmark
+          — including 9bench. Knowing them prevents misinterpreting your score.
+        </p>
+
+        <h3>1. Sustained / thermal performance</h3>
+        <p>
+          9bench finishes in ~8 seconds. Real laptop performance under 30+ minutes of load is dramatically
+          different — most laptops drop 20-40% under sustained load due to thermal throttling. Mobile-class
+          chips (M-series, mobile Intel/AMD) throttle hardest. Desktop chips with proper cooling barely
+          throttle at all. <strong>9bench measures peak burst performance, not what you'll feel in
+          a 4-hour video-edit session.</strong>
+        </p>
+
+        <h3>2. Disk / SSD speed</h3>
+        <p>
+          Storage speed is a huge factor in real-world feel — slow SSD = slow Windows boot, slow app
+          launches, slow file copies. The browser has no API to measure raw disk throughput. 9bench
+          ignores it entirely. A device with NVMe Gen5 SSD and one with SATA SSD will get the same
+          9bench score even though they feel completely different.
+        </p>
+
+        <h3>3. GPU memory bandwidth (separate from compute)</h3>
+        <p>
+          Real GPU performance has two axes: compute throughput (FLOPS) and memory bandwidth (GB/s).
+          We measure compute via matrix multiplication. We don't measure memory bandwidth in isolation.
+          A GPU with 100 TFLOPS but only 200 GB/s memory will score great here but be terrible in
+          memory-heavy workloads (high-res textures, large model inference).
+        </p>
+
+        <h3>4. Game-relevant GPU features</h3>
+        <p>
+          Real GPU benchmarks (3DMark, Unigine) test rasterization, texture sampling, ray-tracing,
+          tessellation. We test only one thing: floating-point matrix multiplication. A GPU's score
+          here doesn't predict how well it runs <em>Cyberpunk 2077</em> at 1440p with ray-tracing on.
+        </p>
+
+        <h3>5. Multi-threading patterns beyond pure work</h3>
+        <p>
+          Real CPU multi-core performance involves locks, atomics, shared memory contention, and OS
+          scheduling. We test the simplest case: independent SHA-256 chains in N workers. This
+          consistently <em>overstates</em> multi-core efficiency — real apps with shared state will
+          scale worse than 9bench predicts.
+        </p>
+
+        <h3>6. RAM timings, latency under load, NUMA</h3>
+        <p>
+          We can measure approximate bandwidth and a single random-walk latency number. We can't measure
+          DDR5 vs DDR4 nuances, dual-channel vs single-channel impact, NUMA effects on multi-socket
+          systems, or memory-pressure throttling.
+        </p>
+
+        <h3>7. Power state — laptop on battery vs plugged in</h3>
+        <p>
+          Most laptops cap performance significantly when on battery. <strong>The same machine can
+          score 30-50% lower on battery than plugged in.</strong> Windows power plans (Best Power
+          Saving / Balanced / Best Performance) compound the effect. We try to detect battery state
+          via <code>navigator.getBattery()</code> — but the API is being deprecated, so detection
+          isn't always reliable.
+        </p>
+
+        <h3>8. Browser-vendor differences</h3>
+        <p>
+          Chrome's V8, Firefox's SpiderMonkey, and Safari's JavaScriptCore have different optimization
+          strategies. The same hardware in Chrome vs Firefox can score 10-20% different on the
+          identical 9bench code. We don't normalize for this — pick a browser and stick with it for
+          comparison runs.
+        </p>
+      </section>
+
+      <section>
+        <h2>Why your score might differ between runs</h2>
+        <p>
+          Even on the same hardware, in the same browser, on the same day — your score will vary.
+          This is normal and not a bug:
+        </p>
+        <ul>
+          <li><strong>±5%</strong> — normal hardware/scheduler jitter, expected on every run</li>
+          <li><strong>±10-15%</strong> — background activity (open tabs, OS updates, antivirus scan)</li>
+          <li><strong>20-50% lower</strong> — laptop just unplugged from charger</li>
+          <li><strong>30-60% lower</strong> — thermal throttling after sustained workload (e.g. you ran the bench right after gaming or video render)</li>
+        </ul>
+        <p>
+          To get the most reliable 9bench score:
+        </p>
+        <ol>
+          <li>Plug your laptop in and set Windows Power Plan to "Best Performance" / macOS "High Power"</li>
+          <li>Close all other browser tabs and apps that might use GPU (Discord, Slack, Spotify all use GPU)</li>
+          <li>Wait 5+ minutes after any heavy work so thermals reset</li>
+          <li>Run the bench 3 times — discard the cold first run, average the next two</li>
+        </ol>
+      </section>
+
+      <section>
         <h2>Why these aren't Geekbench numbers</h2>
         <p>
           9bench scores are <strong>not directly comparable</strong> to Geekbench, Cinebench, or any native
@@ -137,6 +234,8 @@ overall = exp(0.35×ln(scoreGpu) + 0.45×ln(scoreCpuMulti) + 0.20×ln(scoreRam))
           <li>WebGPU adds 5-15% overhead vs native Metal/Vulkan/DirectX</li>
           <li>Web Workers don't achieve full multi-core scaling due to browser sandboxing</li>
           <li>JavaScript memory operations don't always vectorize as efficiently as native C/C++</li>
+          <li>Web Crypto APIs have synchronous fallback paths that limit throughput</li>
+          <li>Browser security mitigations (Spectre, Meltdown patches) cost 5-15% on every measurement</li>
         </ul>
         <p>
           What 9bench is good for:
@@ -145,6 +244,8 @@ overall = exp(0.35×ln(scoreGpu) + 0.45×ln(scoreCpuMulti) + 0.20×ln(scoreRam))
           <li><strong>Relative comparison</strong> between two browsers/machines on the same web platform</li>
           <li><strong>Quick triage</strong> — is this device fast or slow without installing anything</li>
           <li><strong>Browser-cap testing</strong> — what can a website actually expect from this device</li>
+          <li><strong>Vor/Nach-Upgrade-Vergleich</strong> — same machine, same browser, before/after RAM/SSD/GPU swap</li>
+          <li><strong>Privacy-first ranking</strong> — no installer, no admin rights, no tracking</li>
         </ul>
         <p>
           What 9bench is <em>not</em> good for:
@@ -152,8 +253,30 @@ overall = exp(0.35×ln(scoreGpu) + 0.45×ln(scoreCpuMulti) + 0.20×ln(scoreRam))
         <ul>
           <li>Replacing Geekbench/Cinebench for absolute peak measurement</li>
           <li>Hardcore overclocking benchmarking</li>
-          <li>Comparing to native-tool scores from review sites</li>
+          <li>Comparing to native-tool scores from review sites (different scale, different workloads)</li>
+          <li>Predicting exact game framerates</li>
+          <li>Detecting failing hardware (use vendor diagnostics for that)</li>
         </ul>
+      </section>
+
+      <section>
+        <h2>The honesty pledge</h2>
+        <p>
+          9bench is part of the <strong>Truth Series</strong> — we'd rather call out our own limits
+          than oversell. Here's what we'll always tell you straight:
+        </p>
+        <ul>
+          <li>If a number can't be reliably measured in the browser, we won't pretend to measure it.</li>
+          <li>If your score is being depressed by power-state or browser, we'll tell you on screen.</li>
+          <li>If a run looks unusually low or high, we'll flag it as an outlier rather than report it as truth.</li>
+          <li>If a competitor benchmark is more accurate for your use case, we'll point you at it instead of stealing your time.</li>
+          <li>The methodology page (this page) will always document every formula, every weight, every limit.</li>
+        </ul>
+        <p>
+          Every measurement on 9bench is real. Every formula is documented. There are no hidden
+          weights, no fictional numbers, no marketing-pumped scores. What you see is what your
+          browser was actually able to measure on your actual hardware.
+        </p>
       </section>
 
       <section>

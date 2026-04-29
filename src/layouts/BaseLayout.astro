@@ -1,6 +1,7 @@
 ---
 import '../styles/global.css';
 import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
 import { GSC_META_VERIFICATION, BING_META_VERIFICATION, YANDEX_META_VERIFICATION, GA4_ID } from '../config';
 
 export interface Props {
@@ -57,87 +58,89 @@ const defaultKeywords = [
 ].join(', ');
 const finalKeywords = keywords || defaultKeywords;
 
-// ── Schema.org strategy: WebApplication (rich) + Person (EEAT) ────────
+// ── Schema.org strategy: conditional primary type + Person (EEAT) ────
+const webAppNode = {
+  '@type': 'WebApplication',
+  '@id': `${SITE}#app`,
+  name: '9bench',
+  alternateName: ['9bench browser benchmark', 'Nine Bench Hardware Test'],
+  url: SITE,
+  applicationCategory: 'UtilityApplication',
+  applicationSubCategory: 'Hardware Benchmark',
+  operatingSystem: 'Any (browser-based)',
+  description: 'The honest browser-based hardware benchmark. Tests CPU, GPU, and RAM in 15 seconds.',
+  browserRequirements: 'Requires WebGPU + WebAssembly + Web Workers (Chrome 113+, Firefox 147+, Safari 26+, Edge 113+)',
+  featureList: [
+    'WebGPU compute shader GPU benchmark (GFLOPS)',
+    'CPU single-core SHA-256 hash chain',
+    'CPU multi-core parallel via Web Workers',
+    'RAM bandwidth + random-access latency',
+    'Global percentile ranking via Cloudflare D1',
+    'No download or installation required',
+    'No account or login',
+    'Privacy-first: data stays in browser unless submitted',
+    'Persistent shareable result URLs',
+    'Open methodology'
+  ],
+  offers: {
+    '@type': 'Offer',
+    price: '0',
+    priceCurrency: 'USD',
+    availability: 'https://schema.org/InStock'
+  },
+  author: { '@id': `${SITE}#author` },
+  publisher: { '@id': `${SITE}#org` },
+  isAccessibleForFree: true,
+  inLanguage: 'en-US'
+};
+
+const personNode = {
+  '@type': 'Person',
+  '@id': `${SITE}#author`,
+  name: 'Atilla Kürük',
+  url: 'https://toololis.com/atilla/',
+  sameAs: [
+    'https://www.linkedin.com/in/atilla-k-2b28b32a3/',
+    'https://github.com/atillakuruk',
+    'https://toololis.com/atilla/'
+  ],
+  jobTitle: 'Solo software builder',
+  knowsAbout: ['Web performance', 'Browser benchmarking', 'WebGPU', 'WebAssembly', 'Hardware diagnostics']
+};
+
+const orgNode = {
+  '@type': 'Organization',
+  '@id': `${SITE}#org`,
+  name: '9bench',
+  url: SITE,
+  logo: {
+    '@type': 'ImageObject',
+    url: `${SITE}/icon-512.png`,
+    width: '512',
+    height: '512'
+  },
+  sameAs: ['https://toololis.com']
+};
+
+const websiteNode = {
+  '@type': 'WebSite',
+  '@id': `${SITE}#website`,
+  url: SITE,
+  name: '9bench',
+  description: 'The honest browser-based hardware benchmark.',
+  publisher: { '@id': `${SITE}#org` },
+  inLanguage: 'en-US'
+};
+
+// Only include WebApplication on app pages (home, top, compare, history, results)
+const appPages = ['WebApplication'];
+const graphNodes = appPages.includes(schemaType)
+  ? [webAppNode, personNode, orgNode, websiteNode]
+  : [personNode, orgNode, websiteNode];
+
 const baseSchema = {
   '@context': 'https://schema.org',
-  '@graph': [
-    {
-      '@type': 'WebApplication',
-      '@id': `${SITE}#app`,
-      name: '9bench',
-      alternateName: ['9bench browser benchmark', 'Nine Bench Hardware Test'],
-      url: SITE,
-      applicationCategory: 'UtilityApplication',
-      applicationSubCategory: 'Hardware Benchmark',
-      operatingSystem: 'Any (browser-based)',
-      description,
-      browserRequirements: 'Requires WebGPU + WebAssembly + Web Workers (Chrome 113+, Firefox 147+, Safari 26+, Edge 113+)',
-      featureList: [
-        'WebGPU compute shader GPU benchmark (GFLOPS)',
-        'CPU single-core SHA-256 hash chain',
-        'CPU multi-core parallel via Web Workers',
-        'RAM bandwidth + random-access latency',
-        'Global percentile ranking via Cloudflare D1',
-        'No download or installation required',
-        'No account or login',
-        'Privacy-first: data stays in browser unless submitted',
-        'Persistent shareable result URLs',
-        'Open methodology'
-      ],
-      offers: {
-        '@type': 'Offer',
-        price: '0',
-        priceCurrency: 'USD',
-        availability: 'https://schema.org/InStock'
-      },
-      aggregateRating: {
-        '@type': 'AggregateRating',
-        ratingValue: '4.7',
-        reviewCount: '1',
-        bestRating: '5',
-        worstRating: '1'
-      },
-      author: { '@id': `${SITE}#author` },
-      publisher: { '@id': `${SITE}#org` },
-      isAccessibleForFree: true,
-      inLanguage: 'en-US'
-    },
-    {
-      '@type': 'Person',
-      '@id': `${SITE}#author`,
-      name: 'Atilla Kürük',
-      url: 'https://toololis.com/atilla/',
-      sameAs: [
-        'https://www.linkedin.com/in/atilla-k-2b28b32a3/',
-        'https://github.com/atillakuruk',
-        'https://toololis.com/atilla/'
-      ],
-      jobTitle: 'Solo software builder',
-      knowsAbout: ['Web performance', 'Browser benchmarking', 'WebGPU', 'WebAssembly', 'Hardware diagnostics']
-    },
-    {
-      '@type': 'Organization',
-      '@id': `${SITE}#org`,
-      name: '9bench',
-      url: SITE,
-      logo: {
-        '@type': 'ImageObject',
-        url: `${SITE}/icon-512.png`,
-        width: '512',
-        height: '512'
-      },
-      sameAs: ['https://toololis.com']
-    },
-    {
-      '@type': 'WebSite',
-      '@id': `${SITE}#website`,
-      url: SITE,
-      name: '9bench',
-      description: 'The honest browser-based hardware benchmark.',
-      publisher: { '@id': `${SITE}#org` },
-      inLanguage: 'en-US'
-    }
-  ]
+  '@graph': graphNodes
 };
 ---
 
@@ -234,5 +237,6 @@ const baseSchema = {
   <body>
     <Header />
     <slot />
+    <Footer />
   </body>
 </html>

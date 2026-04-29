@@ -1,0 +1,103 @@
+---
+import '../styles/global.css';
+import Header from '../components/Header.astro';
+---
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0B1120" />
+    <meta name="color-scheme" content="dark" />
+    <title>Page Not Found — 9bench</title>
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  </head>
+  <body>
+    <Header />
+    <main class="nf-wrap">
+      <div class="nf-code">404</div>
+      <h1 class="nf-title">Page not found</h1>
+      <p class="nf-desc">The page you're looking for doesn't exist or has been moved.</p>
+      <div class="nf-links">
+        <a href="/" class="nf-btn-primary">Run benchmark</a>
+        <a href="/articles" class="nf-btn-secondary">Read articles</a>
+        <a href="/faq" class="nf-btn-secondary">FAQ</a>
+      </div>
+    </main>
+
+    <style>
+      .nf-wrap {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: calc(100vh - 60px);
+        padding: 2rem 1.25rem;
+        text-align: center;
+      }
+      .nf-code {
+        font-size: clamp(5rem, 15vw, 10rem);
+        font-weight: 900;
+        line-height: 1;
+        background: linear-gradient(135deg, var(--brand) 0%, var(--truth) 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        opacity: 0.25;
+        margin-bottom: 0.5rem;
+      }
+      .nf-title {
+        font-size: 1.75rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+      }
+      .nf-desc {
+        color: var(--text-muted);
+        font-size: 1.05rem;
+        margin-bottom: 2rem;
+        max-width: 420px;
+      }
+      .nf-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        justify-content: center;
+      }
+      .nf-btn-primary {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.75rem 1.75rem;
+        background: linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%);
+        color: #fff;
+        border-radius: 0.6rem;
+        font-weight: 700;
+        text-decoration: none;
+        transition: all 0.15s;
+      }
+      .nf-btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px -8px rgba(16, 185, 129, 0.5);
+      }
+      .nf-btn-secondary {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.75rem 1.5rem;
+        background: var(--bg-elevated);
+        border: 1px solid var(--border);
+        color: var(--text);
+        border-radius: 0.6rem;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.15s;
+      }
+      .nf-btn-secondary:hover {
+        border-color: var(--brand);
+        transform: translateY(-1px);
+      }
+    </style>
+  </body>
+</html>

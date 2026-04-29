@@ -27,6 +27,14 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
         Test your hardware →
       </a>
     </div>
+
+    <div class="mt-10 px-4 py-3 rounded-xl border border-slate-700/40 bg-slate-900/40 text-slate-400 text-xs leading-relaxed">
+      ⚖️ <strong>What this score actually measures:</strong> a single matrix-multiplication GPU workload,
+      a single SHA-256 CPU workload (single + multi-core), a single TypedArray RAM bandwidth test —
+      all running inside a browser sandbox with its inherent ceiling. It's a fast relative ranking,
+      not an absolute hardware profile. For sustained / thermal / disk / game-specific benchmarking,
+      use a native tool. <a href="/methodology" class="underline text-brand">Read the full methodology →</a>
+    </div>
   </main>
 
   <script>

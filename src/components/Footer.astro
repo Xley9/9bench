@@ -1,0 +1,61 @@
+---
+const year = new Date().getFullYear();
+---
+
+<footer class="site-footer">
+  <div class="site-footer-inner">
+    <nav class="footer-nav" aria-label="Footer">
+      <a href="/">Test</a>
+      <a href="/articles">Articles</a>
+      <a href="/methodology">Methodology</a>
+      <a href="/faq">FAQ</a>
+      <a href="/about">About</a>
+      <a href="/privacy">Privacy</a>
+    </nav>
+    <div class="footer-bottom">
+      <span>&copy; {year} 9bench — The honest browser benchmark.</span>
+      <a href="https://github.com/atillakuruk/9bench" rel="external noopener" target="_blank">GitHub</a>
+    </div>
+  </div>
+</footer>
+
+<style>
+  .site-footer {
+    border-top: 1px solid var(--border);
+    margin-top: 3rem;
+    padding: 2rem 1.25rem 1.5rem;
+  }
+  .site-footer-inner {
+    max-width: 1080px;
+    margin: 0 auto;
+    text-align: center;
+  }
+  .footer-nav {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.25rem;
+    margin-bottom: 1.25rem;
+  }
+  .footer-nav a {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.88rem;
+    font-weight: 600;
+    transition: color 0.15s;
+  }
+  .footer-nav a:hover { color: var(--brand); }
+  .footer-bottom {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+  }
+  .footer-bottom a {
+    color: var(--text-muted);
+    text-decoration: none;
+  }
+  .footer-bottom a:hover { color: var(--brand); }
+</style>
