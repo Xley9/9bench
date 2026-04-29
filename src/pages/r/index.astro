@@ -193,6 +193,94 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
           </div>
         </div>
 
+        <!-- ── PHASE L: Live LLM inference test ─────────────────────
+             The killer differentiator. Click → loads transformers.js
+             from CDN → runs a tiny LLM in the browser → measures real
+             tokens/s. First browser-based hardware benchmark in 2026
+             that includes a real local-AI test.
+
+             Lazy-loaded: nothing downloads until the user clicks.
+             Stop button respects in-flight inference.
+             Shows real-time progress + final tokens/s vs estimate.
+        -->
+        <div class="ai-live-test" id="ai-live-test">
+          <header class="ai-live-test__head">
+            <div class="eyebrow eyebrow--accent">// LIVE TEST · GROUND TRUTH</div>
+            <h3 class="ai-live-test__title">
+              Run a real LLM in your browser <em>now.</em>
+            </h3>
+            <p class="ai-live-test__lede">
+              Don't trust our estimates? Click the button. We'll lazy-load
+              <code>transformers.js</code> + a tiny LLM (<span id="llm-model-name">~250 MB-1.7 GB</span>)
+              and measure your <strong>real tokens/s</strong> in your browser
+              right now. Nothing leaves your machine — model runs locally
+              via WebAssembly. First-time download takes 30-90s; cached after.
+            </p>
+          </header>
+
+          <div class="ai-live-test__controls">
+            <button type="button" class="run-btn ai-live-test__run" id="llm-run-btn">
+              ▶ RUN LIVE LLM TEST
+            </button>
+            <p class="ai-live-test__warning text-fg-3 font-mono">
+              ⚠ Downloads ~250 MB-1.7 GB of model weights on first click.
+              Cached after. Don't switch tabs during the test.
+            </p>
+          </div>
+
+          <!-- Progress + result panel (hidden until run starts) -->
+          <div class="ai-live-test__panel" id="llm-test-panel" hidden>
+            <div class="ai-live-test__progress">
+              <div class="ai-live-test__progress-track">
+                <div class="ai-live-test__progress-fill" id="llm-progress-fill"></div>
+              </div>
+              <div class="ai-live-test__progress-text font-mono" id="llm-progress-text">
+                Initializing…
+              </div>
+            </div>
+
+            <!-- Result block (shown after completion) -->
+            <div class="ai-live-test__result" id="llm-result" hidden>
+              <div class="ai-live-test__result-headline">
+                <span class="ai-live-test__result-tps tnum" id="llm-result-tps">—</span>
+                <span class="ai-live-test__result-unit">tokens/s</span>
+              </div>
+              <div class="ai-live-test__result-meta font-mono">
+                <span id="llm-result-model">—</span> ·
+                <span id="llm-result-tokens">—</span> tokens in
+                <span id="llm-result-seconds">—</span>s
+              </div>
+
+              <!-- Comparison vs estimate -->
+              <div class="ai-live-test__compare" id="llm-compare">
+                <div class="ai-live-test__compare-row">
+                  <span class="text-fg-3 font-mono" style="font-size: 11px;">VS. OUR NATIVE ESTIMATE</span>
+                  <span id="llm-compare-verdict">—</span>
+                </div>
+              </div>
+
+              <!-- Truth-Series footnote -->
+              <p class="ai-live-test__result-note font-mono">
+                <strong>What this measures:</strong>
+                Browser-WebAssembly inference of <span id="llm-model-tag">a small model</span>.
+                Native llama.cpp on the same hardware typically runs 5-15× faster
+                because it uses CUDA/Metal/Vulkan directly. Real measurement,
+                not an estimate.
+              </p>
+            </div>
+
+            <!-- Error block -->
+            <div class="ai-live-test__error" id="llm-error" hidden>
+              <strong class="text-warn font-mono">Test failed</strong>
+              <p class="text-fg-2 font-mono" id="llm-error-msg">—</p>
+              <p class="text-fg-3 font-mono" style="font-size: 11px;">
+                The estimated predictions above are still valid — they don't
+                require this test to run.
+              </p>
+            </div>
+          </div>
+        </div>
+
         <!-- Methodology footnote with the 2-context explanation -->
         <p class="ai-section__note">
           <strong>How these predictions work:</strong>
@@ -972,6 +1060,161 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
   .ai-section__note strong { color: var(--fg-2); }
   .ai-section__note a { color: var(--accent); }
 
+  /* ── Phase L · Live LLM test panel ──────────────────────────── */
+  .ai-live-test {
+    margin-top: 32px;
+    border: 1px solid var(--accent);
+    background: rgba(0, 217, 255, 0.04);
+    padding: 28px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  :root[data-accent="orange"] .ai-live-test {
+    background: rgba(255, 107, 43, 0.04);
+  }
+  .ai-live-test__head {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .ai-live-test__title {
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: clamp(22px, 3vw, 32px);
+    color: var(--fg);
+    margin: 4px 0 0 0;
+    letter-spacing: -0.015em;
+  }
+  .ai-live-test__title em {
+    font-style: normal;
+    color: var(--accent);
+  }
+  .ai-live-test__lede {
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--fg-2);
+    margin: 4px 0 0 0;
+    max-width: 720px;
+  }
+  .ai-live-test__lede code {
+    font-family: var(--mono);
+    font-size: 12px;
+    background: var(--bg-3);
+    padding: 1px 6px;
+    color: var(--accent);
+  }
+  .ai-live-test__controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+  }
+  .ai-live-test__warning {
+    flex: 1;
+    min-width: 200px;
+    font-size: 11px;
+    line-height: 1.5;
+  }
+
+  .ai-live-test__panel {
+    border-top: 1px solid var(--line);
+    padding-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .ai-live-test__progress {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .ai-live-test__progress-track {
+    height: 6px;
+    background: var(--bg-3);
+    border: 1px solid var(--line);
+    overflow: hidden;
+  }
+  .ai-live-test__progress-fill {
+    height: 100%;
+    width: 0%;
+    background: var(--accent);
+    transition: width 0.3s ease-out;
+  }
+  .ai-live-test__progress-text {
+    font-size: 12px;
+    color: var(--fg-2);
+    letter-spacing: 0.04em;
+  }
+
+  /* Result */
+  .ai-live-test__result {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 20px 24px;
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+  }
+  .ai-live-test__result-headline {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+  .ai-live-test__result-tps {
+    font-family: var(--sans);
+    font-weight: 800;
+    font-size: clamp(48px, 7vw, 72px);
+    line-height: 0.9;
+    letter-spacing: -0.03em;
+    color: var(--accent);
+  }
+  .ai-live-test__result-unit {
+    font-family: var(--mono);
+    font-size: 18px;
+    color: var(--fg-2);
+    letter-spacing: 0.04em;
+  }
+  .ai-live-test__result-meta {
+    font-size: 12px;
+    color: var(--fg-3);
+    letter-spacing: 0.02em;
+  }
+  .ai-live-test__compare {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line-2);
+  }
+  .ai-live-test__compare-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .ai-live-test__result-note {
+    margin-top: 8px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line-2);
+    font-size: 11px;
+    color: var(--fg-3);
+    line-height: 1.6;
+  }
+  .ai-live-test__result-note strong { color: var(--fg-2); }
+
+  .ai-live-test__error {
+    padding: 16px 20px;
+    border-left: 3px solid var(--warn);
+    background: rgba(255, 87, 34, 0.04);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
   /* Legacy fallback when row predates Phase G */
   .ai-section--legacy { padding: 32px 0; }
   .ai-section__legacy-h2 {
@@ -996,7 +1239,9 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
   // ─────────────────────────────────────────────────────────────────
 
   import { tierFor, PERCENTILE_MIN_N, shareText } from '../../components/bench/tier-system';
+  import { lookupGPUClass, refinedNativeContext, type GPUClass } from '../../bench/gpu-class-lookup';
   import { toPng } from 'html-to-image';
+  import { runLLMLiveTest, formatTPS, type LLMTestProgress, type LLMTestResult } from '../../bench/llm-live-test';
 
   // AI tier label + color helper. Inlined here (rather than importing
   // the full ai-capabilities module) because Astro tree-shakes the
@@ -1045,22 +1290,43 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
   function estimateNativeContext(
     browserGflops: number,
     cpuCores: number,
-    browserFp16: boolean
-  ): NativeContext {
-    // Native GPU compute extrapolation. The browser → native ratio varies
-    // wildly by platform: Apple Silicon shows ~50-70% of native (good
-    // WebGPU implementation), NVIDIA Windows via ANGLE shows ~5-10%
-    // (heavy translation overhead). We give a range to be honest about
-    // this uncertainty rather than picking a single multiplier.
-    const nativeGflopsLow  = browserGflops * 3;   // optimistic browser (Apple)
-    const nativeGflopsHigh = browserGflops * 12;  // discrete GPU through ANGLE
+    browserFp16: boolean,
+    gpuName: string | null  // Phase K: enables tighter calibration when we recognize the GPU
+  ): NativeContext & { gpuClass: GPUClass | null; matchedDisplayName: string | null } {
+    // ── Phase K: Hardware-class lookup ─────────────────────────────
+    // If we recognize the GPU model from the renderer string, we use
+    // calibrated benchmark data instead of the wide 3-12× browser→native
+    // extrapolation. This shrinks the native estimate range from "~3909
+    // GFLOPS" (huge spread) to e.g. "8000-12000 GFLOPS" (RTX 4060 Laptop
+    // class) — matched against published TechPowerUp / 3DMark medians.
+    const gpuClass = lookupGPUClass(gpuName);
 
-    // Total system RAM heuristic. We can't read this directly (browsers
-    // cap navigator.deviceMemory at 8 GB for fingerprinting privacy),
-    // so we estimate from CPU core count which correlates strongly with
-    // typical OEM RAM configurations.
+    let nativeGflopsLow:  number;
+    let nativeGflopsHigh: number;
+
+    if (gpuClass) {
+      // Calibrated path — much tighter range
+      const refined = refinedNativeContext(gpuClass);
+      nativeGflopsLow  = refined.nativeGflopsLow;
+      nativeGflopsHigh = refined.nativeGflopsHigh;
+    } else {
+      // Generic fallback — wide range, browser-extrapolation only.
+      // Apple Silicon shows ~50-70% of native (good WebGPU impl),
+      // NVIDIA Windows via ANGLE shows ~5-10% (heavy translation overhead).
+      // We give a wide range to be honest about uncertainty.
+      nativeGflopsLow  = browserGflops * 3;
+      nativeGflopsHigh = browserGflops * 12;
+    }
+
+    // Total system RAM heuristic. For known Apple Silicon with unified
+    // memory architecture, override with class-specific typical VRAM
+    // (which is system RAM). For others, fall back to CPU-core heuristic.
     let estimatedTotalRamGB: number;
-    if (cpuCores <= 4)        estimatedTotalRamGB = 8;
+    if (gpuClass && gpuClass.form === 'apple-silicon') {
+      // Apple Silicon: VRAM IS system RAM (unified memory).
+      // Class table 'typicalVRAM' is the typical config — use it.
+      estimatedTotalRamGB = gpuClass.typicalVRAM;
+    } else if (cpuCores <= 4)        estimatedTotalRamGB = 8;
     else if (cpuCores <= 8)   estimatedTotalRamGB = 16;
     else if (cpuCores <= 16)  estimatedTotalRamGB = 32;
     else if (cpuCores <= 24)  estimatedTotalRamGB = 48;
@@ -1070,10 +1336,7 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
     // 60% of total is realistically free for an AI inference process.
     const usableRamGB = Math.round(estimatedTotalRamGB * 0.6);
 
-    // FP16 (or BF16) is universal on any GPU shipping after 2020. If
-    // the browser saw it, native definitely has it. If browser didn't
-    // see it (privacy mask, old WebGPU implementation), native almost
-    // certainly still has it.
+    // FP16 universal on any GPU shipping after 2020.
     const fp16Likely = true;
 
     return {
@@ -1082,6 +1345,8 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
       estimatedTotalRamGB,
       usableRamGB,
       fp16Likely,
+      gpuClass,
+      matchedDisplayName: gpuClass?.displayName ?? null,
     };
   }
 
@@ -1097,24 +1362,36 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
    *   - Whisper.cpp on M-series: 5-10× faster than real-time
    */
   function generateNativePredictions(
-    nativeCtx: NativeContext
+    nativeCtx: NativeContext & { gpuClass?: any; matchedDisplayName?: string | null }
   ): Array<{name: string; description: string; verdict: 'yes' | 'maybe' | 'no'; performance: string | null; reasoning: string; category: string}> {
     const out: any[] = [];
     const {nativeGflopsLow: lo, nativeGflopsHigh: hi, usableRamGB} = nativeCtx;
     const midGflops = (lo + hi) / 2;
+    // Phase K: when GPU is recognized, use class-calibrated benchmarks
+    // instead of GFLOPS extrapolation. Tighter ranges, real-world accurate.
+    const cls = (nativeCtx as any).gpuClass;
+    const matchedTag = nativeCtx.matchedDisplayName ? ` (${nativeCtx.matchedDisplayName} class)` : '';
 
     // ── Llama 7B Q4 (~6 GB RAM minimum for KV cache + weights) ──
     if (usableRamGB >= 6) {
-      // Calibration: midGflops/30 gives reasonable t/s for Llama 7B Q4
-      // RTX 4060 (~5000 mid native GFLOPS) → ~166 t/s — too high.
-      // Real native is ~30-50 t/s. Adjust divisor: midGflops / 100
-      const tpsLow  = Math.round(lo / 80);
-      const tpsHigh = Math.round(hi / 80);
+      let tpsLow: number, tpsHigh: number, source: string;
+      if (cls?.llama7BQ4TPSLow != null && cls?.llama7BQ4TPSHigh != null) {
+        // Calibrated path
+        tpsLow  = cls.llama7BQ4TPSLow;
+        tpsHigh = cls.llama7BQ4TPSHigh;
+        source  = `Calibrated for ${cls.displayName} from public llama.cpp benchmarks.`;
+      } else {
+        // Generic GFLOPS-extrapolation path
+        tpsLow  = Math.round(lo / 80);
+        tpsHigh = Math.round(hi / 80);
+        source  = `Estimated ~${Math.round(midGflops)} GFLOPS native + ${usableRamGB} GB usable RAM. llama.cpp / Ollama recommended.`;
+      }
       out.push({
-        name: 'Llama 7B (Q4)', description: '7-billion params, 4-bit quantized',
+        name: 'Llama 7B (Q4)' + matchedTag,
+        description: '7-billion params, 4-bit quantized',
         verdict: 'yes',
         performance: `~${Math.max(5, tpsLow)}–${Math.max(15, tpsHigh)} tokens/s`,
-        reasoning: `Estimated ~${Math.round(midGflops)} GFLOPS native + ${usableRamGB} GB usable RAM. llama.cpp / Ollama recommended.`,
+        reasoning: source,
         category: 'llm',
       });
     } else {
@@ -1175,7 +1452,26 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
     }
 
     // ── SDXL 1024×1024 ──
-    if (midGflops >= 800 && usableRamGB >= 12) {
+    // Phase K: use class-calibrated SDXL seconds when available
+    if (cls?.sdxlSecondsLow != null && cls?.sdxlSecondsHigh != null && usableRamGB >= 8) {
+      out.push({
+        name: 'Stable Diffusion XL (1024×1024)' + matchedTag,
+        description: 'High-res image generation',
+        verdict: 'yes',
+        performance: `~${cls.sdxlSecondsLow}–${cls.sdxlSecondsHigh}s per image`,
+        reasoning: `Calibrated for ${cls.displayName} from public ComfyUI / AUTOMATIC1111 benchmarks. ${cls.typicalVRAM} GB VRAM accommodates the model.`,
+        category: 'image',
+      });
+    } else if (cls?.sdxlSecondsLow === null) {
+      // GPU class explicitly says SDXL impractical
+      out.push({
+        name: 'Stable Diffusion XL (1024×1024)' + matchedTag,
+        description: 'High-res image generation',
+        verdict: 'no', performance: null,
+        reasoning: `${cls.displayName} is too constrained for SDXL natively. Use SD 1.5 (512×512) or cloud.`,
+        category: 'image',
+      });
+    } else if (midGflops >= 800 && usableRamGB >= 12) {
       const sLow  = Math.max(5, Math.round(20000 / hi));
       const sHigh = Math.max(10, Math.round(20000 / lo));
       out.push({
@@ -1537,7 +1833,9 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
       renderImbalanceCallout(r);
 
       // ── AI Capabilities section (Phase G.3) ──────────────────
-      renderAISection(r);
+      // Returns the native context so we can pass it to the live LLM
+      // test wiring for the "vs estimate" comparison.
+      const nativeCtxForCompare = renderAISection(r);
 
       // ── Show result, hide loading ────────────────────────────
       loadingEl.hidden = true;
@@ -1545,6 +1843,12 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
 
       // ── Wire share buttons ───────────────────────────────────
       wireShareButtons(r, percentile, total, tier, url);
+
+      // ── Wire live LLM test (Phase L) ──────────────────────────
+      // Reads memory headroom from r.ai if available; falls back to
+      // a conservative 1 GB if no AI block (legacy results pre-G).
+      const headroomGB = r.ai?.memory?.largestAllocatableGB ?? 1;
+      wireLLMLiveTest(headroomGB, nativeCtxForCompare);
 
       // ── Load reference hardware comparison (async, non-blocking) ──
       loadReferenceComparison(r.scores.overall);
@@ -1641,6 +1945,92 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
   }
 
   /**
+   * Wire the "Run Live LLM Test" button (Phase L).
+   *
+   * On click, lazy-loads transformers.js + a tiny LLM, runs inference
+   * for ~30s, displays measured tokens/s. Compares against the native
+   * Llama 7B Q4 estimate so users can see how browser-WASM compares
+   * to native llama.cpp performance ceilings.
+   */
+  function wireLLMLiveTest(
+    headroomGB: number,
+    nativeCompare: { llama7BTPSLow: number; llama7BTPSHigh: number; matchedDisplayName: string | null } | null
+  ) {
+    const btn = $('#llm-run-btn') as HTMLButtonElement | null;
+    if (!btn) return;
+
+    btn.addEventListener('click', async () => {
+      // Disable button + show panel
+      btn.disabled = true;
+      btn.textContent = '⏳ RUNNING TEST…';
+      $('#llm-test-panel')!.removeAttribute('hidden');
+      $('#llm-result')!.setAttribute('hidden', '');
+      $('#llm-error')!.setAttribute('hidden', '');
+
+      try {
+        const result = await runLLMLiveTest(headroomGB, (progress: LLMTestProgress) => {
+          // Update progress bar + text
+          const fill = $('#llm-progress-fill');
+          const text = $('#llm-progress-text');
+          if (fill && progress.percent != null) {
+            fill.style.width = progress.percent + '%';
+          }
+          if (text) text.textContent = progress.message;
+
+          if (progress.phase === 'error') {
+            $('#llm-error-msg')!.textContent = progress.error || 'Unknown error';
+            $('#llm-error')!.removeAttribute('hidden');
+          }
+        });
+
+        // Render the result block
+        renderLLMResult(result, nativeCompare);
+        btn.textContent = '✓ TEST COMPLETE';
+        btn.disabled = false;
+      } catch (e: any) {
+        // Error already surfaced via onProgress error phase
+        console.error('Live LLM test failed', e);
+        btn.textContent = '✗ FAILED — TRY AGAIN';
+        btn.disabled = false;
+      }
+    });
+  }
+
+  /**
+   * Render the final LLM test result with comparison to native estimate.
+   */
+  function renderLLMResult(
+    result: LLMTestResult,
+    nativeCompare: { llama7BTPSLow: number; llama7BTPSHigh: number; matchedDisplayName: string | null } | null
+  ) {
+    $('#llm-result')!.removeAttribute('hidden');
+
+    $('#llm-result-tps')!.textContent = formatTPS(result.tokensPerSecond).replace(' t/s', '');
+    $('#llm-result-model')!.textContent = result.modelDisplayName;
+    $('#llm-model-tag')!.textContent = result.modelDisplayName;
+    $('#llm-result-tokens')!.textContent = result.tokensGenerated.toString();
+    $('#llm-result-seconds')!.textContent = result.inferenceSeconds.toFixed(1);
+
+    // ── Comparison vs native estimate ──
+    // The browser test uses a SMALLER model than the native estimate
+    // (Phi-3-mini is 4B params, our estimate is for Llama 7B). So the
+    // comparison isn't apples-to-apples. We show the ratio and explain.
+    const verdictEl = $('#llm-compare-verdict');
+    if (verdictEl && nativeCompare && nativeCompare.llama7BTPSHigh > 0) {
+      const ratio = nativeCompare.llama7BTPSLow > 0
+        ? (nativeCompare.llama7BTPSLow + nativeCompare.llama7BTPSHigh) / 2 / result.tokensPerSecond
+        : 0;
+      if (ratio > 0) {
+        verdictEl.innerHTML = `<span class="text-accent font-mono" style="font-weight: 700;">~${ratio.toFixed(1)}× slower than native estimate</span>`;
+      } else {
+        verdictEl.textContent = '—';
+      }
+    } else if (verdictEl) {
+      verdictEl.textContent = '(no native estimate available)';
+    }
+  }
+
+  /**
    * Render component imbalance callout when one of GPU/CPU lags
    * significantly behind the others. RAM is excluded (browser-cap).
    */
@@ -1695,12 +2085,12 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
    * the directly-measured fields; Native is extrapolated client-side
    * via estimateNativeContext() + generateNativePredictions().
    */
-  function renderAISection(r: any) {
+  function renderAISection(r: any): { llama7BTPSLow: number; llama7BTPSHigh: number; matchedDisplayName: string | null } | null {
     const ai = r.ai;
     if (!ai) {
       // Legacy result, no AI block — show "test again" prompt
       $('#ai-section-legacy')!.removeAttribute('hidden');
-      return;
+      return null;
     }
 
     // ── Browser values (directly measured during the bench run) ──
@@ -1711,7 +2101,14 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
     const browserTier     = aiTierLabel(ai.tier);
 
     // ── Native estimation (extrapolated from browser values) ──
-    const nativeCtx       = estimateNativeContext(browserGflops, r.cpu.cores || 4, browserFp16);
+    // Phase K: pass GPU name so the lookup table can refine estimates
+    // when we recognize the hardware (RTX 4060 Laptop, M2 Pro, etc).
+    const nativeCtx       = estimateNativeContext(
+      browserGflops,
+      r.cpu.cores || 4,
+      browserFp16,
+      r.gpu.name || null,
+    );
     const nativeScore     = computeNativeAIScore(nativeCtx);
     const nativeTierInfo  = nativeAITier(nativeScore);
 
@@ -1723,8 +2120,13 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
     // ── Native score block ──
     $('#ai-native-score')!.textContent = '~' + nativeScore.toLocaleString();
     $('#ai-native-tier')!.textContent  = nativeTierInfo.letter;
-    $('#ai-native-sub')!.textContent   = nativeTierInfo.sub +
-      ` · est. ${nativeCtx.estimatedTotalRamGB} GB system RAM`;
+    // When we matched a known GPU class, surface that — gives users
+    // confidence the estimates aren't pure extrapolation. Falls back
+    // gracefully to the RAM-only suffix when no class match.
+    const nativeSubExtras = nativeCtx.matchedDisplayName
+      ? ` · matched ${nativeCtx.matchedDisplayName} · ~${nativeCtx.estimatedTotalRamGB} GB unified/system RAM`
+      : ` · est. ${nativeCtx.estimatedTotalRamGB} GB system RAM`;
+    $('#ai-native-sub')!.textContent   = nativeTierInfo.sub + nativeSubExtras;
 
     // ── Feature inventory (browser-only — these describe the sandbox limits) ──
     setFeature('fp16',
@@ -1799,6 +2201,21 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
 
     $('#ai-pred-rows')!.innerHTML = rowsHtml;
     $('#ai-section')!.removeAttribute('hidden');
+
+    // Return data needed for the live LLM test "vs estimate" comparison.
+    // We use the native Llama 7B prediction range as the calibration
+    // target — that's what users will most likely run with llama.cpp.
+    const llama7B = nativePreds.find(p => p.name.startsWith('Llama 7B'));
+    let lo = 0, hi = 0;
+    if (llama7B?.performance) {
+      const m = llama7B.performance.match(/~?(\d+(?:\.\d+)?)–(\d+(?:\.\d+)?)/);
+      if (m) { lo = parseFloat(m[1]); hi = parseFloat(m[2]); }
+    }
+    return {
+      llama7BTPSLow:  lo,
+      llama7BTPSHigh: hi,
+      matchedDisplayName: nativeCtx.matchedDisplayName,
+    };
   }
 
   // Local escapeHtml (the result page already has one in renderShareButtons
