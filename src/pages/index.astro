@@ -350,6 +350,12 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         // Render result card
         const fmt = (n: number) => n.toLocaleString();
         const pct = (n: number, max: number) => Math.min(100, Math.round((n / max) * 100));
+        // Escape user-controllable strings (GPU renderer string can contain weird chars
+        // from driver versions, ANGLE wrappers, kernel module names). Critical defense
+        // in case innerHTML is used downstream — never trust the GPU string raw.
+        const escapeHtml = (s: string) => String(s ?? '')
+          .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
         result.innerHTML = `
           <div class="result-card">
@@ -388,11 +394,23 @@ import BaseLayout from '../layouts/BaseLayout.astro';
               </div>
             </div>
 
-            <h3 class="text-sm font-bold tracking-wider uppercase text-slate-400 mb-3">Raw measurements</h3>
+            <h3 class="text-sm font-bold tracking-wider uppercase text-slate-400 mb-3">Detected hardware</h3>
             <div class="result-rows">
-              <div class="result-row"><span class="result-row-label">GPU</span><span class="result-row-value">${r.hardware.gpu}</span></div>
+              ${r.hardware.info.gpu.unknown ? `
+              <div class="result-row"><span class="result-row-label">GPU</span><span class="result-row-value"><em class="text-slate-500">Browser hides this</em> · <a href="#" class="text-brand underline" id="add-gpu-manually">add manually</a></span></div>
+              ` : `
+              <div class="result-row"><span class="result-row-label">GPU</span><span class="result-row-value" id="gpu-display">${escapeHtml(r.hardware.info.gpu.name)}${r.hardware.info.gpu.source !== 'webgl' ? ` <span class="text-slate-500 text-xs">(${r.hardware.info.gpu.source})</span>` : ''}</span></div>
+              `}
+              <div class="result-row"><span class="result-row-label">CPU cores</span><span class="result-row-value">${r.cpu.cores}${r.hardware.info.cpu.archHint ? ` · ${escapeHtml(r.hardware.info.cpu.archHint)}` : ''}</span></div>
+              ${r.hardware.info.ram.deviceMemoryGB != null ? `
+              <div class="result-row"><span class="result-row-label">RAM (system)</span><span class="result-row-value">${r.hardware.info.ram.deviceMemoryGB >= 8 ? '≥ 8 GB <span class="text-slate-500 text-xs">(browser cap)</span>' : `≈ ${r.hardware.info.ram.deviceMemoryGB} GB <span class="text-slate-500 text-xs">(approx)</span>`}</span></div>
+              ` : ''}
+              <div class="result-row"><span class="result-row-label">Browser</span><span class="result-row-value">${escapeHtml(r.hardware.info.browser.name)}${r.hardware.info.browser.version ? ' ' + escapeHtml(r.hardware.info.browser.version) : ''} · ${escapeHtml(r.hardware.info.browser.os)}${r.hardware.info.browser.osVersion ? ' ' + escapeHtml(r.hardware.info.browser.osVersion) : ''}</span></div>
+            </div>
+
+            <h3 class="text-sm font-bold tracking-wider uppercase text-slate-400 mb-3 mt-6">Raw measurements</h3>
+            <div class="result-rows">
               <div class="result-row"><span class="result-row-label">GPU compute</span><span class="result-row-value">${r.gpu.gflops.toFixed(1)} GFLOPS</span></div>
-              <div class="result-row"><span class="result-row-label">CPU cores</span><span class="result-row-value">${r.cpu.cores}</span></div>
               <div class="result-row"><span class="result-row-label">SHA-256 single</span><span class="result-row-value">${fmt(Math.round(r.cpu.hashesPerSecondSingle))} h/s</span></div>
               <div class="result-row"><span class="result-row-label">SHA-256 multi</span><span class="result-row-value">${fmt(Math.round(r.cpu.hashesPerSecondMulti))} h/s</span></div>
               <div class="result-row"><span class="result-row-label">Multi-core speedup</span><span class="result-row-value">${r.cpu.speedup.toFixed(2)}× (${(r.cpu.efficiency * 100).toFixed(0)}% eff)</span></div>
@@ -437,6 +455,44 @@ import BaseLayout from '../layouts/BaseLayout.astro';
             </div>
           </div>
         `;
+
+        // Wire up "add manually" link when GPU detection failed.
+        // We never invent a GPU name — if the user wants their GPU shown,
+        // they enter it themselves. This stays consistent with Truth Series.
+        const addGpuLink = document.getElementById('add-gpu-manually');
+        if (addGpuLink) {
+          addGpuLink.addEventListener('click', async (e) => {
+            e.preventDefault();
+            // Pre-fill from prior manual entry if user did this before
+            const previous = localStorage.getItem('9bench:manual-gpu') || '';
+            const entered = window.prompt(
+              'Your browser is hiding your GPU info. What GPU do you have?\n\n' +
+              'Examples: "NVIDIA RTX 4070", "AMD Radeon RX 6800 XT", "Apple M2 Pro", "Intel Iris Xe"',
+              previous
+            );
+            if (entered && entered.trim()) {
+              const cleaned = entered.trim().slice(0, 80); // cap length to prevent abuse
+              try { localStorage.setItem('9bench:manual-gpu', cleaned); } catch {}
+              // Replace the entire result-row in place — no re-render needed
+              const row = (e.target as HTMLElement).closest('.result-row');
+              if (row) {
+                const valueSpan = row.querySelector('.result-row-value');
+                if (valueSpan) {
+                  valueSpan.innerHTML = escapeHtml(cleaned) +
+                    ' <span class="text-slate-500 text-xs">(self-reported)</span>';
+                }
+              }
+              // Update the in-memory result so subsequent share/submit uses it.
+              // Mark source clearly as "self-reported" to keep provenance honest —
+              // critical for Truth Series: never let user-typed data masquerade
+              // as detected hardware.
+              r.hardware.gpu = cleaned;
+              r.hardware.info.gpu.name = cleaned;
+              r.hardware.info.gpu.source = 'self-reported';
+              r.hardware.info.gpu.unknown = false;
+            }
+          });
+        }
 
         // Wire up reaction buttons — submit to backend if we have an ID, else LocalStorage
         result.querySelectorAll('.reaction-btn[data-reaction]').forEach((btn) => {

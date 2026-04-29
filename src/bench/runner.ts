@@ -14,13 +14,17 @@
 import { runWebGPUBench, type WebGPUResult } from './webgpu-test';
 import { runCPUBench, type CPUResult } from './cpu-test';
 import { runRAMBench, type RAMResult } from './ram-test';
+import { detectHardware, type HardwareInfo } from './hardware-detect';
 
 export interface BenchResult {
   timestamp: number;
   durationMs: number;
   hardware: {
     cores: number;
+    /** Human-readable GPU name (best effort). Falls back to '' when browser blocks. */
     gpu: string;
+    /** Full honest hardware detection result — UI uses this for richer display. */
+    info: HardwareInfo;
     ua: string;
   };
   gpu: WebGPUResult;
@@ -46,6 +50,11 @@ export type ProgressCallback = (stage: Stage, percent: number, message: string) 
 
 export async function runFullBench(onProgress?: ProgressCallback): Promise<BenchResult> {
   const startTotal = performance.now();
+
+  // Honest hardware detection runs first so even if a benchmark fails
+  // we still know what hardware we're on. Detection is fast (<50ms),
+  // never blocks, and never invents data.
+  const hardwareInfo = await detectHardware();
 
   onProgress?.('gpu', 0, 'Probing GPU…');
   const gpu = await runWebGPUBench(1024, 5);
@@ -82,12 +91,23 @@ export async function runFullBench(onProgress?: ProgressCallback): Promise<Bench
 
   onProgress?.('done', 100, 'Done');
 
+  // Hardware GPU name preference order:
+  //   1. WebGL/WebGPU detection result (more human-readable)
+  //   2. WebGPU adapter.info.description from the benchmark itself
+  //   3. Empty string + unknown:true flag in info — UI handles fallback
+  // We never substitute a placeholder string here; the UI must explicitly
+  // render the unknown state.
+  const gpuName = !hardwareInfo.gpu.unknown
+    ? hardwareInfo.gpu.name
+    : (gpu.adapterName && gpu.adapterName !== 'Unknown' ? gpu.adapterName : '');
+
   return {
     timestamp: Date.now(),
     durationMs,
     hardware: {
       cores: cpu.cores,
-      gpu: gpu.adapterName || 'Unknown',
+      gpu: gpuName,
+      info: hardwareInfo,
       ua: navigator.userAgent
     },
     gpu,
