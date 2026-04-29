@@ -134,6 +134,8 @@ function detectGPUFromWebGL(): GpuDetection | null {
  * Examples:
  *   "ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 (0x00002786) Direct3D11 vs_5_0 ps_5_0, D3D11)"
  *     → "NVIDIA GeForce RTX 4070"
+ *   "ANGLE (NVIDIA, NVIDIA GeForce RTX 4060 Laptop GPU (0x000028A0) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+ *     → "NVIDIA GeForce RTX 4060 Laptop GPU"
  *   "Apple GPU"
  *     → "Apple GPU"
  *   "AMD Radeon RX 6800 XT (radeonsi, navi21, LLVM 15.0.7, DRM 3.42, 5.15.0-58-generic)"
@@ -142,25 +144,53 @@ function detectGPUFromWebGL(): GpuDetection | null {
 function cleanupRendererString(raw: string): string {
   let s = raw.trim();
 
-  // Strip ANGLE wrapper: "ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 (0x...) Direct3D11 vs_5_0, D3D11)"
-  const angleMatch = s.match(/^ANGLE\s*\(([^,]+),\s*([^,)]+(?:\([^)]*\))?[^,)]*)/i);
-  if (angleMatch) {
-    s = angleMatch[2].trim();
+  // ── Strip ANGLE wrapper ────────────────────────────────────────────
+  // Format observed in Chrome/Edge on Windows:
+  //   ANGLE (VENDOR, RENDERER (0xDEVICE_ID) Direct3D11 vs_5_0 ps_5_0, BACKEND)
+  // Naive regex breaks on the nested device-ID parens, so we parse
+  // explicitly: strip "ANGLE (" prefix, strip ", BACKEND)" suffix,
+  // then split on first comma (vendor, renderer).
+  if (/^ANGLE\s*\(/i.test(s)) {
+    s = s.replace(/^ANGLE\s*\(/i, '');
+    // Strip trailing backend identifier ", D3D11)" / ", D3D9)" / ", OpenGL)" / ", Vulkan)"
+    s = s.replace(/,\s*(?:D3D\d+|OpenGL|Vulkan|Metal)\s*\)\s*$/i, '');
+    // Now: "VENDOR, RENDERER (0x...) Direct3D11 ...". Split on first comma.
+    const firstComma = s.indexOf(',');
+    if (firstComma > 0) {
+      s = s.slice(firstComma + 1).trim();
+    }
   }
 
-  // Strip device IDs in parentheses: "RTX 4070 (0x00002786)" → "RTX 4070"
+  // ── Strip device IDs (with or without closing paren) ──────────────
+  // Standard: "RTX 4070 (0x00002786) ..." → "RTX 4070 ..."
   s = s.replace(/\s*\(0x[0-9a-fA-F]+\)/g, '');
+  // Defensive against unmatched/truncated: "RTX 4060 (0x000028A0" at end of string
+  s = s.replace(/\s*\(0x[0-9a-fA-F]+\s*$/, '');
 
-  // Strip driver/Direct3D suffixes: "RTX 4070 Direct3D11 vs_5_0 ps_5_0" → "RTX 4070"
+  // ── Strip driver/Direct3D/shader-version suffixes ─────────────────
   s = s.replace(/\s+Direct3D\d+.*$/i, '');
   s = s.replace(/\s+OpenGL\s+ES\s+[\d.]+.*$/i, '');
   s = s.replace(/\s+vs_\d+_\d+.*$/i, '');
+  s = s.replace(/\s+ps_\d+_\d+.*$/i, '');
 
-  // Strip Linux Mesa parenthetical: "RX 6800 XT (radeonsi, navi21, LLVM ...)"
+  // ── Strip Linux Mesa parenthetical ────────────────────────────────
   s = s.replace(/\s*\((?:radeonsi|nouveau|i965|iris|llvmpipe|softpipe)[^)]*\)/i, '');
 
-  // Strip generic driver parentheticals when they're long noise
+  // ── Strip generic long driver parentheticals (40+ chars of noise) ─
   s = s.replace(/\s*\([^)]{40,}\)/g, '');
+
+  // ── Final defense: unmatched opening paren at end → strip from there ──
+  // Catches anything our other rules missed (truncated strings, exotic
+  // ANGLE variants, vendor-specific quirks).
+  const lastOpen = s.lastIndexOf('(');
+  const lastClose = s.lastIndexOf(')');
+  if (lastOpen > 0 && lastOpen > lastClose) {
+    s = s.slice(0, lastOpen).trim();
+  }
+
+  // ── De-duplicate vendor name when ANGLE keeps it twice ────────────
+  // Edge case: "NVIDIA NVIDIA GeForce RTX 4070" → "NVIDIA GeForce RTX 4070"
+  s = s.replace(/^(NVIDIA|AMD|Intel|Apple|ATI)\s+\1\b/i, '$1');
 
   return s.trim();
 }
