@@ -111,8 +111,15 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
         <header class="ai-section__head">
           <div class="eyebrow eyebrow--accent">// LOCAL AI · WHAT YOUR PC CAN RUN</div>
           <div class="ai-section__head-row">
-            <h2 class="ai-section__h2" id="ai-tier-letter">—</h2>
+            <!-- Letter tiers (S/A/B) get the giant typography treatment.
+                 Word tiers (Workstation/Office/Limited) get a clean tier-box
+                 without the empty-circle Unicode glyph. We toggle visibility
+                 from JS based on aiTierLabel().letter being a real letter. -->
+            <div class="ai-section__letter" id="ai-tier-letter-box" hidden>
+              <span class="ai-section__letter-char" id="ai-tier-letter">—</span>
+            </div>
             <div class="ai-section__head-text">
+              <p class="ai-section__tier-name" id="ai-tier-name">—</p>
               <p class="ai-section__tier-sub" id="ai-tier-sub">—</p>
               <p class="ai-section__score">
                 AI Capability Score · <span class="text-fg tnum" id="ai-score">—</span>
@@ -121,26 +128,32 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
           </div>
         </header>
 
-        <!-- WebGPU feature inventory — proof the score is grounded -->
+        <!-- WebGPU feature inventory — proof the score is grounded.
+             We render label + value as separate elements (instead of
+             augmenting the strong's textContent at runtime — that caused
+             the duplicate "FP16 (shader-f16) · shader-f16" label bug). -->
         <div class="ai-section__features">
           <div class="ai-feat" id="ai-feat-fp16">
-            <span class="ai-feat__icon">—</span>
-            <div>
-              <strong>FP16 (shader-f16)</strong>
+            <span class="ai-feat__icon" aria-hidden="true">—</span>
+            <div class="ai-feat__body">
+              <strong>FP16 support</strong>
+              <span class="ai-feat__value" id="ai-feat-fp16-value">—</span>
               <span class="ai-feat__sub" id="ai-feat-fp16-sub">—</span>
             </div>
           </div>
           <div class="ai-feat" id="ai-feat-buffer">
-            <span class="ai-feat__icon">—</span>
-            <div>
+            <span class="ai-feat__icon" aria-hidden="true">—</span>
+            <div class="ai-feat__body">
               <strong>Memory headroom</strong>
+              <span class="ai-feat__value" id="ai-feat-buffer-value">—</span>
               <span class="ai-feat__sub" id="ai-feat-buffer-sub">—</span>
             </div>
           </div>
           <div class="ai-feat" id="ai-feat-webgpu">
-            <span class="ai-feat__icon">—</span>
-            <div>
+            <span class="ai-feat__icon" aria-hidden="true">—</span>
+            <div class="ai-feat__body">
               <strong>WebGPU compute</strong>
+              <span class="ai-feat__value" id="ai-feat-webgpu-value">—</span>
               <span class="ai-feat__sub" id="ai-feat-webgpu-sub">—</span>
             </div>
           </div>
@@ -704,30 +717,60 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
     display: flex;
     gap: 24px;
     align-items: center;
-    margin-top: 16px;
+    margin-top: 20px;
     flex-wrap: wrap;
   }
-  .ai-section__h2 {
+
+  /* ── Tier letter box (only shown for S/A/B) ─────────────────── */
+  .ai-section__letter {
+    flex: 0 0 auto;
+    width: 96px;
+    height: 96px;
+    border: 1px solid var(--accent);
+    background: rgba(0, 217, 255, 0.06);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  :root[data-accent="orange"] .ai-section__letter {
+    background: rgba(255, 107, 43, 0.06);
+  }
+  .ai-section__letter-char {
     font-family: var(--sans);
     font-weight: 800;
-    font-size: clamp(64px, 10vw, 120px);
-    line-height: 0.85;
-    letter-spacing: -0.04em;
-    margin: 0;
+    font-size: 64px;
+    line-height: 1;
     color: var(--accent);
-    flex: 0 0 auto;
+    letter-spacing: -0.04em;
   }
+
   .ai-section__head-text {
     display: flex;
     flex-direction: column;
     gap: 4px;
+    flex: 1;
+    min-width: 200px;
+  }
+  /* Tier name — the primary label like "AI-S" / "Working machine"
+     Larger and dominant — replaces the giant Unicode-circle treatment
+     that previously rendered "◯" for word tiers. */
+  .ai-section__tier-name {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0;
   }
   .ai-section__tier-sub {
     font-family: var(--sans);
-    font-size: 18px;
+    font-size: clamp(20px, 2.5vw, 28px);
+    font-weight: 600;
     color: var(--fg);
     margin: 0;
-    line-height: 1.3;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
   }
   .ai-section__score {
     font-family: var(--mono);
@@ -735,7 +778,7 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
     color: var(--fg-3);
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    margin: 0;
+    margin: 8px 0 0 0;
   }
   .ai-section__score .text-fg {
     font-weight: 700;
@@ -765,75 +808,56 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
     font-size: 18px;
     color: var(--accent);
     flex: 0 0 auto;
-    line-height: 1;
+    line-height: 1.2;
+    width: 22px;
+    text-align: center;
   }
   .ai-feat--ok    .ai-feat__icon { color: var(--good); }
   .ai-feat--warn  .ai-feat__icon { color: var(--warn); }
   .ai-feat--limit .ai-feat__icon { color: var(--fg-3); }
+  .ai-feat__body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
   .ai-feat strong {
-    display: block;
     font-family: var(--mono);
     font-size: 11px;
+    font-weight: 600;
     letter-spacing: 0.08em;
     text-transform: uppercase;
     color: var(--fg);
-    margin-bottom: 4px;
   }
+  /* Value (e.g. "shader-f16 supported", "1.0 GB max") — clean tabular line
+     under the strong label. Replaces the old textContent-augmentation
+     approach that produced the duplicate-label bug. */
+  .ai-feat__value {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent);
+    font-weight: 600;
+    margin: 1px 0 4px 0;
+  }
+  .ai-feat--warn  .ai-feat__value { color: var(--warn); }
+  .ai-feat--limit .ai-feat__value { color: var(--fg-3); }
   .ai-feat__sub {
-    display: block;
     font-family: var(--sans);
     font-size: 12px;
     color: var(--fg-2);
     line-height: 1.5;
   }
 
-  /* Predictions list */
+  /* Predictions list container — individual .ai-pred items live in
+     global.css so innerHTML-injected items inherit styling (Astro's
+     scoped CSS doesn't reach JS-injected DOM). */
   .ai-predictions {
     display: flex;
     flex-direction: column;
     gap: 0;
     border: 1px solid var(--line);
     background: var(--bg-2);
-  }
-  .ai-pred {
-    display: grid;
-    grid-template-columns: 24px 1fr;
-    gap: 14px;
-    padding: 16px 20px;
-    border-bottom: 1px solid var(--line-2);
-    align-items: start;
-  }
-  .ai-pred:last-child { border-bottom: 0; }
-  .ai-pred__verdict {
-    font-family: var(--sans);
-    font-weight: 800;
-    font-size: 18px;
-    line-height: 1;
-    flex: 0 0 auto;
-  }
-  .ai-pred--yes   .ai-pred__verdict { color: var(--good); }
-  .ai-pred--maybe .ai-pred__verdict { color: var(--accent); }
-  .ai-pred--no    .ai-pred__verdict { color: var(--fg-3); }
-  .ai-pred__body { display: flex; flex-direction: column; gap: 4px; }
-  .ai-pred__name {
-    font-family: var(--sans);
-    font-weight: 600;
-    font-size: 15px;
-    color: var(--fg);
-  }
-  .ai-pred__perf {
-    font-family: var(--mono);
-    font-size: 13px;
-    color: var(--accent);
-    font-weight: 600;
-  }
-  .ai-pred--no .ai-pred__perf { color: var(--fg-3); text-decoration: line-through; }
-  .ai-pred__reason {
-    font-family: var(--sans);
-    font-size: 12px;
-    color: var(--fg-3);
-    line-height: 1.55;
-    margin-top: 2px;
   }
 
   .ai-section__note {
@@ -1075,7 +1099,9 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
       const total      = data.total ?? 0;
       const tier       = tierFor(r.scores.overall);
 
-      const dateStr = new Date(r.createdAt * 1000).toLocaleString('en-US', {
+      // r.createdAt is already milliseconds (set via Date.now() in submit.ts).
+      // The previous *1000 multiplied to nanoseconds → invalid date "Mar 10, 58295".
+      const dateStr = new Date(r.createdAt).toLocaleString('en-US', {
         month: 'short', day: 'numeric', year: 'numeric',
         hour: '2-digit', minute: '2-digit', timeZone: 'UTC',
       }) + ' UTC';
@@ -1321,33 +1347,59 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
       return;
     }
 
-    const tier = aiTierLabel(ai.tier);
+    const tierLabel = aiTierLabel(ai.tier);
 
-    // Tier letter + sub
-    $('#ai-tier-letter')!.textContent = tier.letter;
-    $('#ai-tier-letter')!.setAttribute('style', `color: ${tier.color};`);
-    $('#ai-tier-sub')!.textContent = tier.sub;
-    $('#ai-tier-sub')!.setAttribute('style', `color: ${tier.color};`);
+    // ── Tier letter box (only shown for actual letter tiers S/A/B) ──
+    // Lower tiers ('◯' / '⚠' Unicode characters) looked terrible at 64-96px
+    // font size — like an empty grey ring or tiny warning sign. Hide the
+    // box for those and let the tier-name + tier-sub text carry the
+    // visual weight on its own.
+    const isLetterTier = /^[A-Z]$/.test(tierLabel.letter);
+    if (isLetterTier) {
+      $('#ai-tier-letter-box')!.removeAttribute('hidden');
+      $('#ai-tier-letter')!.textContent = tierLabel.letter;
+      $('#ai-tier-letter')!.setAttribute('style', `color: ${tierLabel.color};`);
+      // Match the box border to the letter color
+      $('#ai-tier-letter-box')!.setAttribute('style', `border-color: ${tierLabel.color};`);
+    } else {
+      $('#ai-tier-letter-box')!.setAttribute('hidden', '');
+    }
+
+    // Primary tier name (e.g. "AI-S", "AI-Workstation") — uppercase mono
+    $('#ai-tier-name')!.textContent = ai.tier;
+    $('#ai-tier-name')!.setAttribute('style', `color: ${tierLabel.color};`);
+
+    // Description line — large readable sentence
+    $('#ai-tier-sub')!.textContent = tierLabel.sub;
+
     $('#ai-score')!.textContent = ai.score.toLocaleString();
 
-    // Feature inventory
+    // ── Feature inventory ──
     const fp16 = !!ai.webgpu?.fp16;
     const maxAlloc = ai.memory?.largestAllocatableGB ?? 0;
     const webgpuOk = ai.webgpu !== null && ai.webgpu !== undefined;
 
-    setFeature('fp16', fp16, fp16 ? 'shader-f16' : 'not exposed', fp16
-      ? 'Modern LLMs use FP16/BF16. Your adapter supports it.'
-      : 'FP16 unsupported — LLM/SDXL run in FP32 (slower, more memory).');
+    setFeature('fp16',
+      fp16 ? 'ok' : 'warn',
+      fp16 ? 'shader-f16 supported' : 'shader-f16 not exposed',
+      fp16
+        ? 'Modern LLMs use FP16/BF16. Your adapter supports it.'
+        : 'FP16 unsupported — LLM/SDXL run in FP32 (slower, more memory).');
 
-    const memColor = maxAlloc >= 4 ? 'ok' : maxAlloc >= 1 ? 'warn' : 'limit';
-    setFeature('buffer', memColor === 'ok', `${maxAlloc.toFixed(1)} GB max allocation`,
+    const memTier = maxAlloc >= 4 ? 'ok' : maxAlloc >= 1 ? 'warn' : 'limit';
+    setFeature('buffer',
+      memTier,
+      `${maxAlloc.toFixed(1)} GB max allocation`,
       maxAlloc >= 4 ? 'Enough headroom for 7B-13B quantized models.' :
       maxAlloc >= 2 ? 'Tight — fits 7B Q4 but with little overhead.' :
       'Below practical floor for local LLMs.');
 
-    setFeature('webgpu', webgpuOk, webgpuOk ? 'WebGPU compute available' : 'no WebGPU',
-      webgpuOk ? 'Required for GPU-accelerated AI inference.' :
-      'CPU-only fallback — much slower for ML workloads.');
+    setFeature('webgpu',
+      webgpuOk ? 'ok' : 'limit',
+      webgpuOk ? 'compute available' : 'compute unavailable',
+      webgpuOk
+        ? 'Required for GPU-accelerated AI inference.'
+        : 'CPU-only fallback — much slower for ML workloads.');
 
     // Predictions — regenerated client-side from stored fields
     const predictions = generatePredictionsClient(
@@ -1376,21 +1428,28 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
     $('#ai-section')!.removeAttribute('hidden');
   }
 
-  function setFeature(id: string, ok: boolean, value: string, sub: string) {
+  /**
+   * Set a feature card's icon, value, sub, and color tier.
+   *
+   * Replaces the old setFeature() that augmented the strong's textContent
+   * with the value — that produced doubled labels like
+   * "FP16 (shader-f16) · shader-f16". Now the value goes into a
+   * dedicated .ai-feat__value span so each piece stays clean.
+   */
+  function setFeature(id: string, tier: 'ok' | 'warn' | 'limit', value: string, sub: string) {
     const el = $(`#ai-feat-${id}`);
     if (!el) return;
     el.classList.remove('ai-feat--ok', 'ai-feat--warn', 'ai-feat--limit');
-    el.classList.add(ok ? 'ai-feat--ok' : 'ai-feat--warn');
+    el.classList.add(`ai-feat--${tier}`);
+
     const icon = el.querySelector<HTMLElement>('.ai-feat__icon');
-    if (icon) icon.textContent = ok ? '✓' : '⚠';
+    if (icon) icon.textContent = tier === 'ok' ? '✓' : tier === 'warn' ? '⚠' : '○';
+
+    const valueEl = $(`#ai-feat-${id}-value`);
+    if (valueEl) valueEl.textContent = value;
+
     const subEl = $(`#ai-feat-${id}-sub`);
     if (subEl) subEl.textContent = sub;
-    // Append the value to the strong label
-    const strong = el.querySelector<HTMLElement>('strong');
-    if (strong && !strong.dataset.augmented) {
-      strong.textContent = `${strong.textContent} · ${value}`;
-      strong.dataset.augmented = 'true';
-    }
   }
 
   /**
