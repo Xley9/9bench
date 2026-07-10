@@ -2,7 +2,7 @@
 import '../styles/global.css';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
-import { GSC_META_VERIFICATION, BING_META_VERIFICATION, YANDEX_META_VERIFICATION } from '../config';
+import { GSC_META_VERIFICATION, BING_META_VERIFICATION, YANDEX_META_VERIFICATION, CLOUDFLARE_ANALYTICS_TOKEN } from '../config';
 
 export interface Props {
   title: string;
@@ -308,12 +308,20 @@ const baseSchema = {
 
     <!--
       Cloudflare Web Analytics — cookieless, no consent banner needed.
-      Privacy-first replacement for GA4. NO manual script tag needed:
-      Cloudflare auto-injects the beacon at the edge (Web Analytics
-      "Automatic setup" mode is on for this site). Adding a manual
-      <script data-cf-beacon> tag here would result in a duplicate
-      beacon fire — so we don't.
+      Privacy-first replacement for GA4 (removed 2026-04-29).
+      NOTE: edge auto-injection was believed to be on but never actually
+      fired (verified 2026-07-10: no beacon.min.js in served HTML on either
+      domain — the site collected ZERO analytics since the GA4 removal).
+      So we render the beacon manually as soon as a token is configured
+      in src/config.ts. While the token is empty this renders nothing.
     -->
+    {CLOUDFLARE_ANALYTICS_TOKEN && (
+      <script
+        defer
+        src="https://static.cloudflareinsights.com/beacon.min.js"
+        data-cf-beacon={JSON.stringify({ token: CLOUDFLARE_ANALYTICS_TOKEN })}
+      />
+    )}
   </head>
   <body class="theme-bg">
     <Header />
