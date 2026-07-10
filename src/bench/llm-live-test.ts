@@ -136,7 +136,8 @@ export async function runLLMLiveTest(
       'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2'
     );
     pipeline = transformers.pipeline;
-    // Configure: prefer WebGPU when available, otherwise WASM SIMD
+    // Configure: transformers.js v2 runs on WASM (SIMD, multi-threaded).
+    // WebGPU inference needs the v3 API — revisit when we migrate.
     transformers.env.allowLocalModels = false;
     transformers.env.useBrowserCache = true;
     transformers.env.backends.onnx.wasm.numThreads = navigator.hardwareConcurrency || 4;
@@ -196,10 +197,10 @@ export async function runLLMLiveTest(
     console.warn('Warm-up failed (non-fatal):', e);
   }
 
-  // ── 5. Timed inference (cap at 30s) ────────────────────────────
+  // ── 5. Timed inference (up to 100 tokens) ──────────────────────
   onProgress({
     phase: 'inferencing',
-    message: 'Generating tokens for ~30 seconds…',
+    message: 'Generating up to 100 tokens — this can take a minute on slower machines…',
     percent: 90,
   });
 
@@ -221,8 +222,11 @@ export async function runLLMLiveTest(
     prompt = userQuestion;
   }
 
-  const maxTokens = 100;  // Hard cap — we'll usually hit time before tokens
-  const timeCap = 30_000; // 30 second wall-clock cap (informational; we don't actively cap here)
+  // The generation bound is TOKENS (100), not wall-clock time —
+  // transformers.js v2 has no reliable mid-generation abort, so a slow
+  // machine simply takes longer. `cappedAt30s` in the result reports
+  // whether the run exceeded 30s, purely as context for the reader.
+  const maxTokens = 100;
 
   // Manually track tokens because transformers.js doesn't easily
   // expose per-token callbacks for time-capping. We use max_new_tokens

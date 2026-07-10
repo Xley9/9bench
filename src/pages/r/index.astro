@@ -1238,6 +1238,7 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
   import { lookupGPUClass, refinedNativeContext, type GPUClass } from '../../bench/gpu-class-lookup';
   import { toPng } from 'html-to-image';
   import { runLLMLiveTest, formatTPS, type LLMTestProgress, type LLMTestResult } from '../../bench/llm-live-test';
+  import { probeMemoryHeadroom } from '../../bench/ai-capabilities';
 
   // AI tier label + color helper. Inlined here (rather than importing
   // the full ai-capabilities module) because Astro tree-shakes the
@@ -2225,8 +2226,8 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
   /**
    * Wire the "Run Live LLM Test" button (Phase L).
    *
-   * On click, lazy-loads transformers.js + a tiny LLM, runs inference
-   * for ~30s, displays measured tokens/s. Compares against the native
+   * On click, lazy-loads transformers.js + a tiny LLM, generates up to
+   * 100 tokens, displays measured tokens/s. Compares against the native
    * Llama 7B Q4 estimate so users can see how browser-WASM compares
    * to native llama.cpp performance ceilings.
    */
@@ -2245,8 +2246,20 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
       $('#llm-result')!.setAttribute('hidden', '');
       $('#llm-error')!.setAttribute('hidden', '');
 
+      // Model selection must use the VIEWER's memory headroom, probed
+      // right now — not the headroom stored with this result. Anyone can
+      // open a shared permalink: a phone viewing a 64 GB desktop's result
+      // must not be handed the 1.7 GB model (OOM), and a desktop viewing
+      // a phone's result shouldn't be limited to the tiny one. The stored
+      // value is only the fallback if the live probe throws.
+      let viewerHeadroomGB = headroomGB;
       try {
-        const result = await runLLMLiveTest(headroomGB, (progress: LLMTestProgress) => {
+        const probed = probeMemoryHeadroom();
+        if (probed > 0) viewerHeadroomGB = probed;
+      } catch { /* keep stored fallback */ }
+
+      try {
+        const result = await runLLMLiveTest(viewerHeadroomGB, (progress: LLMTestProgress) => {
           // Update progress bar + text
           const fill = $('#llm-progress-fill');
           const text = $('#llm-progress-text');

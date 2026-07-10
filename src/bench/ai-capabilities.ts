@@ -89,7 +89,7 @@ const ZERO_AI: AICapabilities = {
  *
  * Returns the largest GB allocation that succeeded.
  */
-function probeMemoryHeadroom(): number {
+export function probeMemoryHeadroom(): number {
   // Test sizes in GB. We start small to avoid hangs on weak machines.
   const testSizesGB = [0.5, 1, 2, 4, 6, 8];
   let largestSuccessful = 0;
