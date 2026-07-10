@@ -309,11 +309,13 @@ const baseSchema = {
     <!--
       Cloudflare Web Analytics — cookieless, no consent banner needed.
       Privacy-first replacement for GA4 (removed 2026-04-29).
-      NOTE: edge auto-injection was believed to be on but never actually
-      fired (verified 2026-07-10: no beacon.min.js in served HTML on either
-      domain — the site collected ZERO analytics since the GA4 removal).
-      So we render the beacon manually as soon as a token is configured
-      in src/config.ts. While the token is empty this renders nothing.
+      Edge auto-injection IS active and collecting (verified 2026-07-10:
+      beacon.min.js appears in HTML served to real browser User-Agents;
+      Cloudflare skips injection for bot/CLI UAs, which is why curl
+      doesn't show it). CLOUDFLARE_ANALYTICS_TOKEN in src/config.ts must
+      therefore stay EMPTY — setting it would render a second beacon and
+      double-count every visit. The conditional below exists only as a
+      fallback if auto-injection is ever turned off.
     -->
     {CLOUDFLARE_ANALYTICS_TOKEN && (
       <script
