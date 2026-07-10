@@ -465,6 +465,11 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
 <style>
   .result-page {
     padding: 24px 0 56px;
+    /* Reserve viewport height while the result loads client-side.
+       Without this the tiny loading state gets replaced by the tall
+       result card and everything below (footer) jumps — RUM measured
+       CLS 0.77 on this container. */
+    min-height: 100vh;
   }
 
   /* Loading + error states */

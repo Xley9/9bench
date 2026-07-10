@@ -849,6 +849,11 @@ import TruthDisclaimer from '../components/bench/TruthDisclaimer.astro';
     const consentBox = document.getElementById('consent-submit') as HTMLInputElement | null;
     userConsent = consentBox?.checked ?? true;
 
+    // Guard against double-starts: on slow devices the reveal frame can
+    // lag (RUM: INP poor events on this button) and users click again —
+    // two concurrent runFullBench calls would fight over the GPU.
+    if (startBtn) (startBtn as HTMLButtonElement).disabled = true;
+
     // Hide intro, show test UI
     const intro = document.getElementById('test-intro');
     const ui    = document.getElementById('test-ui');

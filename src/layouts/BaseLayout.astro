@@ -210,14 +210,17 @@ const baseSchema = {
     </script>
 
     <!-- ── Editorial brand fonts: JetBrains Mono + Inter ──
-         Self-hosted via /fonts/ would be faster (Toololis pattern), but
-         9bench has different font weights than Toololis (700, 800 needed
-         for big editorial type). Keep Google Fonts for now; migrate
-         to self-hosted in Phase F if PageSpeed shows render-block. -->
+         display=optional (not swap): RUM data 2026-07-10 showed the swap
+         reflow as a site-wide CLS source (nav 0.54, footer 0.22). With
+         `optional`, the webfont is used only when it loads within the
+         ~100ms block period (or from cache on repeat visits) — otherwise
+         the metric-similar system fallbacks render and NO swap happens,
+         eliminating font-driven layout shift. Self-hosting with
+         size-adjust fallbacks remains the Phase-F upgrade path. -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Inter:wght@400;500;600;700;800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Inter:wght@400;500;600;700;800&display=optional"
       rel="stylesheet"
     />
 

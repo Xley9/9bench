@@ -98,6 +98,10 @@ import { tierFor } from '../components/bench/tier-system';
 <style>
   .top-page {
     padding: 32px 0 56px;
+    /* Reserve viewport height while the leaderboard loads client-side —
+       prevents the footer from jumping when rows replace the loading
+       state (RUM CLS 0.25 on this page). */
+    min-height: 100vh;
   }
   .top-page__head {
     margin-bottom: 32px;
@@ -219,9 +223,11 @@ import { tierFor } from '../components/bench/tier-system';
   let currentPeriod: 'week' | 'month' | 'all' = 'week';
 
   function fmt(n: number) { return Number(n).toLocaleString(); }
-  function shortDate(unix: number) {
-    const d = new Date(unix * 1000);
-    return d.toISOString().slice(2, 10).replace(/-/g, '-');
+  function shortDate(ms: number) {
+    // createdAt is stored/returned in milliseconds (Date.now() in submit.ts)
+    // — multiplying by 1000 here rendered every date as year ~58492.
+    const d = new Date(ms);
+    return d.toISOString().slice(2, 10);
   }
   function shortGpu(name: string | null) {
     if (!name) return '—';
