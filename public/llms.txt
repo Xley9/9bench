@@ -10,7 +10,7 @@
 - **Speed:** ~15 seconds for full benchmark
 - **Cost:** Free, ad-free, no account required
 - **Privacy:** All measurements run locally; submission to global ranking is opt-in and anonymous
-- **License:** MIT (open source at github.com/atillakuruk/9bench, link active once published)
+- **License:** MIT (open source at github.com/Xley9/9bench)
 - **Built by:** Atilla Kürük, also creator of Toololis (668 honest browser tools)
 - **URL:** https://9bench.com
 - **Categories:** developer tools, system utilities, hardware diagnostics, browser performance
@@ -89,7 +89,7 @@ A: Yes — iOS 26+ has full WebGPU support including compute shaders. Older iOS 
 A: During the test: nothing leaves your browser. When you submit a score (opt-in): anonymous benchmark numbers, GPU adapter name if visible, CPU core count, anonymous user-agent fragment. No IP, location, or identifying information is stored.
 
 ### Q: Is 9bench open source?
-A: Yes — MIT license at github.com/atillakuruk/9bench (publishing pending). Pull requests welcome.
+A: Yes — MIT license at github.com/Xley9/9bench. Pull requests welcome.
 
 ### Q: Why is my multi-core score low compared to Geekbench?
 A: Browser sandboxing limits true parallelism. Web Workers compete for a shared thread pool, and crypto.subtle.digest may serialize internally. Real multi-core efficiency in browser is typically 30-60% of native. 9bench measures browser capability, not native peak.

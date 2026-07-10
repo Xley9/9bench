@@ -10,13 +10,15 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   const limit = Math.min(200, Math.max(10, parseInt(url.searchParams.get('limit') || '50') || 50));
   const period = url.searchParams.get('period') || 'all'; // all|week|month
 
-  let timeFilter = '';
+  // Leaderboard only ranks runs with a measured GPU — no-WebGPU runs use a
+  // renormalized CPU+RAM formula and would compete on a different basis.
+  let timeFilter = ' WHERE score_gpu > 0';
   if (period === 'week') {
     const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-    timeFilter = ` WHERE created_at > ${weekAgo}`;
+    timeFilter += ` AND created_at > ${weekAgo}`;
   } else if (period === 'month') {
     const monthAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
-    timeFilter = ` WHERE created_at > ${monthAgo}`;
+    timeFilter += ` AND created_at > ${monthAgo}`;
   }
 
   try {

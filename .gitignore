@@ -22,3 +22,9 @@ npm-debug.log*
 
 # Temp
 *.tmp
+
+# Wrangler local state
+.wrangler/
+
+# Windows redirect artifact (accidental "> nul")
+nul

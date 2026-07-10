@@ -1256,7 +1256,9 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
       case 'AI-S':           return { letter: 'S', sub: 'AI workstation — runs 13B LLMs and SDXL comfortably', color: 'var(--accent)' };
       case 'AI-A':           return { letter: 'A', sub: 'Strong local AI — 7-13B LLMs, SD 1.5 image generation', color: 'var(--good)' };
       case 'AI-B':           return { letter: 'B', sub: 'Capable — 7B LLMs, SD 1.5, smaller image models', color: 'var(--fg)' };
-      case 'AI-Workstation': return { letter: '◯', sub: 'Limited — 7B Q4 marginal, smaller models work', color: 'var(--fg-2)' };
+      case 'AI-Entry':
+      case 'AI-Workstation': // legacy rows stored before the rename
+                             return { letter: '◯', sub: 'Entry level — 7B Q4 marginal, smaller models work', color: 'var(--fg-2)' };
       case 'AI-Office':      return { letter: '◯', sub: 'Cloud-first — local AI is impractical on this hardware', color: 'var(--fg-3)' };
       case 'AI-Limited':     return { letter: '⚠', sub: 'Cloud-only — not a local-AI machine', color: 'var(--warn)' };
       default:               return { letter: '?', sub: 'Unknown AI tier', color: 'var(--fg-3)' };

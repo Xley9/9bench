@@ -114,7 +114,7 @@ const personNode = {
   url: 'https://toololis.com/atilla/',
   sameAs: [
     'https://www.linkedin.com/in/atilla-k-2b28b32a3/',
-    'https://github.com/atillakuruk',
+    'https://github.com/Xley9',
     'https://toololis.com/atilla/'
   ],
   jobTitle: 'Solo software builder',
@@ -144,12 +144,9 @@ const websiteNode = {
   name: '9bench',
   description: 'The honest browser-based hardware benchmark.',
   publisher: { '@id': `${SITE}#org` },
-  inLanguage: 'en-US',
-  potentialAction: {
-    '@type': 'SearchAction',
-    target: `${SITE}/r/{search_term_string}`,
-    'query-input': 'required name=search_term_string'
-  }
+  inLanguage: 'en-US'
+  // No SearchAction: the site has no search interface. /r/{id} permalinks
+  // are not a query endpoint — advertising them as one would be bogus markup.
 };
 
 // Speakable — tells voice assistants which parts of the page to read aloud

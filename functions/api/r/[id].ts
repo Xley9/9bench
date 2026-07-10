@@ -29,10 +29,15 @@ export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => {
       });
     }
 
-    // Recompute percentile against current global distribution
-    const totalRow = await env.DB.prepare('SELECT COUNT(*) as c FROM results').first<{ c: number }>();
-    const lowerRow = await env.DB.prepare('SELECT COUNT(*) as c FROM results WHERE score_overall < ?')
-      .bind(row.score_overall)
+    // Recompute percentile against current global distribution — but only
+    // within the same measurement class (GPU-measured vs no-WebGPU), so the
+    // two incompatible score bases never mix in one ranking.
+    const hasGpu = row.score_gpu > 0 ? 1 : 0;
+    const totalRow = await env.DB.prepare('SELECT COUNT(*) as c FROM results WHERE (score_gpu > 0) = ?')
+      .bind(hasGpu)
+      .first<{ c: number }>();
+    const lowerRow = await env.DB.prepare('SELECT COUNT(*) as c FROM results WHERE score_overall < ? AND (score_gpu > 0) = ?')
+      .bind(row.score_overall, hasGpu)
       .first<{ c: number }>();
 
     const total = totalRow?.c || 1;

@@ -153,23 +153,68 @@ export async function runWebGPUBench(matrixSize = 1024, iterations = 5): Promise
       device.queue.submit([enc.finish()]);
     };
 
+    // ── Correctness probe ──────────────────────────────────────────
+    // Before timing anything, verify the shader actually computed: run one
+    // dispatch, read back the first output values, and require them to be
+    // finite and positive (matmul of uniform-random positive inputs is
+    // always > 0). On some driver/VM combos the dispatch silently no-ops
+    // and onSubmittedWorkDone() resolves near-instantly — without this
+    // check that produced "impossible" GFLOPS results in the wild
+    // (GTX 1070 at 35-51 TFLOPS on the public leaderboard).
+    const readbackBuffer = device.createBuffer({
+      size: 16,
+      usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ
+    });
+    {
+      const enc = device.createCommandEncoder();
+      const pass = enc.beginComputePass();
+      pass.setPipeline(pipeline);
+      pass.setBindGroup(0, bindGroup);
+      pass.dispatchWorkgroups(Math.ceil(N / 8), Math.ceil(N / 8));
+      pass.end();
+      enc.copyBufferToBuffer(bufferC, 0, readbackBuffer, 0, 16);
+      device.queue.submit([enc.finish()]);
+      await readbackBuffer.mapAsync(GPUMapMode.READ);
+      const out = new Float32Array(readbackBuffer.getMappedRange().slice(0));
+      readbackBuffer.unmap();
+      readbackBuffer.destroy();
+      const valid = out.length === 4 && Array.from(out).every(v => Number.isFinite(v) && v > 0);
+      if (!valid) {
+        result.error = 'GPU compute verification failed — output buffer empty or invalid';
+        return result;
+      }
+    }
+
     // ── Adaptive warm-up ───────────────────────────────────────────
     // GPUs (especially laptop/mobile) idle at low power. A deep-idle GPU
     // can take 200-500ms of sustained work to clock up to performance state.
     // We run warm-up waves until two consecutive samples converge (within
     // 8% of each other) — then we know the GPU has stabilized. Cold GPUs
     // take more waves, warm ones converge quickly.
+    //
+    // Timer floor: performance.now() is quantized (0.1ms Chrome, coarser in
+    // Firefox). A wave measured below MIN_SAMPLE_MS is timer noise, not GPU
+    // time — on fast GPUs 5 iterations finish in under a millisecond and
+    // the quantized duration inflates GFLOPS by 10-100×. When a wave is too
+    // fast we double the iteration count and discard that sample instead of
+    // trusting it.
+    const MIN_SAMPLE_MS = 25;
+    const MAX_ITERATIONS = 640;
     const warmupSamples: number[] = [];
-    for (let warmup = 0; warmup < 10; warmup++) {
+    for (let warmup = 0; warmup < 12; warmup++) {
       const wStart = performance.now();
       for (let i = 0; i < iterations; i++) dispatchOnce();
       await device.queue.onSubmittedWorkDone();
       const wDur = performance.now() - wStart;
+      if (wDur < MIN_SAMPLE_MS && iterations < MAX_ITERATIONS) {
+        iterations = Math.min(MAX_ITERATIONS, iterations * 2);
+        continue; // sample below timer floor — scale up and remeasure
+      }
       const wGflops = (2 * N * N * N * iterations) / (wDur / 1000) / 1e9;
       warmupSamples.push(wGflops);
       // Need at least 3 warmup waves before we can declare convergence
-      if (warmup >= 2) {
-        const prev = warmupSamples[warmup - 1];
+      if (warmupSamples.length >= 3) {
+        const prev = warmupSamples[warmupSamples.length - 2];
         const curr = wGflops;
         const peak = Math.max(...warmupSamples);
         // Converged when latest is within 8% of previous AND within 10% of peak
@@ -190,6 +235,7 @@ export async function runWebGPUBench(matrixSize = 1024, iterations = 5): Promise
       for (let i = 0; i < iterations; i++) dispatchOnce();
       await device.queue.onSubmittedWorkDone();
       const duration = performance.now() - start;
+      if (duration < MIN_SAMPLE_MS / 2) continue; // timer noise — never trust it
       const totalFlops = 2 * N * N * N * iterations;
       const seconds = duration / 1000;
       const gflops = totalFlops / seconds / 1e9;
@@ -197,14 +243,18 @@ export async function runWebGPUBench(matrixSize = 1024, iterations = 5): Promise
       // Tiny gap so the GPU scheduler doesn't queue all three back-to-back
       await new Promise<void>(r => setTimeout(r, 40));
     }
+    if (samples.length === 0 && warmupSamples.length === 0) {
+      result.error = 'GPU measurement below timer resolution — cannot produce a trustworthy number';
+      return result;
+    }
     const sorted = [...samples].sort((a, b) => b - a);
-    const best = sorted[0];
-    const median = sorted[1];
+    const best = sorted[0] ?? 0;
+    const median = sorted.length >= 2 ? sorted[1] : best;
     // Use best when its margin over median is meaningful (others were throttled);
     // otherwise use median. We also compare against the best warmup sample —
     // if a warmup wave saw a faster GPU than any measurement, use that
     // (the GPU may have throttled back down between warmup and measurement).
-    const peakWarmup = Math.max(...warmupSamples);
+    const peakWarmup = warmupSamples.length ? Math.max(...warmupSamples) : 0;
     const fromMeasurement = (best - median) / Math.max(median, 1) > 0.25 ? best : median;
     const headlineGflops = Math.max(fromMeasurement, peakWarmup * 0.95);
     const headlineDurationMs = (2 * N * N * N * iterations) / (headlineGflops * 1e9) * 1000;
@@ -212,6 +262,7 @@ export async function runWebGPUBench(matrixSize = 1024, iterations = 5): Promise
     result.supported = true;
     result.durationMs = headlineDurationMs;
     result.gflops = headlineGflops;
+    result.iterations = iterations; // may have scaled up on fast GPUs
     result.measurements = samples;
 
     return result;

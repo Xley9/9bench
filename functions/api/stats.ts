@@ -26,7 +26,10 @@ const HEADERS = {
 export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
   try {
     // Run all three count queries in parallel — D1 batches well at this scale.
-    const oneDayAgo = Math.floor(Date.now() / 1000) - 86400;
+    // created_at is stored in MILLISECONDS (Date.now() in submit.ts) — the
+    // cutoff must be in ms too, or the comparison is always true and
+    // last_24h silently equals total_runs.
+    const oneDayAgo = Date.now() - 86400 * 1000;
     const [totalRow, gpuRow, recentRow] = await env.DB.batch([
       env.DB.prepare('SELECT COUNT(*) AS n FROM results'),
       env.DB.prepare("SELECT COUNT(DISTINCT gpu_name) AS n FROM results WHERE gpu_name IS NOT NULL AND gpu_name != ''"),

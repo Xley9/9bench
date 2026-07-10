@@ -86,18 +86,87 @@ interface Submission {
   };
 }
 
+function isNum(v: unknown): v is number {
+  return typeof v === 'number' && Number.isFinite(v);
+}
+
+/** true when a is within tol (relative) of b, with a small absolute floor for rounding noise */
+function roughlyEqual(a: number, b: number, tol = 0.05, absFloor = 3): boolean {
+  return Math.abs(a - b) <= Math.max(absFloor, Math.abs(b) * tol);
+}
+
+function bad(error: string): Response {
+  return new Response(JSON.stringify({ ok: false, error }), {
+    status: 400,
+    headers: { 'content-type': 'application/json' }
+  });
+}
+
+/**
+ * Validate a submission against physical plausibility AND internal
+ * consistency. Component scores are pure functions of the raw metrics
+ * (documented on /methodology and in runner.ts) — so we recompute them
+ * server-side and reject rows that don't match. This blocks both
+ * hand-crafted curl submissions and corrupted client measurements from
+ * polluting the shared leaderboard/percentile pool.
+ */
+function validate(body: Submission): string | null {
+  const s = body?.scores;
+  if (!s || !body.gpu || !body.cpu || !body.ram || !body.hardware) return 'Missing fields';
+
+  for (const [name, v] of Object.entries({
+    overall: s.overall, gpu: s.gpu, cpuSingle: s.cpuSingle, cpuMulti: s.cpuMulti, ram: s.ram,
+  })) {
+    if (!isNum(v) || v < 0) return `Invalid score: ${name}`;
+  }
+  if (s.overall > 50000) return 'Invalid score: overall';
+
+  // Plausibility ceilings — generous headroom above anything a browser
+  // can legitimately measure today, but a hard wall against absurd junk.
+  if (!isNum(body.gpu.gflops) || body.gpu.gflops < 0 || body.gpu.gflops > 120000) return 'Implausible GPU GFLOPS';
+  if (!isNum(body.cpu.cores) || body.cpu.cores < 1 || body.cpu.cores > 512) return 'Implausible core count';
+  if (!isNum(body.cpu.hashesPerSecondSingle) || body.cpu.hashesPerSecondSingle < 0 || body.cpu.hashesPerSecondSingle > 1e9) return 'Implausible CPU single';
+  if (!isNum(body.cpu.hashesPerSecondMulti) || body.cpu.hashesPerSecondMulti < 0 || body.cpu.hashesPerSecondMulti > 1e10) return 'Implausible CPU multi';
+  if (!isNum(body.ram.readBandwidthGBs) || body.ram.readBandwidthGBs < 0 || body.ram.readBandwidthGBs > 500) return 'Implausible RAM read';
+  if (!isNum(body.ram.writeBandwidthGBs) || body.ram.writeBandwidthGBs < 0 || body.ram.writeBandwidthGBs > 500) return 'Implausible RAM write';
+  if (!isNum(body.ram.randomAccessLatencyNs) || body.ram.randomAccessLatencyNs < 0 || body.ram.randomAccessLatencyNs > 1e6) return 'Implausible RAM latency';
+
+  // Consistency: component scores must match the documented formulas.
+  if (!roughlyEqual(s.gpu, body.gpu.gflops * 3)) return 'Inconsistent GPU score';
+  if (!roughlyEqual(s.cpuSingle, body.cpu.hashesPerSecondSingle / 300)) return 'Inconsistent CPU single score';
+  if (!roughlyEqual(s.cpuMulti, body.cpu.hashesPerSecondMulti / 600)) return 'Inconsistent CPU multi score';
+  if (!roughlyEqual(s.ram, ((body.ram.readBandwidthGBs + body.ram.writeBandwidthGBs) / 2) * 60)) return 'Inconsistent RAM score';
+
+  // Overall: weighted geometric mean — GPU 35 / CPU-multi 45 / RAM 20.
+  // When the GPU couldn't be measured (no WebGPU) the client renormalizes
+  // over CPU+RAM; accept both formulas depending on scores.gpu.
+  const ln = (v: number) => Math.log(Math.max(v, 1));
+  if (s.gpu > 0) {
+    const expected = Math.exp(0.35 * ln(s.gpu) + 0.45 * ln(s.cpuMulti) + 0.20 * ln(s.ram));
+    if (!roughlyEqual(s.overall, expected)) return 'Inconsistent overall score';
+  } else {
+    // No-WebGPU clients renormalize over CPU+RAM; clients running a stale
+    // cached page still use the old collapsed formula — accept either.
+    const renormalized = Math.exp((0.45 * ln(s.cpuMulti) + 0.20 * ln(s.ram)) / 0.65);
+    const legacy = Math.exp(0.45 * ln(s.cpuMulti) + 0.20 * ln(s.ram));
+    if (!roughlyEqual(s.overall, renormalized) && !roughlyEqual(s.overall, legacy)) return 'Inconsistent overall score';
+  }
+
+  return null;
+}
+
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
   try {
-    const body = await request.json() as Submission;
-
-    // Sanity-check: refuse obviously bad data
-    const s = body?.scores;
-    if (!s || typeof s.overall !== 'number' || s.overall < 0 || s.overall > 50000) {
-      return new Response(JSON.stringify({ ok: false, error: 'Invalid scores' }), {
-        status: 400,
-        headers: { 'content-type': 'application/json' }
-      });
+    let body: Submission;
+    try {
+      body = await request.json() as Submission;
+    } catch {
+      return bad('Invalid JSON');
     }
+
+    const invalid = validate(body);
+    if (invalid) return bad(invalid);
+    const s = body.scores;
 
     // Try a few times if random ID collides (extremely rare)
     let id = makeId();
@@ -162,10 +231,16 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       aiFp16
     ).run();
 
-    // Compute percentile: count rows with score < this user's overall, divide by total
-    const totalRow = await env.DB.prepare('SELECT COUNT(*) as c FROM results').first<{ c: number }>();
-    const lowerRow = await env.DB.prepare('SELECT COUNT(*) as c FROM results WHERE score_overall < ?')
-      .bind(Math.round(s.overall))
+    // Compute percentile: count rows with score < this user's overall, divide by total.
+    // Percentiles are computed within the same measurement class — runs with a
+    // measured GPU compare only against other GPU runs, no-WebGPU runs only
+    // against no-WebGPU runs. Mixing the two bases would be unfair to both.
+    const hasGpu = Math.round(s.gpu) > 0 ? 1 : 0;
+    const totalRow = await env.DB.prepare('SELECT COUNT(*) as c FROM results WHERE (score_gpu > 0) = ?')
+      .bind(hasGpu)
+      .first<{ c: number }>();
+    const lowerRow = await env.DB.prepare('SELECT COUNT(*) as c FROM results WHERE score_overall < ? AND (score_gpu > 0) = ?')
+      .bind(Math.round(s.overall), hasGpu)
       .first<{ c: number }>();
 
     const total = totalRow?.c || 1;

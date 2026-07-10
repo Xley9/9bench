@@ -46,6 +46,15 @@ const ARTICLES: Record<string, { title: string; subtitle?: string }> = {
   'how-many-cpu-cores-do-you-need-2026':                { title: 'How Many CPU Cores Do You Need in 2026?' },
   'why-browser-benchmarks-score-lower-than-native':     { title: 'Why Browser Benchmarks Score Lower Than Native' },
   'complete-guide-online-hardware-benchmarking-2026':   { title: 'Complete Guide to Online Hardware Benchmarking' },
+  'userbenchmark-banned-honest-alternatives-2026':      { title: 'UserBenchmark Was Banned — 5 Honest Alternatives' },
+  'best-gpu-for-local-llm-2026':                        { title: 'Best GPU for Local LLM in 2026' },
+  'how-much-vram-do-you-need-for-local-llm-2026':       { title: 'How Much VRAM Do You Need for Local LLMs?' },
+  'run-local-llm-on-8gb-vram-2026-reality-check':       { title: 'Run Local LLMs on 8 GB VRAM — Reality Check' },
+  'best-laptop-for-local-ai-2026':                      { title: 'Best Laptop for Local AI in 2026' },
+  'browser-vs-native-llm-performance':                  { title: 'Browser vs Native LLM Performance' },
+  'can-my-pc-run-it-15-second-test-2026':               { title: 'Can My PC Run It? Test in 15 Seconds' },
+  'apple-m3-max-vs-rtx-4090-local-ai':                  { title: 'Apple M3 Max vs RTX 4090 for Local AI' },
+  'test-pc-stable-diffusion-xl-15-seconds':             { title: 'Test Your PC for Stable Diffusion XL' },
 };
 
 const PAGES: Record<string, { title: string; subtitle: string }> = {

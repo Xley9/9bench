@@ -46,7 +46,9 @@ export interface AICapabilities {
   score: number;
 
   /** AI-tier verdict — separate from main 9bench tier, AI-specific */
-  tier: 'AI-S' | 'AI-A' | 'AI-B' | 'AI-Workstation' | 'AI-Office' | 'AI-Limited';
+  // 'AI-Workstation' is the legacy name of 'AI-Entry' — still present in
+  // stored rows submitted before the rename; render both identically.
+  tier: 'AI-S' | 'AI-A' | 'AI-B' | 'AI-Entry' | 'AI-Workstation' | 'AI-Office' | 'AI-Limited';
 
   /**
    * What the user can actually run locally — concrete predictions
@@ -418,7 +420,7 @@ function aiTierFor(score: number): AICapabilities['tier'] {
   if (score >= 2500) return 'AI-S';
   if (score >= 1700) return 'AI-A';
   if (score >= 1100) return 'AI-B';
-  if (score >= 600)  return 'AI-Workstation';
+  if (score >= 600)  return 'AI-Entry';
   if (score >= 300)  return 'AI-Office';
   return 'AI-Limited';
 }
@@ -468,7 +470,9 @@ export function aiTierLabel(tier: AICapabilities['tier']): { letter: string; sub
     case 'AI-S':            return { letter: 'S', sub: 'AI workstation — runs 13B LLMs, SDXL comfortably',          color: 'var(--accent)' };
     case 'AI-A':            return { letter: 'A', sub: 'Strong local AI — 7-13B LLMs, SD 1.5 image gen',           color: 'var(--good)' };
     case 'AI-B':            return { letter: 'B', sub: 'Capable — 7B LLMs, SD 1.5, smaller image models',           color: 'var(--fg)' };
-    case 'AI-Workstation':  return { letter: '◯', sub: 'Limited — 7B Q4 marginal, smaller models work',             color: 'var(--fg-2)' };
+    case 'AI-Entry':
+    case 'AI-Workstation':  // legacy rows stored before the rename
+                            return { letter: '◯', sub: 'Entry level — 7B Q4 marginal, smaller models work',         color: 'var(--fg-2)' };
     case 'AI-Office':       return { letter: '◯', sub: 'Cloud-first — local AI is impractical on this hardware',    color: 'var(--fg-3)' };
     case 'AI-Limited':      return { letter: '⚠', sub: 'Cloud-only — not a local-AI machine',                        color: 'var(--warn)' };
   }
