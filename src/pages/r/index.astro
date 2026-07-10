@@ -336,15 +336,12 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
             </div>
           </div>
 
-          <!-- VS. KNOWN HARDWARE (V1 viral asset) -->
-          <h3 class="result__section-h">— vs. known hardware</h3>
-          <div id="cmp-bars" class="cmp-bars">
-            <!-- Phase 2 placeholder: shown until reference_hardware D1 table is seeded -->
-            <p class="cmp-bars__placeholder font-mono">
-              <span class="text-warn">Phase 2:</span>
-              comparison data unlocks once reference hardware is seeded.
-              <a href="/methodology/" class="text-accent">How this works →</a>
-            </p>
+          <!-- VS. KNOWN HARDWARE (V1 viral asset) — whole section stays
+               hidden until the reference_hardware table returns real data;
+               a visible "coming soon" placeholder read as unfinished. -->
+          <div id="cmp-section" hidden>
+            <h3 class="result__section-h">— vs. known hardware</h3>
+            <div id="cmp-bars" class="cmp-bars"></div>
           </div>
 
           <!-- Raw measurements (collapsible) -->
@@ -654,16 +651,6 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
     text-align: right;
     flex: 1;
     word-break: break-word;
-  }
-
-  /* Comparison bars (Phase 2 placeholder for now) */
-  .cmp-bars__placeholder {
-    padding: 14px 16px;
-    border: 1px dashed var(--line);
-    background: var(--bg-2);
-    font-size: 12px;
-    line-height: 1.6;
-    color: var(--fg-2);
   }
 
   /* Raw measurements (collapsible) */
@@ -2559,16 +2546,16 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
 
   /**
    * Load reference hardware comparison bars from /api/reference-hardware.
-   * Empty response → keep Phase 2 placeholder visible.
-   * Real data → replace placeholder with bar chart.
+   * Empty response → section stays hidden entirely.
+   * Real data → fill bars and reveal the section.
    */
   async function loadReferenceComparison(userScore: number) {
     try {
       const res = await fetch(`/api/reference-hardware?limit=6&around=${userScore}`);
-      if (!res.ok) return;  // graceful — keep placeholder
+      if (!res.ok) return;  // graceful — section stays hidden
       const data = await res.json() as any;
       const items = data.items || [];
-      if (items.length < 3) return;  // Less than 3 references = not useful — keep placeholder
+      if (items.length < 3) return;  // Less than 3 references = not useful — stay hidden
 
       const container = $('#cmp-bars');
       if (!container) return;
@@ -2607,6 +2594,7 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
         </p>
         ${html}
       `;
+      $('#cmp-section')?.removeAttribute('hidden');
     } catch (e) {
       // Silent fallback — placeholder stays visible
       console.warn('reference-hardware fetch failed', e);

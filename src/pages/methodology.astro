@@ -69,11 +69,11 @@ const FAQ = [
   })} />
   <main class="container methodology">
 
-    <IssueNameplate middle="Methodology — Truth Series" right="v3.1 · Apr 2026" />
+    <IssueNameplate middle="Methodology — Truth Series" right="v3.2 · Jul 2026" />
 
     <!-- Hero -->
     <section class="methodology__hero">
-      <div class="eyebrow eyebrow--accent">// METHODOLOGY · v3.1</div>
+      <div class="eyebrow eyebrow--accent">// METHODOLOGY · v3.2</div>
       <h1 class="methodology__h1">
         Every formula.<br />
         <span class="text-fg-3">Every constant.</span><br />
@@ -97,6 +97,7 @@ const FAQ = [
         <li><a href="#limits">5. What we cannot measure</a></li>
         <li><a href="#faq">6. FAQ</a></li>
         <li><a href="#license">7. License</a></li>
+        <li><a href="#changelog">8. Changelog</a></li>
       </ul>
     </nav>
 
@@ -280,6 +281,52 @@ const FAQ = [
       </p>
     </section>
 
+    <!-- Section 8 — Changelog -->
+    <section id="changelog" class="methodology__section">
+      <h2 class="section-h">8. Changelog</h2>
+      <p class="methodology__p">
+        A benchmark that changes its measurement silently cannot be trusted.
+        Every change to how scores are measured or computed is documented here,
+        including our own mistakes.
+      </p>
+
+      <h3 class="methodology__h3">v3.2 — July 10, 2026</h3>
+      <ul class="methodology__list">
+        <li>
+          <strong>Fixed a GPU timing bug that produced impossible scores.</strong>
+          On fast GPUs, a measurement pass could finish in under a millisecond —
+          below the resolution of the browser's <code>performance.now()</code> timer.
+          The quantized duration inflated GFLOPS by 10-100×, which is how a
+          GTX 1070 briefly topped the leaderboard at a physically impossible
+          51 TFLOPS. The benchmark now verifies the compute shader actually
+          produced output before timing, and scales iteration counts until each
+          sample runs long enough (≥25 ms) to measure reliably.
+        </li>
+        <li>
+          <strong>Removed 16 invalid results</strong> produced by that bug from
+          the leaderboard and percentile pool. Every remaining score comes from
+          a verified measurement.
+        </li>
+        <li>
+          <strong>Server-side validation added.</strong> Submissions are now
+          checked for physical plausibility and internal consistency against
+          the documented formulas before they enter the database.
+        </li>
+        <li>
+          <strong>Fairer scoring without WebGPU.</strong> Previously a missing
+          GPU measurement collapsed the overall score. Now the weights
+          renormalize over CPU + RAM (45/65 · 20/65), those runs rank in their
+          own percentile pool, and the leaderboard only lists GPU-measured runs.
+        </li>
+      </ul>
+
+      <h3 class="methodology__h3">v3.1 — April 30, 2026</h3>
+      <ul class="methodology__list">
+        <li>Calibrated scoring formulas for browser-API ceilings (GFLOPS × 3, SHA/s ÷ 300 and ÷ 600, bandwidth × 60).</li>
+        <li>Weighted geometric mean composite: GPU 35% · CPU-multi 45% · RAM 20%.</li>
+      </ul>
+    </section>
+
     <!-- CTA -->
     <section class="methodology__cta">
       <a href="/test/" class="run-btn">▶ TEST MY HARDWARE</a>
@@ -359,6 +406,34 @@ const FAQ = [
     padding: 2px 6px;
   }
   .methodology__p a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+
+  /* Changelog (Section 8) */
+  .methodology__h3 {
+    font-family: var(--mono);
+    font-size: 14px;
+    letter-spacing: 0.04em;
+    color: var(--accent);
+    margin: 28px 0 12px 0;
+  }
+  .methodology__list {
+    margin: 0 0 18px 0;
+    padding-left: 20px;
+  }
+  .methodology__list li {
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.7;
+    color: var(--fg-2);
+    margin-bottom: 12px;
+  }
+  .methodology__list strong { color: var(--fg); font-weight: 600; }
+  .methodology__list code {
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--accent);
+    background: var(--bg-2);
+    padding: 2px 6px;
+  }
 
   /* Section 1 grid */
   .methodology__grid {
