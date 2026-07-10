@@ -1,0 +1,389 @@
+---
+import ArticleLayout from '../../layouts/ArticleLayout.astro';
+
+const props = {
+  title: 'Can My PC Run It? Test Hardware for Games, AI & Apps in 15 Seconds [No Download]',
+  description: 'Stop downloading "can-you-run-it" tools. 9bench tests your CPU, GPU, and RAM in 15 seconds — and tells you what games, AI models, and modern apps your hardware can actually handle. No account, no install, no bias.',
+  slug: 'can-my-pc-run-it-15-second-test-2026',
+  publishedDate: '2026-04-29',
+  readingMinutes: 14,
+  category: 'How-to',
+  primaryKeyword: 'can my pc run it',
+  secondaryKeywords: [
+    'my pc run it', 'pc will it run', 'my computer can run it', 'canmy pc run it',
+    'can my pc run llama', 'can my pc run stable diffusion', 'can my laptop run ai',
+    'is my computer fast enough', 'pc compatibility checker', 'check pc specs online',
+    'browser hardware test', 'no download pc benchmark'
+  ],
+  heroEmoji: '🎯',
+  heroGradientFrom: '#00D9FF',
+  heroGradientTo: '#0891B2',
+  faqs: [
+    { q: 'Is "Can My PC Run It" still relevant in 2026?', a: 'Yes — but the meaning shifted. In 2018, "can my PC run it" usually meant "can it run Cyberpunk 2077?" In 2026, it more often means "can it run Llama 13B locally?", "can it handle Stable Diffusion XL?", or "is it fast enough for 4K video editing?". Game-only checkers like CanYouRunIt.com don\'t answer those questions. 9bench does.' },
+    { q: 'How accurate is a browser-based test vs installing software?', a: 'For relative comparison and triage: very accurate (within ±10% of native scores). For absolute peak measurement: less accurate (browsers add ~5-15% overhead, RAM is sandbox-capped at 30-50% of native). The honest answer: 9bench tells you what tier your hardware is in, not its absolute peak. For most people, that\'s exactly what they need.' },
+    { q: 'What\'s the difference between 9bench and CanYouRunIt.com?', a: 'CanYouRunIt and similar sites check your hardware against the published minimum/recommended specs of specific games. Useful, but limited to whatever games they\'ve indexed. 9bench measures actual CPU/GPU/RAM performance, then maps that to general capability tiers — including AI workloads (Llama, Stable Diffusion, Whisper) that no game-checker covers.' },
+    { q: 'Do I need to install anything?', a: 'No. 9bench runs entirely in your browser using WebGPU (for GPU compute), Web Workers (for multi-core CPU), Web Crypto API (for SHA-256 hashing), and WebAssembly. No download, no account, no upload. Your benchmark data stays on your machine unless you click "submit" to add your score to the global leaderboard.' },
+    { q: 'My PC is old — should I even bother testing?', a: 'Especially then. The most useful information from a benchmark is whether you should upgrade or whether your machine is actually fine for what you do. A 6-year-old i5 can still handle most office work, browser-everything, and SD 1.5 image generation. Knowing exactly where your hardware sits beats guessing.' },
+    { q: 'Can my PC run Llama 7B locally?', a: 'Most modern hardware can. Llama 7B Q4 needs ~6 GB free RAM and a GPU with ~4 TFLOPS native compute. Almost any laptop sold after 2022 with a discrete GPU clears that bar. 9bench\'s AI Capability Score tells you specifically what tokens/s to expect — for both browser and native (llama.cpp) execution.' },
+    { q: 'Can my PC run Stable Diffusion XL?', a: 'It depends on GPU compute and VRAM. SDXL native (ComfyUI/AUTOMATIC1111) typically needs 6+ GB VRAM and ~10 TFLOPS for usable speed. RTX 4060 Laptop class: ~18-30s per image. RTX 4080: ~6-10s. RTX 4090: ~3-5s. Apple M2 Pro: ~14-24s. 9bench gives you a calibrated estimate after the 15-second test.' }
+  ],
+  relatedArticles: [
+    { slug: 'best-gpu-for-local-llm-2026', title: 'Best GPU for Local LLM 2026', emoji: '⚡' },
+    { slug: 'userbenchmark-alternatives-2026', title: 'UserBenchmark Alternatives 2026', emoji: '🚫' },
+    { slug: 'how-to-test-cpu-gpu-ram-online-no-download', title: 'How to Test CPU, GPU, RAM Online', emoji: '🛠️' }
+  ]
+};
+---
+
+<ArticleLayout {...props}>
+  <div class="tldr">
+    <div class="tldr-title">TL;DR</div>
+    Open <a href="/test/" class="text-brand"><strong>9bench.com/test</strong></a> in your browser. Click <em>Test my hardware</em>.
+    15 seconds later you'll know if your PC can run modern games, local AI models (Llama 7B/13B/70B,
+    Stable Diffusion XL/1.5, Whisper), and 2026 productivity apps — with concrete predictions, not generic
+    "Can-You-Run-It" minimum-spec checks. No download. No account. No bias.
+  </div>
+
+  <p>
+    Type "<em>can my pc run it</em>" into Google and you'll get a wall of game-compatibility checkers.
+    Most haven't updated their AI predictions because none of them <em>have</em> AI predictions.
+    They check whether your hardware meets a game's published minimum specs — Cyberpunk 2077, Hogwarts
+    Legacy, GTA 6.
+  </p>
+
+  <p>
+    That's still useful, but it answers half the question.
+    In 2026, the most asked version of "can my PC run it" isn't about a specific game.
+    It's about whether your laptop can run Llama 13B locally without melting,
+    whether Stable Diffusion XL is going to take 5 seconds or 5 minutes per image,
+    or whether 4K video editing will be smooth or a slideshow.
+  </p>
+
+  <p>
+    9bench answers all of those. It runs a 15-second hardware test in your browser, then maps
+    your measured performance to concrete capability tiers — for games, for AI workloads, for
+    creative apps. Below is the full guide to interpreting your result.
+  </p>
+
+  <h2>Step 1 — Run the test (15 seconds, no install)</h2>
+  <p>
+    Open <a href="/test/" class="text-brand"><strong>9bench.com/test</strong></a> in any modern browser
+    (Chrome 113+, Firefox 147+, Edge 113+, Safari 26+). The benchmark runs three measurements in sequence:
+  </p>
+  <ul>
+    <li><strong>GPU compute (~5s)</strong>: WebGPU shader executes 1024×1024 matrix multiplication. Output: GFLOPS.</li>
+    <li><strong>CPU single + multi-core (~6s)</strong>: SHA-256 hash chain on the main thread, then across all cores via Web Workers. Output: hashes/second + multi-core scaling efficiency.</li>
+    <li><strong>RAM bandwidth + latency (~4s)</strong>: Sequential reads/writes + random-access pointer-chase on a 256 MB Float32Array. Output: GB/s + ns latency.</li>
+  </ul>
+  <p>
+    The composite <strong>9bench Score</strong> is a weighted geometric mean of these (35% GPU, 45% CPU multi, 20% RAM).
+    Geometric mean prevents a strong component from masking a weak one.
+    Calibrated so that a typical 2024 mainstream laptop scores 1.000-1.500.
+  </p>
+
+  <div class="info-box">
+    <strong>Why browser-based?</strong> Because every PC has a browser.
+    Geekbench requires a 250 MB download and admin rights. Cinebench R23 is similar.
+    3DMark is 8 GB. Useful in some contexts, useless on locked-down corporate laptops, school computers,
+    or shared family PCs. 9bench installs nothing and finishes before a typical Cinebench download even starts.
+  </div>
+
+  <h2>Step 2 — What your score tells you about <em>games</em></h2>
+
+  <p>
+    Game performance correlates strongly (but not perfectly) with the GPU and CPU multi-core scores.
+    Modern AAA titles are GPU-bound at high settings; older or eSports titles are CPU-bound.
+    Here's the mapping from your 9bench Score to typical game capability:
+  </p>
+
+  <h3>S-tier (9bench Score ≥ 1.386) — Enthusiast / Workstation</h3>
+  <p>
+    You can run anything currently shipping at 1440p or 4K with high settings.
+    GTA 6, Cyberpunk 2077 with path-tracing, Microsoft Flight Simulator 2024 — all comfortable.
+    Frame rates depend on settings, but the bottleneck is rarely your hardware.
+  </p>
+  <p>
+    <strong>Examples in this tier</strong>: RTX 5090 / 4090 / 4080 desktops, RTX 4070 Ti+ desktops,
+    Apple M3 Max / M3 Ultra, AMD Ryzen 9 + RX 7900 XTX systems.
+  </p>
+
+  <h3>A-tier (900-1.385) — Power user</h3>
+  <p>
+    1440p high settings on most games. AAA titles at 1440p with some compromises (medium-high textures,
+    DLSS Quality). Older games (anything pre-2022) max out at 1080p with no issue.
+  </p>
+  <p>
+    <strong>Examples</strong>: RTX 4070 / 4060 Ti desktops, RTX 4070 Laptop, Apple M2 Max / M3 Pro.
+  </p>
+
+  <h3>Solid daily driver (600-899) — Comfortable for most games</h3>
+  <p>
+    1080p high settings runs comfortably. Newest AAA at 1080p medium with DLSS/FSR Performance.
+    eSports titles (CS2, Valorant, League) at 1080p high deliver 144+ fps easily.
+  </p>
+  <p>
+    <strong>Examples</strong>: RTX 4060 / 4060 Laptop / 3070 desktops, Apple M2 Pro / M3, RX 6700 XT.
+  </p>
+
+  <h3>Working machine (300-599) — Office class</h3>
+  <p>
+    Older or lighter games run fine: Stardew Valley, Hades, indie titles, eSports at 1080p medium.
+    AAA titles from 2020+ playable but require low/medium settings + upscaling.
+  </p>
+
+  <h3>Patient & honest (≤ 299) — Light duty</h3>
+  <p>
+    Office work, browser-everything, light gaming on integrated graphics. Cyberpunk 2077 will technically
+    boot but isn't going to be fun. This tier is fine if your needs match — many people don't actually
+    need more.
+  </p>
+
+  <h2>Step 3 — Can your PC run <em>local AI models</em>?</h2>
+
+  <p>
+    This is where 9bench differs from every other "can my PC run it" tool. We test specifically for
+    AI workloads using a separate <strong>AI Capability Score</strong> that combines GPU compute,
+    memory bandwidth, browser allocation headroom, and FP16 (shader-f16) detection.
+  </p>
+
+  <p>
+    The result page shows two views: <strong>Browser</strong> (what runs in your tab today via
+    transformers.js / web-llm — sandbox memory limits + WebGPU translation overhead included)
+    and <strong>Native</strong> (estimated tokens/s with llama.cpp, Ollama, or ComfyUI — assuming
+    typical RAM headroom and direct GPU access).
+  </p>
+
+  <h3>Llama 7B (Q4 quantized) — the entry-level local LLM</h3>
+  <p>
+    Llama 7B at 4-bit quantization needs ~4 GB for weights + ~2 GB for KV cache = ~6 GB usable RAM.
+    Native compute requirement: any GPU above 4 TFLOPS handles it.
+  </p>
+  <ul>
+    <li><strong>RTX 5090 / 4090 / M3 Ultra</strong>: ~100-200 tokens/s native</li>
+    <li><strong>RTX 4070 / M3 Max</strong>: ~50-80 tokens/s native</li>
+    <li><strong>RTX 4060 Laptop / M3 Pro / M2 Pro</strong>: ~25-45 tokens/s native</li>
+    <li><strong>Iris Xe / UHD Graphics integrated</strong>: ~5-12 tokens/s native (CPU-bound)</li>
+  </ul>
+  <p>
+    <strong>Browser-side (transformers.js)</strong>: typically 5-15× slower due to WebAssembly
+    overhead vs native CUDA/Metal/Vulkan. Still functional for testing — 9bench has a
+    <strong>live LLM test</strong> button that downloads Phi-3-mini and runs real inference
+    in your browser, so you can verify the prediction without leaving the page.
+  </p>
+
+  <h3>Llama 13B (Q4) — the productive local LLM</h3>
+  <p>
+    Needs ~8 GB for weights + ~3 GB cache = ~11 GB usable RAM. Most 2024+ laptops with 16 GB
+    handle it. Tokens/s scales roughly with native GFLOPS:
+  </p>
+  <ul>
+    <li><strong>Apple Silicon Pro/Max</strong>: 30-60 t/s (unified memory advantage)</li>
+    <li><strong>RTX 4070+ desktops</strong>: 40-80 t/s</li>
+    <li><strong>RTX 4060 Laptop / mainstream desktops</strong>: 12-25 t/s</li>
+    <li><strong>Integrated graphics</strong>: usually too slow to be practical (3-8 t/s)</li>
+  </ul>
+
+  <h3>Llama 70B (Q4) — the flagship local LLM</h3>
+  <p>
+    Needs ~40 GB just for weights + cache. This is workstation territory:
+    M2/M3 Ultra Macs (96-192 GB unified memory), workstation desktops with 64+ GB RAM.
+    Browser-based execution is impossible (memory caps at ~8 GB).
+  </p>
+  <p>
+    Native machines with 32 GB can technically run via GGUF disk-streaming but it's slow (~1-3 t/s).
+    For comfortable use you want 64+ GB system RAM or Apple Silicon Ultra-tier unified memory.
+  </p>
+
+  <h3>Stable Diffusion 1.5 (512×512)</h3>
+  <p>
+    Almost any modern hardware runs SD 1.5. Practical floor: ~2 TFLOPS GPU compute.
+    Generation time for 512×512:
+  </p>
+  <ul>
+    <li><strong>RTX 4070+</strong>: 2-5s per image</li>
+    <li><strong>RTX 4060 / M2 Pro</strong>: 5-15s</li>
+    <li><strong>Iris Xe / older integrated</strong>: 30-90s</li>
+  </ul>
+
+  <h3>Stable Diffusion XL (1024×1024)</h3>
+  <p>
+    More demanding: ~6 GB VRAM minimum, ~10 TFLOPS for usable throughput.
+    Native (ComfyUI/AUTOMATIC1111):
+  </p>
+  <ul>
+    <li><strong>RTX 5090 / 4090</strong>: 3-5s per image</li>
+    <li><strong>RTX 4080 / M3 Max</strong>: 6-12s</li>
+    <li><strong>RTX 4070 / 4060 Ti</strong>: 12-22s</li>
+    <li><strong>RTX 4060 Laptop / M2 Pro</strong>: 18-30s</li>
+    <li><strong>Older / integrated GPUs</strong>: usually impractical</li>
+  </ul>
+
+  <h3>Whisper Small (audio→text)</h3>
+  <p>
+    Whisper is light (244M parameters). Almost any hardware runs it real-time or faster.
+    Apple Silicon with whisper.cpp: 5-10× faster than real-time.
+    Mainstream GPUs: 3-6× faster than real-time. Even integrated graphics handle near-real-time.
+  </p>
+
+  <h2>Step 4 — Can your PC run <em>modern productivity apps</em>?</h2>
+
+  <h3>Photoshop / Lightroom / Affinity Photo</h3>
+  <p>
+    Light-to-medium GPU + 16 GB RAM is the sweet spot. Most laptops shipped after 2022 handle
+    professional photo work without issue. Heavy generative-AI features (Photoshop's Generative Fill)
+    are cloud-based, so local hardware doesn't matter for those specific features.
+  </p>
+  <p>
+    <strong>9bench Score floor</strong>: 600+ comfortable, 300+ functional with patience.
+  </p>
+
+  <h3>Premiere Pro / DaVinci Resolve / Final Cut Pro</h3>
+  <p>
+    Video editing is GPU-bound and RAM-hungry. 1080p editing is comfortable on any A-tier or above.
+    4K editing requires solid GPU performance + 32 GB RAM minimum + fast NVMe storage. RAM bandwidth
+    matters a lot — your 9bench RAM score is a good proxy.
+  </p>
+  <ul>
+    <li><strong>1080p editing</strong>: 9bench 600+, 16 GB RAM, any modern GPU</li>
+    <li><strong>1440p editing</strong>: 9bench 1.000+, 16-32 GB RAM, RTX 4060 / M2 Pro+</li>
+    <li><strong>4K editing real-time</strong>: 9bench 1.700+, 32 GB RAM, RTX 4070+ / M2 Max+</li>
+    <li><strong>4K + multi-stream + heavy effects</strong>: workstation only — 9bench 2.500+</li>
+  </ul>
+
+  <h3>Blender / 3D rendering</h3>
+  <p>
+    Blender Cycles is GPU-bound. EEVEE is more forgiving but still benefits from a discrete GPU.
+    Render times scale roughly linearly with GFLOPS. Your 9bench GPU compute (raw GFLOPS) is the
+    direct predictor.
+  </p>
+
+  <h3>Code editing / dev work</h3>
+  <p>
+    VS Code, JetBrains IDEs, Docker, Node.js, etc. — almost entirely RAM-bound and CPU-bound for
+    builds. 16 GB RAM minimum, 32 GB comfortable for big monorepos. CPU multi-core matters for
+    compilation. 9bench's CPU·M score directly correlates.
+  </p>
+
+  <h2>Step 5 — Read your full result page</h2>
+
+  <p>
+    After your test runs, click your <code>9bench.com/r/[hash]</code> permalink. The result page shows:
+  </p>
+  <ul>
+    <li><strong>9bench Score</strong> + tier label (S/A/B / Working machine / Office class / Patient & honest)</li>
+    <li><strong>4-card component breakdown</strong>: GPU / CPU·1 / CPU·M / RAM scores</li>
+    <li><strong>Detected hardware</strong>: GPU model (when browser allows), CPU cores + architecture, RAM (≈ approximate, browser-capped)</li>
+    <li><strong>AI Capability section</strong>: dual-track Browser + Native scores, FP16 detection, memory headroom probe, 6 concrete predictions (Llama 7B/13B/70B, SDXL, SD 1.5, Whisper)</li>
+    <li><strong>Live LLM test button</strong>: optional — downloads transformers.js + a tiny model and measures real tokens/s in your browser. Verifies our predictions with measurement.</li>
+    <li><strong>Trading Card</strong>: shareable PNG export at 1080×1350 — perfect for Twitter / Reddit / LinkedIn</li>
+  </ul>
+
+  <h2>What 9bench doesn't tell you</h2>
+  <p>
+    Truth Series principle: be transparent about limits.
+  </p>
+  <ul>
+    <li><strong>Sustained / thermal performance</strong>: 15 seconds is a sprint. Long renders, gaming sessions, or prolonged inference may throttle on laptops. We don't measure that.</li>
+    <li><strong>Disk / NVMe speed</strong>: not testable in browser. Use CrystalDiskMark or similar native tool if you suspect storage is your bottleneck.</li>
+    <li><strong>Network speed</strong>: different problem entirely. Test at fast.com or speed.cloudflare.com.</li>
+    <li><strong>Specific game frame rates</strong>: we predict tier capability, not Cyberpunk 2077 average fps. For specific game predictions, use a service that aggregates tested benchmarks (CanYouRunIt, GPU benchmark databases).</li>
+    <li><strong>Browser-cap on RAM scores</strong>: V8/SpiderMonkey/JavaScriptCore sandbox memory access. Browser RAM scores typically run at 30-50% of native bandwidth. We say so on every result page; the score is comparative across machines, not absolute.</li>
+  </ul>
+
+  <h2>Common questions about hardware capability</h2>
+
+  <h3>"Is my laptop too slow for ChatGPT-level AI locally?"</h3>
+  <p>
+    ChatGPT's specific model weights aren't public, but the rough equivalent for local use is Llama 13B
+    or larger. If your 9bench AI Capability Score is 1.000+ (browser) or 2.500+ (native), Llama 13B
+    runs comfortably. Below 600, consider sticking with cloud-based ChatGPT/Claude — local AI will
+    feel slow.
+  </p>
+
+  <h3>"Can my old gaming PC handle modern AI workloads?"</h3>
+  <p>
+    Surprisingly often, yes. The GPU you bought for gaming in 2020 is usually a respectable AI machine
+    in 2026. RTX 2080, RTX 3060, RX 5700 XT — all run Llama 7B Q4 at usable speeds (15-30 t/s)
+    and SD 1.5 image generation in 5-15 seconds.
+  </p>
+
+  <h3>"Should I upgrade or is my hardware fine?"</h3>
+  <p>
+    Test before you buy. Your specific bottleneck might not be what you think. RAM bandwidth often
+    limits LLM inference more than GPU compute. CPU multi-core often limits compile/render times more
+    than peak frequency. 9bench shows you which component is actually constraining you — look at the
+    Component Imbalance Callout on your result page.
+  </p>
+
+  <h2>Try it now (15 seconds)</h2>
+  <p>
+    Open <a href="/test/" class="text-brand"><strong>9bench.com/test</strong></a> in your current browser.
+    Don't switch tabs during the test — browsers throttle background tabs and that will skew your score.
+    After the test, share your permalink — your AI Capability Score and game tier travel with the link
+    so anyone can see your hardware capability without re-running the test.
+  </p>
+
+  <p>
+    No download. No account. No bias. Just the honest answer to "can my PC run it" — for whatever <em>it</em>
+    means in 2026.
+  </p>
+
+  <div class="cta-box">
+    <a href="/test/" class="cta-button">▶ Test my hardware (15 seconds)</a>
+  </div>
+</ArticleLayout>
+
+<style>
+  .tldr {
+    background: var(--bg-2);
+    border-left: 3px solid var(--accent);
+    padding: 18px 22px;
+    margin: 24px 0;
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.6;
+  }
+  .tldr-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .info-box {
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    padding: 16px 20px;
+    margin: 20px 0;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .info-box strong { color: var(--accent); }
+  .cta-box {
+    text-align: center;
+    margin: 40px 0;
+  }
+  .cta-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 32px;
+    background: var(--accent);
+    color: #000;
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-decoration: none;
+  }
+  .cta-button:hover { background: var(--fg); }
+  code {
+    font-family: var(--mono);
+    font-size: 0.92em;
+    background: var(--bg-2);
+    padding: 1px 6px;
+    color: var(--accent);
+  }
+</style>

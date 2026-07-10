@@ -102,6 +102,8 @@ const breadcrumbSchema = {
   description={description}
   keywords={allKeywords}
   schemaType="Article"
+  ogType="article"
+  articleMeta={{ publishedTime: publishedDate, modifiedTime: updated, author: 'Atilla Kürük', section: category }}
   ogImage={`https://9bench.com/og?p=${slug}`}
 >
   <script slot="head" type="application/ld+json" set:html={JSON.stringify(articleSchema)} />
@@ -169,7 +171,7 @@ const breadcrumbSchema = {
   )}
 
   <div class="article-back">
-    <a href="/articles">← All articles</a>
+    <a href="/articles/">← All articles</a>
   </div>
 
   <style is:global>

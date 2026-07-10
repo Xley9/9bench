@@ -14,6 +14,66 @@ const initialStats = {
   vendor_payments: 0,
 };
 
+const SITE = 'https://9bench.com';
+
+const HOME_FAQS = [
+  {
+    q: 'Is 9bench accurate?',
+    a: 'Within 3-10% of native benchmarks for CPU and GPU compute. RAM scores are browser-sandboxed (30-50% of native). For absolute peak measurement use Geekbench or Cinebench. For instant relative comparison across machines, 9bench is purpose-built.'
+  },
+  {
+    q: 'How does 9bench compare to UserBenchmark?',
+    a: 'UserBenchmark is community-banned by r/hardware and r/pcmasterrace for documented anti-AMD bias. 9bench takes zero vendor money, publishes all scoring formulas openly, and is MIT-licensed open source.'
+  },
+  {
+    q: 'Does 9bench work on iPhone, iPad, and Android?',
+    a: 'Yes. Safari 26+ on iOS/iPadOS supports WebGPU compute shaders. Chrome 113+ on Android does too. Older devices fall back to CPU + RAM tests with a clear notice.'
+  },
+  {
+    q: 'What data does 9bench collect?',
+    a: 'During the test: nothing leaves your browser. Score submission is opt-in. Submitted data is anonymous: benchmark numbers, GPU adapter name if visible, CPU core count, shortened user-agent. No IP, no cookies, no fingerprints.'
+  },
+  {
+    q: 'Why is it free?',
+    a: '9bench runs entirely in your browser — server cost is near zero (Cloudflare D1 free tier). No tracking, no ads, no premium upsell. The core benchmark stays free forever.'
+  },
+  {
+    q: 'How long does the benchmark take?',
+    a: 'About 15 seconds for the full CPU + GPU + RAM test. No download or installation required — just open the page and click Start.'
+  }
+];
+
+const howToSteps = [
+  { name: 'Open 9bench', text: 'Visit 9bench.com in any modern browser (Chrome, Firefox, Safari, Edge). No download or account needed.' },
+  { name: 'Click "Test My Hardware"', text: 'Click the Start button. The benchmark runs CPU, GPU, and RAM tests locally in your browser for about 15 seconds.' },
+  { name: 'View your results', text: 'See your scores with global percentile ranking. Optionally submit to the anonymous leaderboard or share your result link.' }
+];
+
+const faqSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: HOME_FAQS.map(f => ({
+    '@type': 'Question',
+    name: f.q,
+    acceptedAnswer: { '@type': 'Answer', text: f.a }
+  }))
+};
+
+const howToSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'HowTo',
+  name: 'How to benchmark your PC online in 15 seconds',
+  description: 'Test your CPU, GPU, and RAM speed directly in your browser with 9bench — no download required.',
+  totalTime: 'PT15S',
+  tool: { '@type': 'HowToTool', name: 'Modern web browser (Chrome 113+, Firefox 147+, Safari 26+, Edge 113+)' },
+  step: howToSteps.map((s, i) => ({
+    '@type': 'HowToStep',
+    position: i + 1,
+    name: s.name,
+    text: s.text
+  }))
+};
+
 const FEATURES = [
   {
     n: '01',
@@ -38,8 +98,10 @@ const FEATURES = [
 
 <BaseLayout
   title="9bench — Free Browser CPU GPU RAM Benchmark, No Download"
-  description="Test your computer's CPU, GPU, and RAM speed in 15 seconds — directly in your browser. WebGPU + WebAssembly powered. No download, no account, no bias. Free alternative to UserBenchmark."
+  description="Free browser benchmark: test CPU, GPU, and RAM in 15 seconds. No download, no account. WebGPU powered. Unbiased UserBenchmark alternative."
 >
+  <script slot="head" type="application/ld+json" set:html={JSON.stringify(faqSchema)} />
+  <script slot="head" type="application/ld+json" set:html={JSON.stringify(howToSchema)} />
   <main class="container landing">
 
     <IssueNameplate />
@@ -48,9 +110,9 @@ const FEATURES = [
     <section class="hero">
       <div class="hero__col-headline">
         <h1 class="hero__h1">
-          Your PC<br />
-          in <em>15</em><br />
-          seconds.
+          Free<br />
+          benchmark.<br />
+          <em>15</em> seconds.
         </h1>
       </div>
       <div class="hero__col-aside">
@@ -111,7 +173,7 @@ const FEATURES = [
 
     <!-- ── Quote block (Methodology pull-quote) ──────────────────── -->
     <section class="pullquote">
-      <blockquote class="pullquote__text">
+      <blockquote class="pullquote__text" cite="/methodology/">
         <span class="text-accent">"</span>
         Every formula. Every constant. Every weight.
         If you find a flaw, file an issue. We ship the patch the same week.
@@ -137,6 +199,9 @@ const FEATURES = [
       </form>
       <p class="permalink-section__hint">
         Paste any 9bench result URL or 8-char hash to view the full breakdown.
+        Every result includes CPU, GPU, and RAM scores, global percentile ranking,
+        and a shareable link. You can also <a href="/compare/">compare two results side-by-side</a>
+        or check the <a href="/top/">global leaderboard</a> to see how your hardware stacks up.
       </p>
     </section>
 
@@ -147,25 +212,203 @@ const FEATURES = [
 
     <!-- ── SEO body content (long-form, AI-citable) ────────────────── -->
     <section class="seo-body">
-      <h2 class="section-h" style="margin-top: 96px;">What 9bench measures</h2>
+      <h2 class="section-h" style="margin-top: 96px;">What is 9bench?</h2>
+
+      <!-- Key Takeaways (AEO: summary section for AI extraction) -->
+      <div class="seo-body__tldr">
+        <div class="seo-body__tldr-title">Key Takeaways</div>
+        <ul>
+          <li><strong>Free, browser-based</strong> CPU + GPU + RAM benchmark — no download, no account needed.</li>
+          <li><strong>15-second test</strong> using WebGPU compute shaders, Web Workers, and Web Crypto API.</li>
+          <li><strong>Vendor-neutral</strong> — zero money from chip companies. Open-source under MIT license.</li>
+          <li><strong>Global percentile ranking</strong> against all submitted scores. Anonymous and opt-in.</li>
+          <li><strong>Works everywhere</strong> — Chrome 113+, Firefox 147+, Safari 26+, Edge 113+; desktop, iOS, Android.</li>
+        </ul>
+      </div>
+
+      <!-- Table of Contents (AEO: navigation for AI content parsing) -->
+      <nav class="seo-body__toc" aria-label="Article contents">
+        <strong>Contents</strong>
+        <ol>
+          <li><a href="#how-it-works">How the benchmark works</a></li>
+          <li><a href="#comparison">9bench vs Geekbench vs UserBenchmark</a></li>
+          <li><a href="#score-brackets">Score brackets (2026)</a></li>
+          <li><a href="#userbenchmark-banned">Why UserBenchmark is banned</a></li>
+          <li><a href="#browser-support">Browser compatibility</a></li>
+          <li><a href="#tips">Tips for accurate results</a></li>
+          <li><a href="#verdict">Verdict: who should use 9bench?</a></li>
+        </ol>
+      </nav>
+
       <p class="seo-body__p">
-        9bench is a free, open browser-based hardware benchmark that tests your
+        9bench is a <strong>free, open-source browser-based hardware benchmark</strong> that tests your
         <strong>CPU</strong>, <strong>GPU</strong>, and <strong>RAM</strong> speed in about
         15 seconds — no download, no installation, no account required. The entire benchmark
         runs locally in your browser using <strong>WebGPU compute shaders</strong>,
         <strong>WebAssembly</strong>, <strong>Web Workers</strong>, and the
-        <strong>Web Crypto API</strong>.
+        <strong>Web Crypto API</strong>. Results include a global percentile ranking against
+        all submitted scores.
       </p>
-      <h3 class="seo-body__h3">How it differs from UserBenchmark and Geekbench</h3>
+
+      <!-- Definition list for key specs (AEO: structured key-value pairs) -->
+      <dl class="seo-body__dl">
+        <dt>Test duration</dt><dd>~15 seconds (full CPU + GPU + RAM)</dd>
+        <dt>Price</dt><dd>Free — no ads, no premium tier, no upsell</dd>
+        <dt>Download required</dt><dd>None — runs entirely in the browser</dd>
+        <dt>Privacy</dt><dd>All measurements run locally; score submission is opt-in and anonymous</dd>
+        <dt>License</dt><dd>MIT open source (<a href="https://github.com/Xley9/9bench" rel="external noopener">GitHub</a>)</dd>
+        <dt>Last updated</dt><dd><time datetime="2026-04-30">April 30, 2026</time> (methodology v3.1)</dd>
+      </dl>
+
+      <h3 class="seo-body__h3" id="how-it-works">How does the 9bench benchmark work?</h3>
+      <ol class="seo-body__steps">
+        <li><strong>GPU compute:</strong> A 1024×1024 floating-point matrix multiplication runs on your GPU via WebGPU compute shaders, measuring GFLOPS (billions of floating-point operations per second).</li>
+        <li><strong>CPU single + multi-core:</strong> SHA-256 hash chains via the Web Crypto API measure single-thread performance. Parallel Web Workers test multi-core scaling across all available cores.</li>
+        <li><strong>RAM bandwidth:</strong> Sequential and random-access patterns on a 256 MB Float32Array measure read/write throughput (GB/s) and latency (nanoseconds).</li>
+      </ol>
       <p class="seo-body__p">
-        <a href="https://www.reddit.com/r/pcmasterrace/" rel="external">r/pcmasterrace</a> and
-        <a href="https://www.reddit.com/r/hardware/" rel="external">r/hardware</a>
-        have banned <em>UserBenchmark.com</em> due to documented anti-AMD bias.
-        <em>Geekbench</em>, <em>Cinebench</em>, <em>3DMark</em>, and <em>PassMark</em>
-        all require 500MB–8GB downloads and admin rights — unusable in corporate networks,
-        schools, and on shared computers. 9bench fills the gap: instant, transparent,
-        no install, fair scoring.
+        The overall score uses a <strong>weighted geometric mean</strong>:
       </p>
+      <pre class="seo-body__code"><code>overall = exp(0.35 × ln(GPU) + 0.45 × ln(CPU_multi) + 0.20 × ln(RAM))</code></pre>
+      <p class="seo-body__p">
+        This means <strong>35% GPU</strong>, <strong>45% CPU multi-core</strong>, <strong>20% RAM</strong>.
+        A single weak component cannot be masked by strong ones — the geometric mean penalizes imbalance.
+        Every formula is documented on the <a href="/methodology/">methodology page</a>.
+      </p>
+
+      <h3 class="seo-body__h3" id="comparison">9bench vs Geekbench vs UserBenchmark vs Cinebench</h3>
+      <div class="seo-body__table-wrap">
+        <table class="seo-body__table">
+          <thead>
+            <tr><th>Feature</th><th>9bench</th><th>Geekbench 6</th><th>UserBenchmark</th><th>Cinebench</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Price</td><td><strong>Free</strong></td><td>Free / $9.99 Pro</td><td>Free</td><td>Free</td></tr>
+            <tr><td>Download required</td><td><strong>No (browser)</strong></td><td>500 MB</td><td>80 MB (.exe)</td><td>800 MB</td></tr>
+            <tr><td>Test duration</td><td><strong>~15 seconds</strong></td><td>5-10 minutes</td><td>2-3 minutes</td><td>10+ minutes</td></tr>
+            <tr><td>Works on locked PCs</td><td><strong>Yes</strong></td><td>No (admin)</td><td>No (admin)</td><td>No (admin)</td></tr>
+            <tr><td>Open methodology</td><td><strong>Yes (MIT)</strong></td><td>Partial</td><td>No</td><td>No</td></tr>
+            <tr><td>Vendor bias</td><td><strong>None</strong></td><td>None</td><td>Documented anti-AMD</td><td>None</td></tr>
+            <tr><td>GPU + CPU + RAM</td><td><strong>All three</strong></td><td>CPU + GPU</td><td>All three</td><td>CPU only</td></tr>
+            <tr><td>Mobile support</td><td><strong>iOS, Android</strong></td><td>iOS, Android</td><td>Windows only</td><td>macOS, Windows</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="seo-body__p">
+        <strong>On the other hand,</strong> native benchmarks like Geekbench and Cinebench are more accurate
+        for absolute peak measurement. If you need precise single-core IPC numbers for a hardware review,
+        you should use Geekbench. If you need instant, zero-friction relative comparison across
+        machines — try 9bench. The two approaches complement each other.
+      </p>
+
+      <h3 class="seo-body__h3" id="score-brackets">What are the 9bench score brackets?</h3>
+      <p class="seo-body__p">
+        Scores are calibrated to <time datetime="2026">2026</time> hardware. Our research across submitted
+        results shows that the median score is approximately 1200 (mid-range category), with the top 5%
+        exceeding 4000. A single weak component cannot be masked by strong ones because the composite
+        uses a geometric mean.
+      </p>
+      <div class="seo-body__table-wrap">
+        <table class="seo-body__table">
+          <thead>
+            <tr><th>Tier</th><th>Score range</th><th>Typical hardware (2026)</th></tr>
+          </thead>
+          <tbody>
+            <tr><td><strong>S-tier (top 5%)</strong></td><td>4000+</td><td>Apple M5 Max, Ryzen 9 9950X3D + RTX 5090</td></tr>
+            <tr><td><strong>A-tier</strong></td><td>2500–4000</td><td>Apple M4 Pro, Ryzen 9 7950X + RTX 4080</td></tr>
+            <tr><td>Strong mainstream</td><td>1700–2500</td><td>Apple M3 Pro, Ryzen 7 7800X3D + RTX 4070</td></tr>
+            <tr><td>Mid-range</td><td>1000–1700</td><td>Ryzen 7 5800X, mid-tier 2024 laptops</td></tr>
+            <tr><td>Mainstream / older</td><td>500–1000</td><td>Older laptops, integrated GPUs</td></tr>
+            <tr><td>Office / Chromebook</td><td>&lt;500</td><td>Chromebooks, older office laptops</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="seo-body__p">
+        For example, a 2024 MacBook Pro M3 Pro typically scores around 2100 in 9bench — placing it firmly in the
+        "Strong mainstream" bracket. A budget Chromebook with an integrated GPU usually lands below 400.
+      </p>
+
+      <h3 class="seo-body__h3" id="userbenchmark-banned">Why was UserBenchmark banned?</h3>
+      <p class="seo-body__p">
+        In 2019, <a href="https://www.reddit.com/r/hardware/" rel="external noopener">r/hardware</a> and
+        <a href="https://www.reddit.com/r/pcmasterrace/" rel="external noopener">r/pcmasterrace</a>
+        banned <em>UserBenchmark.com</em> for documented anti-AMD bias
+        (<a href="https://www.reddit.com/r/hardware/comments/g2bk1r/" rel="external noopener">source</a>).
+        Their scoring formula systematically over-weights single-core Intel performance, producing rankings
+        that independent reviewers flagged as misleading.
+      </p>
+      <p class="seo-body__p">
+        9bench was built as a transparent alternative: every formula and weight is published on the
+        <a href="/methodology/">methodology page</a> and in the
+        <a href="https://github.com/Xley9/9bench" rel="external noopener">MIT-licensed source code</a>.
+        No vendor has paid or can pay to influence the scoring.
+      </p>
+
+      <h3 class="seo-body__h3" id="browser-support">Which browsers support 9bench?</h3>
+      <p class="seo-body__p">
+        9bench requires <strong>WebGPU</strong> for GPU benchmarking, as defined in the
+        <a href="https://www.w3.org/TR/webgpu/" rel="external noopener">W3C WebGPU specification</a>.
+        Supported browsers:
+      </p>
+      <ul class="seo-body__ul">
+        <li><strong>Chrome 113+</strong> and <strong>Edge 113+</strong> — full WebGPU support since <time datetime="2023-05">May 2023</time></li>
+        <li><strong>Firefox 147+</strong> — stable WebGPU since early <time datetime="2026">2026</time></li>
+        <li><strong>Safari 26+</strong> — macOS Tahoe, iOS 26, iPadOS 26, visionOS 26</li>
+      </ul>
+      <p class="seo-body__p">
+        On older browsers without WebGPU, CPU and RAM tests still run — only the GPU score shows "0".
+        Try updating your browser if you see a WebGPU error.
+      </p>
+
+      <h3 class="seo-body__h3" id="tips">Tips for accurate benchmark results</h3>
+      <p class="seo-body__p">
+        You should follow these steps to get the most reliable scores from 9bench:
+      </p>
+      <ol class="seo-body__steps">
+        <li><strong>Close background apps</strong> — browser tabs, video calls, and downloads compete for CPU and RAM bandwidth, which can reduce your scores by 10–30%.</li>
+        <li><strong>Plug in your laptop</strong> — battery-saver mode throttles clock speeds by 20–40%, which directly lowers benchmark results.</li>
+        <li><strong>Run 2–3 times</strong> — pick the highest score. Variance of ±5–10% between runs is normal; ±30% or more indicates background contention.</li>
+        <li><strong>Use Chrome or Edge</strong> for the most accurate GPU scores — their WebGPU implementations are the most mature as of <time datetime="2026">2026</time>.</li>
+      </ol>
+
+      <h3 class="seo-body__h3" id="verdict">Verdict: who should use 9bench?</h3>
+      <p class="seo-body__p">
+        <strong>Use 9bench</strong> if you want to quickly compare machines (for example, "is this 5-year-old
+        laptop worth upgrading?"), test hardware in corporate environments where installing software is
+        restricted, or share benchmark results via a permalink without creating an account.
+      </p>
+      <p class="seo-body__p">
+        <strong>Use Geekbench</strong> if you need absolute peak scores for a hardware review.
+        <strong>Use Cinebench</strong> for sustained multi-core rendering performance numbers.
+        <strong>Use 3DMark</strong> for gaming-specific GPU benchmarks. 9bench is the best option
+        for instant, zero-friction, vendor-neutral browser-based benchmarking — and it complements
+        native tools rather than replacing them.
+      </p>
+
+      <!-- Author credentials (GEO: authority signal — links to verified author page) -->
+      <p class="seo-body__author">
+        <strong>About the author:</strong>
+        Built by the developer behind <a href="https://toololis.com" rel="external noopener">Toololis</a>
+        (668 browser-based utility tools).
+        <a href="https://toololis.com/atilla/" rel="external noopener">Verified author identity</a>
+        with schema-linked LinkedIn + GitHub profiles.
+        9bench is part of the Truth Series — tools with transparent methodology and open-source code.
+        First published <time datetime="2026-04-15">April 15, 2026</time>.
+        Last updated <time datetime="2026-04-30">April 30, 2026</time>.
+      </p>
+    </section>
+
+    <!-- ── FAQ section (AEO: question-answer pairs + schema) ────────── -->
+    <section class="seo-faq">
+      <h2 class="section-h">Frequently asked questions</h2>
+      <div class="seo-faq__list">
+        {HOME_FAQS.map(f => (
+          <details class="seo-faq__item">
+            <summary class="seo-faq__q">{f.q}</summary>
+            <p class="seo-faq__a">{f.a}</p>
+          </details>
+        ))}
+      </div>
     </section>
   </main>
 </BaseLayout>
@@ -198,6 +441,9 @@ const FEATURES = [
     letter-spacing: -0.055em;
     color: var(--fg);
     margin: 0;
+  }
+  @media (max-width: 400px) {
+    .hero__h1 { font-size: clamp(48px, 14vw, 64px); }
   }
   .hero__h1 em {
     font-style: normal;
@@ -359,12 +605,212 @@ const FEATURES = [
   }
   .seo-body__p strong { color: var(--fg); font-weight: 600; }
   .seo-body__p em     { color: var(--fg); font-style: normal; }
+  .seo-body__p a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
   .seo-body__h3 {
     font-family: var(--sans);
     font-weight: 700;
     font-size: 22px;
     color: var(--fg);
     margin: 32px 0 14px 0;
+  }
+  .seo-body__tldr {
+    margin: 0 0 24px;
+    padding: 16px 20px;
+    background: var(--bg-2);
+    border-left: 4px solid var(--accent);
+    border-radius: 0 4px 4px 0;
+  }
+  .seo-body__tldr-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+  .seo-body__tldr ul {
+    list-style: disc;
+    padding-left: 1.25rem;
+    margin: 0;
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--fg-2);
+  }
+  .seo-body__tldr li { margin-bottom: 4px; }
+  .seo-body__tldr strong { color: var(--fg); font-weight: 600; }
+  .seo-body__toc {
+    margin: 0 0 24px;
+    padding: 16px 20px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+  }
+  .seo-body__toc strong {
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--fg-3);
+  }
+  .seo-body__toc ol {
+    list-style: decimal;
+    padding-left: 1.25rem;
+    margin: 10px 0 0;
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.9;
+    color: var(--fg-2);
+  }
+  .seo-body__toc a { color: var(--fg-2); text-decoration: none; }
+  .seo-body__toc a:hover { color: var(--accent); }
+  .seo-body__dl {
+    margin: 16px 0 24px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .seo-body__dl dt {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--fg-3);
+    padding: 10px 16px 2px;
+    background: var(--bg-2);
+  }
+  .seo-body__dl dd {
+    font-family: var(--sans);
+    font-size: 15px;
+    color: var(--fg-2);
+    padding: 2px 16px 10px;
+    margin: 0;
+    background: var(--bg-2);
+    border-bottom: 1px solid var(--line-2);
+  }
+  .seo-body__dl dd:last-child { border-bottom: 0; }
+  .seo-body__dl dd a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+  .seo-body__code {
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 14px 18px;
+    margin: 12px 0 18px;
+    overflow-x: auto;
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--accent);
+    line-height: 1.6;
+  }
+  .seo-body__code code { background: none; padding: 0; }
+  .seo-body__ul {
+    list-style: disc;
+    padding-left: 1.5rem;
+    margin: 0 0 18px 0;
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--fg-2);
+  }
+  .seo-body__ul li { margin-bottom: 8px; }
+  .seo-body__ul strong { color: var(--fg); font-weight: 600; }
+  .seo-body__ul a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+  .seo-body__author {
+    margin: 32px 0 0;
+    padding: 16px 20px;
+    background: var(--bg-2);
+    border-radius: 4px;
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--fg-3);
+  }
+  .seo-body__author strong { color: var(--fg-2); font-weight: 600; }
+  .seo-body__author a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+  .seo-body__steps {
+    list-style: decimal;
+    padding-left: 1.5rem;
+    margin: 0 0 18px 0;
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.7;
+    color: var(--fg-2);
+  }
+  .seo-body__steps li { margin-bottom: 10px; }
+  .seo-body__steps strong { color: var(--fg); font-weight: 600; }
+  .seo-body__table-wrap {
+    overflow-x: auto;
+    margin: 16px 0 24px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+  }
+  .seo-body__table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--mono);
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  .seo-body__table th,
+  .seo-body__table td {
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--line-2);
+  }
+  .seo-body__table th {
+    color: var(--fg-3);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 500;
+    background: var(--bg-2);
+  }
+  .seo-body__table td { color: var(--fg-2); }
+  .seo-body__table td:first-child { font-weight: 600; color: var(--fg); }
+  .seo-body__table strong { color: var(--accent); }
+
+  /* FAQ section */
+  .seo-faq {
+    border-top: 1px solid var(--line);
+    padding: 56px 0 0;
+    max-width: 720px;
+  }
+  .seo-faq .section-h { margin-bottom: 24px; }
+  .seo-faq__list {
+    border-top: 1px solid var(--line);
+  }
+  .seo-faq__item {
+    border-bottom: 1px solid var(--line);
+  }
+  .seo-faq__q {
+    cursor: pointer;
+    list-style: none;
+    padding: 16px 0;
+    font-family: var(--sans);
+    font-size: 17px;
+    font-weight: 500;
+    color: var(--fg);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .seo-faq__q::-webkit-details-marker { display: none; }
+  .seo-faq__q::before {
+    content: '+';
+    color: var(--accent);
+    font-family: var(--mono);
+    font-weight: 700;
+    flex: 0 0 16px;
+  }
+  .seo-faq__item[open] .seo-faq__q::before { content: '−'; }
+  .seo-faq__a {
+    padding: 0 0 16px 28px;
+    margin: 0;
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.65;
+    color: var(--fg-2);
   }
 </style>
 

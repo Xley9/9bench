@@ -95,18 +95,33 @@ function resultCard(args: {
           scoreGpu, scoreCpuSingle, scoreCpuMulti, scoreRam,
           total, percentile, aiTier } = args;
 
+  // HTML-escape user-supplied strings before interpolating into the
+  // workers-og template. gpu_name and ai_tier come from D1 → originally
+  // submitted by client → could contain malformed markup. Satori sandbox
+  // means no JS execution, but malformed HTML can still corrupt layout.
+  const escape = (s: string | null | undefined): string =>
+    String(s ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+  const safeGpuName = escape(gpuName);
+  const safeAiTier  = escape(aiTier);
+
   // Show percentile only when N ≥ minimum (matches in-page gate logic)
   const percentileLine = total >= PERCENTILE_MIN_N
     ? `Faster than ${percentile}% of all runs · ${fmt(total)} tests submitted`
     : `Early days · ${fmt(total)} test${total === 1 ? '' : 's'} so far · percentile unlocks at 100+`;
 
   // Hardware sub-line — fall back gracefully when GPU is masked
-  const hwLine = gpuName
-    ? `${gpuName} · ${cores}-core CPU`
+  const hwLine = safeGpuName
+    ? `${safeGpuName} · ${cores}-core CPU`
     : `${cores}-core CPU · GPU hidden by browser`;
 
   // AI tier badge (only shown if Phase G data is present)
-  const aiBadge = aiTier ? `
+  const aiBadge = safeAiTier ? `
     <div style="
       display: flex; align-items: center; gap: 8px;
       padding: 6px 12px; border: 1px solid ${TOKENS.accent};
@@ -115,7 +130,7 @@ function resultCard(args: {
       font-weight: 600; letter-spacing: 0.06em; color: ${TOKENS.accent};
       text-transform: uppercase;
     ">
-      LOCAL AI · ${aiTier}
+      LOCAL AI · ${safeAiTier}
     </div>
   ` : '';
 
@@ -310,7 +325,7 @@ function genericCard(): string {
         <div style="
           font-family: 'JetBrains Mono', monospace; font-size: 12px;
           color: ${TOKENS.fg3}; letter-spacing: 0.04em; display: flex;
-        ">Sister of Toololis · Built by Atilla Kürük · MIT licensed</div>
+        ">Sister of Toololis · MIT licensed · Truth Series</div>
       </div>
 
       <!-- Accent bar -->

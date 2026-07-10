@@ -17,6 +17,7 @@ import TruthDisclaimer from '../components/bench/TruthDisclaimer.astro';
   title="Compare two — 9bench"
   description="Side-by-side comparison of two 9bench results. Paste two permalinks to see GPU, CPU, RAM differences with % deltas."
   keywords="compare hardware benchmarks, gpu vs gpu comparison, cpu vs cpu comparison, browser benchmark diff"
+  breadcrumbItems={[{ name: 'Compare' }]}
 >
   <main class="container compare-page">
 
@@ -326,6 +327,17 @@ import TruthDisclaimer from '../components/bench/TruthDisclaimer.astro';
     return `Run ${aWins ? 'A' : 'B'} is ${diff.toFixed(1)}% faster overall. ${biggest.name} drives most of the gap (+${biggest.pct.toFixed(0)}% in favor).`;
   }
 
+  // HTML-escape user-supplied strings before injecting into innerHTML.
+  // GPU name is user-submitted via WebGL debug-renderer — stored XSS protection.
+  function escapeHtml(s: string | null | undefined): string {
+    return String(s ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   function renderComparison(a: any, b: any) {
     const aWins = a.scores.overall > b.scores.overall;
 
@@ -334,12 +346,12 @@ import TruthDisclaimer from '../components/bench/TruthDisclaimer.astro';
     $('#block-a-score')!.textContent = fmt(a.scores.overall);
     $('#block-b-score')!.textContent = fmt(b.scores.overall);
     $('#block-a-hw')!.innerHTML = [
-      a.gpu.name || 'GPU hidden',
-      `${a.cpu.cores}-core CPU`,
+      escapeHtml(a.gpu.name || 'GPU hidden'),
+      `${a.cpu.cores | 0}-core CPU`,
     ].join('<br>');
     $('#block-b-hw')!.innerHTML = [
-      b.gpu.name || 'GPU hidden',
-      `${b.cpu.cores}-core CPU`,
+      escapeHtml(b.gpu.name || 'GPU hidden'),
+      `${b.cpu.cores | 0}-core CPU`,
     ].join('<br>');
     $('#block-a')!.classList.toggle('is-winner', aWins);
     $('#block-b')!.classList.toggle('is-winner', !aWins);

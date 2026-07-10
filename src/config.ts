@@ -15,10 +15,13 @@ export const BING_META_VERIFICATION = '462CF586AFC168C3EA971B9476EA008C';
 // Get from: https://webmaster.yandex.com
 export const YANDEX_META_VERIFICATION = 'fd56f469b0ccc4ee';
 
-// ─── Google Analytics 4 ───────────────────────────────────────────
-// Get from: https://analytics.google.com
-// → Admin → Create Property → Web Stream → Measurement ID (G-XXXXXXXXXX)
-export const GA4_ID = 'G-6DGWR5Y2CS';
+// ─── Analytics: Cloudflare Web Analytics (cookieless) ─────────────
+// Replaced GA4 (2026-04-29) — GDPR/TTDSG § 25 requires opt-in consent
+// for GA4, and we don't want a cookie banner. Cloudflare Web Analytics
+// is cookieless, no consent banner needed.
+// Get token from: Cloudflare dashboard → Web Analytics → Add a site
+// Then update the data-cf-beacon token in BaseLayout.astro
+export const CLOUDFLARE_ANALYTICS_TOKEN = ''; // ← paste from CF dashboard
 
 // ─── IndexNow API key (instant Bing/Yandex crawl trigger) ──────────
 // Generate any 16-char hex string and put it as /KEY.txt in public/

@@ -20,6 +20,7 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
 <BaseLayout
   title="Score — 9bench"
   description="Browser-based hardware benchmark result. Test yours at 9bench.com — no download, no account, no bias."
+  noindex={true}
 >
   <main class="container result-page">
 
@@ -251,10 +252,10 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
                 <span id="llm-result-seconds">—</span>s
               </div>
 
-              <!-- Comparison vs estimate -->
+              <!-- Same-model native estimate (apples-to-apples) -->
               <div class="ai-live-test__compare" id="llm-compare">
                 <div class="ai-live-test__compare-row">
-                  <span class="text-fg-3 font-mono" style="font-size: 11px;">VS. OUR NATIVE ESTIMATE</span>
+                  <span class="text-fg-3 font-mono" style="font-size: 11px;">SAME MODEL ON NATIVE LLAMA.CPP</span>
                   <span id="llm-compare-verdict">—</span>
                 </div>
               </div>
@@ -263,9 +264,12 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
               <p class="ai-live-test__result-note font-mono">
                 <strong>What this measures:</strong>
                 Browser-WebAssembly inference of <span id="llm-model-tag">a small model</span>.
-                Native llama.cpp on the same hardware typically runs 5-15× faster
-                because it uses CUDA/Metal/Vulkan directly. Real measurement,
-                not an estimate.
+                Native llama.cpp on the same hardware running the same model
+                typically generates 5-10× more tokens/second because it uses
+                CUDA/Metal/Vulkan directly + skips the WebAssembly + browser-sandbox
+                overhead. The "native" estimate above is the same-model
+                extrapolation. For a real-world model like Llama 7B Q4,
+                see the predictions table above. Real measurement, not an estimate.
               </p>
             </div>
 
@@ -339,7 +343,7 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
             <p class="cmp-bars__placeholder font-mono">
               <span class="text-warn">Phase 2:</span>
               comparison data unlocks once reference hardware is seeded.
-              <a href="/methodology" class="text-accent">How this works →</a>
+              <a href="/methodology/" class="text-accent">How this works →</a>
             </p>
           </div>
 
@@ -392,10 +396,10 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
                 <span>9BENCH · TRUTH SERIES</span>
                 <span id="card-id">—</span>
               </div>
-              <div>
+              <div class="trading-card__score-row">
                 <span class="trading-card__score tnum" id="card-score">—</span>
-                <span class="trading-card__tier" id="card-tier">—</span>
               </div>
+              <div class="trading-card__tier" id="card-tier">—</div>
               <div class="trading-card__hw" id="card-hw">—</div>
               <div class="trading-card__components">
                 <div class="trading-card__comp">
@@ -452,7 +456,7 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
       <!-- CTA back to test -->
       <section class="result__cta">
         <a href="/test/" class="run-btn">▶ TEST AGAIN</a>
-        <a href="/methodology" class="btn-outline">Read the methodology</a>
+        <a href="/methodology/" class="btn-outline">Read the methodology</a>
       </section>
     </article>
   </main>
@@ -1370,7 +1374,6 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
     // Phase K: when GPU is recognized, use class-calibrated benchmarks
     // instead of GFLOPS extrapolation. Tighter ranges, real-world accurate.
     const cls = (nativeCtx as any).gpuClass;
-    const matchedTag = nativeCtx.matchedDisplayName ? ` (${nativeCtx.matchedDisplayName} class)` : '';
 
     // ── Llama 7B Q4 (~6 GB RAM minimum for KV cache + weights) ──
     if (usableRamGB >= 6) {
@@ -1387,7 +1390,10 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
         source  = `Estimated ~${Math.round(midGflops)} GFLOPS native + ${usableRamGB} GB usable RAM. llama.cpp / Ollama recommended.`;
       }
       out.push({
-        name: 'Llama 7B (Q4)' + matchedTag,
+        // Phase K (fix): keep name plain so it pairs up with the
+        // browser-side prediction row. The matched-class info already
+        // shows in the native score sub-text and in the reasoning.
+        name: 'Llama 7B (Q4)',
         description: '7-billion params, 4-bit quantized',
         verdict: 'yes',
         performance: `~${Math.max(5, tpsLow)}–${Math.max(15, tpsHigh)} tokens/s`,
@@ -1451,11 +1457,82 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
       });
     }
 
+    // ── Qwen2.5-Coder 32B Q4_K_M (~22 GB minimum incl. KV cache) ──
+    // The de-facto local coding-agent model in 2026 (Continue.dev, Aider).
+    // Calibrated as ~30% of Llama 7B Q4 throughput due to ~4.5× model size
+    // and similar quant scheme.
+    if (usableRamGB >= 22 && cls?.llama7BQ4TPSLow != null) {
+      const tpsLow  = Math.max(8,  Math.round(cls.llama7BQ4TPSLow  * 0.30));
+      const tpsHigh = Math.max(15, Math.round(cls.llama7BQ4TPSHigh * 0.30));
+      out.push({
+        name: 'Qwen2.5-Coder 32B (Q4)',
+        description: 'Local coding-agent LLM, 32B params, 4-bit quantized',
+        verdict: 'yes',
+        performance: `~${tpsLow}–${tpsHigh} tokens/s`,
+        reasoning: `Calibrated for ${cls.displayName} from llama.cpp. Most-used local coding model in 2026 — runs Continue.dev / Aider as a Cursor replacement.`,
+        category: 'llm',
+      });
+    } else if (usableRamGB >= 22) {
+      const tpsLow  = Math.max(5,  Math.round(lo / 250));
+      const tpsHigh = Math.max(10, Math.round(hi / 250));
+      out.push({
+        name: 'Qwen2.5-Coder 32B (Q4)',
+        description: 'Local coding-agent LLM, 32B params, 4-bit quantized',
+        verdict: 'yes',
+        performance: `~${tpsLow}–${tpsHigh} tokens/s`,
+        reasoning: `Estimated ~${Math.round(midGflops)} GFLOPS native + ${usableRamGB} GB RAM. llama.cpp / Ollama recommended.`,
+        category: 'llm',
+      });
+    } else {
+      out.push({
+        name: 'Qwen2.5-Coder 32B (Q4)',
+        description: 'Local coding-agent LLM, 32B params, 4-bit quantized',
+        verdict: 'no', performance: null,
+        reasoning: `Estimated ${usableRamGB} GB free RAM — needs ≥22 GB for the 19 GB Q4 weights + KV cache.`,
+        category: 'llm',
+      });
+    }
+
+    // ── Qwen2-VL 7B Q4 (~6 GB minimum, vision-language model) ──
+    // Local VLM for OCR / screenshot agents / multimodal tasks. 2026 default.
+    // ~55% of Llama 7B throughput due to vision encoder overhead.
+    if (usableRamGB >= 6 && cls?.llama7BQ4TPSLow != null) {
+      const tpsLow  = Math.max(5,  Math.round(cls.llama7BQ4TPSLow  * 0.55));
+      const tpsHigh = Math.max(12, Math.round(cls.llama7BQ4TPSHigh * 0.55));
+      out.push({
+        name: 'Qwen2-VL 7B (Q4)',
+        description: 'Vision-language model — OCR, screenshots, multimodal',
+        verdict: 'yes',
+        performance: `~${tpsLow}–${tpsHigh} tokens/s`,
+        reasoning: `Calibrated for ${cls.displayName}. Reads images + generates text — used in screen-reading agents and OCR pipelines.`,
+        category: 'llm',
+      });
+    } else if (usableRamGB >= 6) {
+      const tpsLow  = Math.max(3,  Math.round(lo / 145));
+      const tpsHigh = Math.max(8,  Math.round(hi / 145));
+      out.push({
+        name: 'Qwen2-VL 7B (Q4)',
+        description: 'Vision-language model — OCR, screenshots, multimodal',
+        verdict: 'yes',
+        performance: `~${tpsLow}–${tpsHigh} tokens/s`,
+        reasoning: `Estimated ~${Math.round(midGflops)} GFLOPS native + ${usableRamGB} GB RAM. Vision encoder adds overhead vs pure-text Llama 7B.`,
+        category: 'llm',
+      });
+    } else {
+      out.push({
+        name: 'Qwen2-VL 7B (Q4)',
+        description: 'Vision-language model — OCR, screenshots, multimodal',
+        verdict: 'no', performance: null,
+        reasoning: `Estimated ${usableRamGB} GB free RAM; 7B Q4 + vision encoder needs ~6 GB minimum.`,
+        category: 'llm',
+      });
+    }
+
     // ── SDXL 1024×1024 ──
     // Phase K: use class-calibrated SDXL seconds when available
     if (cls?.sdxlSecondsLow != null && cls?.sdxlSecondsHigh != null && usableRamGB >= 8) {
       out.push({
-        name: 'Stable Diffusion XL (1024×1024)' + matchedTag,
+        name: 'Stable Diffusion XL (1024×1024)',
         description: 'High-res image generation',
         verdict: 'yes',
         performance: `~${cls.sdxlSecondsLow}–${cls.sdxlSecondsHigh}s per image`,
@@ -1465,7 +1542,7 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
     } else if (cls?.sdxlSecondsLow === null) {
       // GPU class explicitly says SDXL impractical
       out.push({
-        name: 'Stable Diffusion XL (1024×1024)' + matchedTag,
+        name: 'Stable Diffusion XL (1024×1024)',
         description: 'High-res image generation',
         verdict: 'no', performance: null,
         reasoning: `${cls.displayName} is too constrained for SDXL natively. Use SD 1.5 (512×512) or cloud.`,
@@ -1498,6 +1575,86 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
       });
     }
 
+    // ── Flux.1-dev (NF4 quantized, 1024×1024, 20 steps) ──
+    // 2026's most popular open image model (60%+ of r/StableDiffusion).
+    // NF4 quant runs on 12 GB VRAM; fp16 needs 24 GB. Roughly ~3.5× SDXL time
+    // due to the 12B DiT architecture vs SDXL's 2.6B UNet.
+    const fluxFloorVRAM = cls?.typicalVRAM ?? Math.min(usableRamGB, 8);
+    if (cls?.sdxlSecondsLow != null && cls?.sdxlSecondsHigh != null && fluxFloorVRAM >= 12) {
+      const sLow  = Math.round(cls.sdxlSecondsLow  * 3.5);
+      const sHigh = Math.round(cls.sdxlSecondsHigh * 3.5);
+      out.push({
+        name: 'Flux.1-dev (1024×1024, NF4)',
+        description: '12B DiT — 2026\'s leading open image model',
+        verdict: 'yes',
+        performance: `~${sLow}–${sHigh}s per image`,
+        reasoning: `Calibrated for ${cls.displayName}. NF4 quant fits in 12 GB VRAM; fp16 needs 24 GB. Replacing SDXL as the default in 2026.`,
+        category: 'image',
+      });
+    } else if (midGflops >= 800 && usableRamGB >= 12) {
+      const sLow  = Math.max(15, Math.round(70000 / hi));
+      const sHigh = Math.max(25, Math.round(70000 / lo));
+      out.push({
+        name: 'Flux.1-dev (1024×1024, NF4)',
+        description: '12B DiT — 2026\'s leading open image model',
+        verdict: 'yes',
+        performance: `~${sLow}–${sHigh}s per image`,
+        reasoning: `Estimated native ~${Math.round(midGflops)} GFLOPS + ${usableRamGB} GB RAM. Uses NF4 quant — fp16 needs 24 GB VRAM.`,
+        category: 'image',
+      });
+    } else if (fluxFloorVRAM >= 8) {
+      out.push({
+        name: 'Flux.1-dev (1024×1024, NF4)',
+        description: '12B DiT — 2026\'s leading open image model',
+        verdict: 'maybe',
+        performance: '~60-180s per image',
+        reasoning: `Tight VRAM (~${fluxFloorVRAM} GB) — works with --lowvram + tile-VAE but slow. Try Flux.1-schnell instead for fast iteration.`,
+        category: 'image',
+      });
+    } else {
+      out.push({
+        name: 'Flux.1-dev (1024×1024, NF4)',
+        description: '12B DiT — 2026\'s leading open image model',
+        verdict: 'no', performance: null,
+        reasoning: `Needs ≥12 GB VRAM for the NF4-quantized model. Use cloud (Replicate / Hugging Face) or upgrade GPU.`,
+        category: 'image',
+      });
+    }
+
+    // ── Flux.1-schnell (4 steps, 1024×1024) ──
+    // Speed-optimized 4-step variant. ~70% of SDXL time, runs on 8 GB.
+    if (cls?.sdxlSecondsLow != null && cls?.sdxlSecondsHigh != null && fluxFloorVRAM >= 8) {
+      const sLow  = Math.max(1, Math.round(cls.sdxlSecondsLow  * 0.7));
+      const sHigh = Math.max(2, Math.round(cls.sdxlSecondsHigh * 0.7));
+      out.push({
+        name: 'Flux.1-schnell (1024×1024, 4 steps)',
+        description: 'Fast 4-step Flux variant — 8 GB VRAM friendly',
+        verdict: 'yes',
+        performance: `~${sLow}–${sHigh}s per image`,
+        reasoning: `Calibrated for ${cls.displayName}. 4 steps vs Flux-dev's 20 — much faster, slightly lower quality, fits in 8 GB.`,
+        category: 'image',
+      });
+    } else if (midGflops >= 400 && usableRamGB >= 8) {
+      const sLow  = Math.max(2,  Math.round(15000 / hi));
+      const sHigh = Math.max(5,  Math.round(15000 / lo));
+      out.push({
+        name: 'Flux.1-schnell (1024×1024, 4 steps)',
+        description: 'Fast 4-step Flux variant — 8 GB VRAM friendly',
+        verdict: 'yes',
+        performance: `~${sLow}–${sHigh}s per image`,
+        reasoning: `Estimated native ~${Math.round(midGflops)} GFLOPS + ${usableRamGB} GB RAM. Fast iteration option.`,
+        category: 'image',
+      });
+    } else {
+      out.push({
+        name: 'Flux.1-schnell (1024×1024, 4 steps)',
+        description: 'Fast 4-step Flux variant — 8 GB VRAM friendly',
+        verdict: 'no', performance: null,
+        reasoning: `Needs ≥8 GB VRAM. SDXL or SD 1.5 with --lowvram remain the budget-tier image options.`,
+        category: 'image',
+      });
+    }
+
     // ── SD 1.5 ──
     if (midGflops >= 200) {
       const sLow  = Math.max(2, Math.round(5000 / hi));
@@ -1516,6 +1673,80 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
         performance: '~30-90s per image',
         reasoning: 'Will run but slowly — older GPU or integrated graphics.',
         category: 'image',
+      });
+    }
+
+    // ── HunyuanVideo Q4 (5s 720p) ──
+    // 13B Tencent video model, 60% of r/StableDiffusion video discussion.
+    // ~65× SDXL time on the same hardware (4090: SDXL 4s → HunyuanVideo 260s).
+    // Q4 quant runs on 12 GB; fp16 needs 24 GB.
+    if (cls?.sdxlSecondsLow != null && cls?.sdxlSecondsHigh != null && fluxFloorVRAM >= 12) {
+      const sLow  = Math.round(cls.sdxlSecondsLow  * 65);
+      const sHigh = Math.round(cls.sdxlSecondsHigh * 65);
+      const minLow  = Math.floor(sLow / 60);
+      const minHigh = Math.floor(sHigh / 60);
+      const perfStr = sLow >= 60
+        ? `~${minLow}–${minHigh} min per 5s 720p clip`
+        : `~${sLow}–${sHigh}s per 5s 720p clip`;
+      out.push({
+        name: 'HunyuanVideo (5s 720p, Q4)',
+        description: '13B Tencent video model — 2026\'s quality leader',
+        verdict: 'yes',
+        performance: perfStr,
+        reasoning: `Calibrated for ${cls.displayName}. Q4 quant fits in 12 GB; fp16 needs 24 GB. Local video gen viable on consumer GPUs in 2026.`,
+        category: 'video',
+      });
+    } else if (midGflops >= 1500 && usableRamGB >= 12) {
+      out.push({
+        name: 'HunyuanVideo (5s 720p, Q4)',
+        description: '13B Tencent video model — 2026\'s quality leader',
+        verdict: 'maybe',
+        performance: '~5-15 min per 5s 720p clip',
+        reasoning: `Estimated native ~${Math.round(midGflops)} GFLOPS + ${usableRamGB} GB RAM. Will work but expect long generation times.`,
+        category: 'video',
+      });
+    } else {
+      out.push({
+        name: 'HunyuanVideo (5s 720p, Q4)',
+        description: '13B Tencent video model — 2026\'s quality leader',
+        verdict: 'no', performance: null,
+        reasoning: `Needs ≥12 GB VRAM and substantial compute. Try LTX-Video (lighter) or use cloud.`,
+        category: 'video',
+      });
+    }
+
+    // ── LTX-Video (5s) ──
+    // Lightricks 2B video model — speed champion, runs on 8 GB.
+    // ~7× SDXL time (4090: SDXL 4s → LTX 28s).
+    if (cls?.sdxlSecondsLow != null && cls?.sdxlSecondsHigh != null && fluxFloorVRAM >= 8) {
+      const sLow  = Math.max(10, Math.round(cls.sdxlSecondsLow  * 7));
+      const sHigh = Math.max(20, Math.round(cls.sdxlSecondsHigh * 7));
+      out.push({
+        name: 'LTX-Video (5s)',
+        description: 'Lightricks 2B — fastest local video model',
+        verdict: 'yes',
+        performance: `~${sLow}–${sHigh}s per 5s clip`,
+        reasoning: `Calibrated for ${cls.displayName}. 2B params, 8 GB VRAM friendly. Near-realtime video gen on consumer GPUs.`,
+        category: 'video',
+      });
+    } else if (midGflops >= 600 && usableRamGB >= 8) {
+      const sLow  = Math.max(20, Math.round(140000 / hi));
+      const sHigh = Math.max(40, Math.round(140000 / lo));
+      out.push({
+        name: 'LTX-Video (5s)',
+        description: 'Lightricks 2B — fastest local video model',
+        verdict: 'yes',
+        performance: `~${sLow}–${sHigh}s per 5s clip`,
+        reasoning: `Estimated native ~${Math.round(midGflops)} GFLOPS + ${usableRamGB} GB RAM.`,
+        category: 'video',
+      });
+    } else {
+      out.push({
+        name: 'LTX-Video (5s)',
+        description: 'Lightricks 2B — fastest local video model',
+        verdict: 'no', performance: null,
+        reasoning: `Needs ≥8 GB VRAM. Local video gen is GPU-floor 2026 — older cards or iGPUs are not yet there.`,
+        category: 'video',
       });
     }
 
@@ -1619,6 +1850,22 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
     out.push({ name: 'Llama 70B (Q4)', description: 'Large flagship LLM, 70B params', verdict: 'no', performance: null,
       reasoning: 'Needs ~40 GB just for weights. Browser memory model caps allocation well below this. Use a native llama.cpp setup with 64 GB+ RAM.', category: 'llm' });
 
+    // Qwen2.5-Coder 32B — always no for browser (~19 GB weights)
+    out.push({ name: 'Qwen2.5-Coder 32B (Q4)', description: 'Local coding-agent LLM, 32B params, 4-bit quantized', verdict: 'no', performance: null,
+      reasoning: 'Needs ~19 GB just for Q4 weights. Way beyond browser allocation caps. Native llama.cpp on 24 GB+ GPU only.', category: 'llm' });
+
+    // Qwen2-VL 7B — similar headroom math to Llama 7B
+    {
+      if (largestAllocatableGB < 5) {
+        out.push({ name: 'Qwen2-VL 7B (Q4)', description: 'Vision-language model — OCR, screenshots, multimodal', verdict: 'no', performance: null,
+          reasoning: `Browser memory headroom is ${largestAllocatableGB.toFixed(1)} GB; 7B Q4 + vision encoder needs ~5 GB minimum.`, category: 'llm' });
+      } else {
+        out.push({ name: 'Qwen2-VL 7B (Q4)', description: 'Vision-language model — OCR, screenshots, multimodal', verdict: 'maybe',
+          performance: 'Slow — vision encoder is unoptimized in browser',
+          reasoning: 'transformers.js supports it but vision-encoder kernels run unoptimized. Use native llama.cpp / Ollama for usable speed.', category: 'llm' });
+      }
+    }
+
     // SDXL
     {
       if (!fp16) {
@@ -1638,6 +1885,22 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
           reasoning: `GPU compute (${gpuGflops.toFixed(0)} GFLOPS) is below the practical floor for SDXL. Use cloud or a more powerful GPU.`, category: 'image' });
       }
     }
+    // Flux.1-dev — needs 12 GB+ VRAM, browser caps at ~4 GB max → always NO
+    out.push({ name: 'Flux.1-dev (1024×1024, NF4)', description: '12B DiT — 2026\'s leading open image model', verdict: 'no', performance: null,
+      reasoning: 'NF4 quant still needs ~10 GB working memory. Browser sandbox caps allocation well below this. Native ComfyUI / Forge required.', category: 'image' });
+
+    // Flux.1-schnell — possibly maybe on top-tier WebGPU (4 steps + 8 GB)
+    {
+      if (fp16 && gpuGflops >= 1500 && largestAllocatableGB >= 4) {
+        out.push({ name: 'Flux.1-schnell (1024×1024, 4 steps)', description: 'Fast 4-step Flux variant — 8 GB VRAM friendly', verdict: 'maybe',
+          performance: '~30-90s per image (browser)',
+          reasoning: 'Top-tier WebGPU + FP16 can theoretically run it via ONNX Runtime Web — but 5-10× slower than native ComfyUI.', category: 'image' });
+      } else {
+        out.push({ name: 'Flux.1-schnell (1024×1024, 4 steps)', description: 'Fast 4-step Flux variant — 8 GB VRAM friendly', verdict: 'no', performance: null,
+          reasoning: 'Browser memory + compute below the practical floor. Native ComfyUI / Forge required.', category: 'image' });
+      }
+    }
+
     // SD 1.5
     {
       if (gpuGflops >= 200) {
@@ -1650,6 +1913,23 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
           reasoning: 'Functional but slow — usable for occasional generation, not iterative work.', category: 'image' });
       }
     }
+
+    // HunyuanVideo — always no for browser
+    out.push({ name: 'HunyuanVideo (5s 720p, Q4)', description: '13B Tencent video model — 2026\'s quality leader', verdict: 'no', performance: null,
+      reasoning: 'Local video gen requires 12 GB+ VRAM and minutes of GPU time. Browser-impractical. Native ComfyUI on RTX 4070+ / M3 Max+.', category: 'video' });
+
+    // LTX-Video — possibly maybe on top-tier WebGPU (lighter 2B model)
+    {
+      if (fp16 && gpuGflops >= 1500 && largestAllocatableGB >= 4) {
+        out.push({ name: 'LTX-Video (5s)', description: 'Lightricks 2B — fastest local video model', verdict: 'maybe',
+          performance: '~2-5 min per 5s clip (browser)',
+          reasoning: 'Top-tier WebGPU can run the 2B model. Native ComfyUI is 5-10× faster — use that for real work.', category: 'video' });
+      } else {
+        out.push({ name: 'LTX-Video (5s)', description: 'Lightricks 2B — fastest local video model', verdict: 'no', performance: null,
+          reasoning: 'Browser memory + compute below the practical floor. Native ComfyUI / DiffusionPipeline required.', category: 'video' });
+      }
+    }
+
     // Whisper
     {
       if (gpuGflops >= 150 && largestAllocatableGB >= 1) {
@@ -1805,7 +2085,11 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
       // ── Trading card ─────────────────────────────────────────
       setText('#card-id',     `-${r.id.slice(0, 6)}-`);
       setText('#card-score',  fmt(r.scores.overall));
-      setText('#card-tier',   tier.key === 'S' || tier.key === 'A' ? tier.key : '');
+      // Tier badge: full label below the score (was previously just "S"
+      // rendered as a 36px superscript right next to the score number,
+      // which looked like a typo on the PNG export).
+      // S-tier → "S-TIER · ENTHUSIAST / WORKSTATION", D-tier → "PATIENT & HONEST · IT STILL GETS THE JOB DONE", etc.
+      setText('#card-tier', `${tier.label.toUpperCase()} · ${tier.sub.toUpperCase()}`);
       setText('#card-hw',     [
         r.gpu.name || 'GPU details hidden',
         `${r.cpu.cores}-core CPU`,
@@ -2011,23 +2295,36 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
     $('#llm-result-tokens')!.textContent = result.tokensGenerated.toString();
     $('#llm-result-seconds')!.textContent = result.inferenceSeconds.toFixed(1);
 
-    // ── Comparison vs native estimate ──
-    // The browser test uses a SMALLER model than the native estimate
-    // (Phi-3-mini is 4B params, our estimate is for Llama 7B). So the
-    // comparison isn't apples-to-apples. We show the ratio and explain.
+    // ── Honest same-model native estimate ──
+    // Previous version compared browser-DistilGPT-2 against native-Llama-7B
+    // and produced a misleading ~1× ratio. Different model sizes — apples
+    // to oranges. The defensible, well-documented number is:
+    //
+    //   browser-vs-native on the SAME model = 5-10× slowdown
+    //
+    // Sources: llama.cpp GitHub issues #4167, #5950; MLX-Examples README;
+    // 9bench Article 4 (Browser vs Native LLM Performance) — all converge
+    // on 5-10× for the same model running browser vs native on identical
+    // hardware. So we show the user what their hardware would do natively
+    // running the SAME model they just tested. No cross-model conflation.
     const verdictEl = $('#llm-compare-verdict');
-    if (verdictEl && nativeCompare && nativeCompare.llama7BTPSHigh > 0) {
-      const ratio = nativeCompare.llama7BTPSLow > 0
-        ? (nativeCompare.llama7BTPSLow + nativeCompare.llama7BTPSHigh) / 2 / result.tokensPerSecond
-        : 0;
-      if (ratio > 0) {
-        verdictEl.innerHTML = `<span class="text-accent font-mono" style="font-weight: 700;">~${ratio.toFixed(1)}× slower than native estimate</span>`;
-      } else {
-        verdictEl.textContent = '—';
-      }
+    if (verdictEl && result.tokensPerSecond > 0) {
+      const nativeSameLow  = Math.round(result.tokensPerSecond * 5);
+      const nativeSameHigh = Math.round(result.tokensPerSecond * 10);
+      verdictEl.innerHTML =
+        `<span class="text-accent font-mono" style="font-weight: 700;">` +
+        `~${nativeSameLow}–${nativeSameHigh} t/s` +
+        `</span>` +
+        `<span class="text-fg-3 font-mono" style="font-size: 11px; margin-left: 8px;">` +
+        `(extrapolated · 5-10× browser→native)` +
+        `</span>`;
     } else if (verdictEl) {
-      verdictEl.textContent = '(no native estimate available)';
+      verdictEl.textContent = '—';
     }
+    // Suppress the previously-noisy nativeCompare warning (variable kept
+    // in signature for API compat — we may use Llama 7B numbers in a
+    // future "what about real models?" tooltip).
+    void nativeCompare;
   }
 
   /**

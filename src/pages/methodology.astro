@@ -14,6 +14,8 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import IssueNameplate from '../components/bench/IssueNameplate.astro';
 import TruthDisclaimer from '../components/bench/TruthDisclaimer.astro';
 
+const SITE = 'https://9bench.com';
+
 const FAQ = [
   {
     q: 'Is 9bench accurate?',
@@ -41,7 +43,7 @@ const FAQ = [
   },
   {
     q: 'Where is my data stored?',
-    a: "Nowhere, unless you click Submit. The benchmark runs locally in your browser. If you submit, exactly one row goes to Cloudflare D1: your score breakdown, GPU name string, CPU core count, and a random 8-char hash ID. No IP address, no cookie, no fingerprint, no IP geolocation."
+    a: "The benchmark runs locally in your browser. The test page has a consent box (default-on) — when checked, an anonymous summary is submitted to Cloudflare D1 after the test finishes. The submitted row contains: score breakdown, GPU name string, CPU core count, AI capability snapshot, a short 'Browser-Major / OS / Arch' UA fragment, timestamp, and a random 8-char hash ID. No IP address, no cookies, no fingerprints, no geolocation. Uncheck the box before clicking Start to run the benchmark without storing anything."
   },
   {
     q: "What does 'self-reported' mean on a GPU name?",
@@ -54,7 +56,17 @@ const FAQ = [
   title="Methodology — 9bench"
   description="How 9bench measures CPU, GPU, and RAM in the browser. Full transparency: formulas, weights, score brackets, and known limits."
   schemaType="WebPage"
+  breadcrumbItems={[{ name: 'Methodology' }]}
 >
+  <script slot="head" type="application/ld+json" set:html={JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: FAQ.map(f => ({
+      '@type': 'Question',
+      name: f.q,
+      acceptedAnswer: { '@type': 'Answer', text: f.a }
+    }))
+  })} />
   <main class="container methodology">
 
     <IssueNameplate middle="Methodology — Truth Series" right="v3.1 · Apr 2026" />
@@ -263,8 +275,8 @@ const FAQ = [
         <a href="https://github.com/Xley9/9bench" rel="external noopener">GitHub</a>.
       </p>
       <p class="methodology__p">
-        Built solo by <a href="https://toololis.com/atilla/" rel="external noopener">Atilla Kürük</a>,
-        sister of <a href="https://toololis.com" rel="external noopener">Toololis</a>.
+        Built independently. Sister project of <a href="https://toololis.com" rel="external noopener">Toololis</a>.
+        <a href="https://toololis.com/atilla/" rel="external noopener">Author identity</a>.
       </p>
     </section>
 

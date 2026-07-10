@@ -84,6 +84,25 @@ export const GPU_CLASSES: GPUClass[] = [
   },
 
   // ── NVIDIA RTX 40 series ─────────────────────────────────────────
+  // IMPORTANT: Laptop variants MUST come before desktop ones because
+  // matching is substring-based — "RTX 4090 Laptop" would otherwise
+  // match the "RTX 4090" desktop entry (giving wrong native estimates).
+  {
+    match: ['RTX 4090 Laptop', 'RTX 4090 Mobile', '4090 Laptop GPU'],
+    vendor: 'NVIDIA', displayName: 'RTX 4090 Laptop', form: 'laptop',
+    nativeTFlopsLow: 24, nativeTFlopsHigh: 32,
+    typicalVRAM: 16,
+    llama7BQ4TPSLow: 70, llama7BQ4TPSHigh: 110,
+    sdxlSecondsLow: 5, sdxlSecondsHigh: 8,
+  },
+  {
+    match: ['RTX 4080 Laptop', 'RTX 4080 Mobile', '4080 Laptop GPU'],
+    vendor: 'NVIDIA', displayName: 'RTX 4080 Laptop', form: 'laptop',
+    nativeTFlopsLow: 18, nativeTFlopsHigh: 25,
+    typicalVRAM: 12,
+    llama7BQ4TPSLow: 50, llama7BQ4TPSHigh: 80,
+    sdxlSecondsLow: 7, sdxlSecondsHigh: 11,
+  },
   {
     match: ['RTX 4090'],
     vendor: 'NVIDIA', displayName: 'RTX 4090', form: 'desktop',
@@ -571,6 +590,19 @@ export const GPU_CLASSES: GPUClass[] = [
     typicalVRAM: 2,
     llama7BQ4TPSLow: 2, llama7BQ4TPSHigh: 6,
     sdxlSecondsLow: null, sdxlSecondsHigh: null,
+  },
+
+  // ── AMD Strix Halo (Ryzen AI Max+ 395) — 2026 launch ─────────────
+  // First non-Apple chip with serious unified memory (up to 96-128 GB).
+  // RDNA 3.5 iGPU, ~256 GB/s LPDDR5X-8000 bandwidth. Slower than M3 Max
+  // on raw compute but competitive on memory capacity.
+  {
+    match: ['Ryzen AI Max', 'Strix Halo', 'Radeon 8060S', '8060S Graphics'],
+    vendor: 'AMD', displayName: 'AMD Ryzen AI Max+ 395 (Strix Halo)', form: 'integrated',
+    nativeTFlopsLow: 12, nativeTFlopsHigh: 16,
+    typicalVRAM: 96,  // unified, configs from 32-128 GB
+    llama7BQ4TPSLow: 30, llama7BQ4TPSHigh: 55,
+    sdxlSecondsLow: 25, sdxlSecondsHigh: 45,
   },
 
   // ── AMD integrated (Radeon Graphics on APUs) ────────────────────

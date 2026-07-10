@@ -1,0 +1,415 @@
+---
+import ArticleLayout from '../../layouts/ArticleLayout.astro';
+
+const props = {
+  title: 'Test Your PC for Stable Diffusion XL in 15 Seconds (No Install)',
+  description: 'Will your PC run Stable Diffusion XL? Test it in your browser in 15 seconds — no install. Calibrated SDXL generation times for 30+ GPUs (RTX 4090, 4070, 3060, M3 Max, RX 7900 XTX) plus tier breakdown.',
+  slug: 'test-pc-stable-diffusion-xl-15-seconds',
+  publishedDate: '2026-04-29',
+  readingMinutes: 13,
+  category: 'Hardware Testing',
+  primaryKeyword: 'test pc stable diffusion xl',
+  secondaryKeywords: [
+    'sdxl hardware requirements', 'stable diffusion xl gpu',
+    'sdxl gpu benchmark', 'best gpu for stable diffusion xl',
+    'will my pc run sdxl', 'stable diffusion vram requirements',
+    'sdxl speed comparison', 'sdxl 1024x1024 seconds'
+  ],
+  heroEmoji: '🎨',
+  heroGradientFrom: '#EC4899',
+  heroGradientTo: '#831843',
+  faqs: [
+    { q: 'How do I test if my PC can run Stable Diffusion XL?', a: 'The fastest way: visit 9bench.com, run the 15-second test, then check the AI Capabilities section. It detects your GPU, VRAM, FP16 support, and predicts SDXL generation time per 1024×1024 image (calibrated against real ComfyUI/Automatic1111 benchmarks). No install needed.' },
+    { q: 'What GPU do I need for Stable Diffusion XL?', a: 'Minimum: any GPU with 8 GB VRAM and FP16 support. Comfortable: 12 GB VRAM (RTX 3060 12GB, RTX 4070, RX 7700 XT). Fast: 16 GB+ (RTX 4080 Super, RX 7900 XTX, RTX 4090). On Apple Silicon, M2 Pro 16GB or better. Below 8 GB you can run SDXL via memory-saving tricks but it\'s slow and crashes a lot.' },
+    { q: 'Can I run SDXL on 8 GB VRAM?', a: 'Yes, but with compromises. Use --medvram or --lowvram flags in Automatic1111, or the Tile VAE node in ComfyUI. Generation takes 25-45 seconds per 1024×1024 image at 8 GB instead of 8-15 seconds at 12 GB+. Refiner stage often needs to be disabled. For batch generation, 8 GB is painful.' },
+    { q: 'How long does SDXL take per image on RTX 4090?', a: '3-5 seconds per 1024×1024 image with 30 steps and refiner enabled (Automatic1111 / ComfyUI). With LCM/Turbo at 8 steps: under 1 second. The RTX 4090 is roughly 3× faster than RTX 4070 for SDXL workloads thanks to memory bandwidth and tensor cores.' },
+    { q: 'Is Stable Diffusion XL faster on Apple Silicon or NVIDIA?', a: 'NVIDIA wins on per-image speed. RTX 4090: 3-5 seconds; M3 Max: 10-17 seconds; M3 Ultra: 5-9 seconds. Apple unified memory advantage doesn\'t help SDXL the way it helps LLM, because SDXL fits comfortably in 24 GB. NVIDIA tensor cores + CUDA-optimised samplers (DPM++ 2M) make the difference. Use Mac for LLM, NVIDIA for SDXL.' },
+    { q: 'Can I run Stable Diffusion XL in the browser?', a: 'Yes, partially. Browser-based SDXL via WebGPU (sdxl-turbo on Hugging Face Spaces, ONNX Runtime Web) works on RTX 30/40-series and Apple Silicon. Generation is 5-10× slower than native (30-90 seconds per 1024×1024 image vs 3-15 seconds native). Useful for demos and triage; not for production work.' }
+  ],
+  relatedArticles: [
+    { slug: 'best-gpu-for-local-llm-2026', title: 'Best GPU for Local LLM 2026', emoji: '🧠' },
+    { slug: 'can-my-pc-run-it-15-second-test-2026', title: 'Can My PC Run It? Test in 15 Seconds', emoji: '🎮' },
+    { slug: 'apple-m3-max-vs-rtx-4090-local-ai', title: 'Apple M3 Max vs RTX 4090 for Local AI', emoji: '🍎' }
+  ]
+};
+---
+
+<ArticleLayout {...props}>
+  <div class="tldr">
+    <div class="tldr-title">TL;DR — How fast is your PC for SDXL?</div>
+    Calibrated 1024×1024 SDXL image generation times (30 steps + refiner, native ComfyUI):
+    <strong>RTX 4090</strong> 3-5s, <strong>RTX 4070</strong> 9-14s, <strong>RTX 3060 12GB</strong> 20-32s,
+    <strong>RX 7900 XTX</strong> 4-7s, <strong>M3 Max</strong> 10-17s, <strong>M3 Ultra</strong> 5-9s.
+    Want yours measured automatically? <a href="/test/">Run the 9bench test (15 seconds, browser-only)</a>.
+    Or skim the tier tables below.
+  </div>
+
+  <p>
+    Stable Diffusion XL is the most popular open-source image model in 2026. ComfyUI shipped 4M+
+    downloads. Automatic1111 still has its loyal user base. Forge, Fooocus, InvokeAI, SwarmUI —
+    every flavour exists. They all run SDXL. The question for most users isn't "which UI" but
+    "will my PC run it well?"
+  </p>
+  <p>
+    This article gives you calibrated answers. We'll cover the hardware test you can run in 15
+    seconds (no install), then break down expected SDXL performance by GPU tier with real
+    seconds-per-image numbers from public ComfyUI benchmarks.
+  </p>
+
+  <h2>The 15-second hardware test (in your browser)</h2>
+  <p>
+    9bench.com runs a hardware probe via WebGPU + WebAssembly + Web Workers. Open the page, click
+    Start, wait 15 seconds. Result: your CPU/GPU/RAM scores plus an AI Capabilities section that
+    predicts SDXL feasibility on your hardware.
+  </p>
+  <p>
+    What it actually measures and how it predicts SDXL:
+  </p>
+  <ol>
+    <li><strong>GPU detection</strong> via WEBGL_debug_renderer_info — extracts the actual GPU model</li>
+    <li><strong>FP16 support check</strong> via WebGPU shader-f16 feature — required for SDXL native speed (FP32 fallback is 2× slower)</li>
+    <li><strong>VRAM probe</strong> — checks max allocatable buffer size, infers usable VRAM</li>
+    <li><strong>GPU class lookup</strong> — matches your detected GPU against a curated table of 50+ entries with calibrated SDXL times sourced from ComfyUI benchmarks, TechPowerUp, public Hugging Face Spaces measurements</li>
+    <li><strong>Result</strong> — predicts seconds per 1024×1024 image (low/high range based on sampler choice)</li>
+  </ol>
+  <p>
+    This isn't a deep-learning benchmark — we don't actually run SDXL in your browser (it'd take
+    minutes). It's a calibrated lookup based on your detected hardware. Honest about being a
+    prediction, not a measurement.
+  </p>
+
+  <div class="callout">
+    <div class="callout-title">📊 Want to actually run SDXL right now?</div>
+    Try <a href="https://huggingface.co/spaces/stabilityai/stable-diffusion-3-medium" rel="noopener">Hugging Face Spaces</a>
+    (browser-hosted, free with Hugging Face account) or <a href="https://www.fooocus.ai" rel="noopener">Fooocus</a>
+    (one-click install, easiest local UI for SDXL). 9bench predicts whether it'll be fast on your
+    machine. Those tools actually run it.
+  </div>
+
+  <h2>Tier-by-tier SDXL performance (1024×1024, 30 steps + refiner)</h2>
+  <p>
+    Numbers below are <strong>median seconds per image</strong> on stock SDXL (no LoRA, no
+    ControlNet) generating a 1024×1024 image with 30 steps base + 10 steps refiner. Sampler:
+    DPM++ 2M Karras. Sources: ComfyUI public benchmarks, Civitai user reports, Tom's Hardware
+    AI workload tests.
+  </p>
+
+  <h3>Tier 1: Beast (under 6 seconds per image)</h3>
+  <table class="bench-table">
+    <thead>
+      <tr>
+        <th>GPU</th>
+        <th>VRAM</th>
+        <th>SDXL 1024² (sec)</th>
+        <th>Batch 4 feasible?</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>RTX 5090</td><td>32 GB</td><td>2-4</td><td>Yes (batch 8+)</td></tr>
+      <tr><td>RTX 4090</td><td>24 GB</td><td>3-5</td><td>Yes (batch 4-6)</td></tr>
+      <tr><td>RX 7900 XTX</td><td>24 GB</td><td>4-7</td><td>Yes (batch 4)</td></tr>
+      <tr><td>RTX 5080</td><td>16 GB</td><td>3-5</td><td>Yes (batch 2-3)</td></tr>
+      <tr><td>RTX 4080 Super</td><td>16 GB</td><td>4-7</td><td>Yes (batch 2-3)</td></tr>
+      <tr><td>Apple M3 Ultra</td><td>up to 192 GB unified</td><td>5-9</td><td>Yes (memory-rich)</td></tr>
+    </tbody>
+  </table>
+  <p>
+    Tier 1 is "make it as fast as it can be". Suitable for: Civitai-style mass image creation,
+    SDXL-Turbo experimentation at 60+ images/minute, ComfyUI animation workflows, training
+    LoRAs locally.
+  </p>
+
+  <h3>Tier 2: Workstation (6-15 seconds per image)</h3>
+  <table class="bench-table">
+    <thead>
+      <tr>
+        <th>GPU</th>
+        <th>VRAM</th>
+        <th>SDXL 1024² (sec)</th>
+        <th>Batch 2 feasible?</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>RTX 5070 Ti</td><td>16 GB</td><td>4-7</td><td>Yes</td></tr>
+      <tr><td>RTX 4070 Ti Super</td><td>16 GB</td><td>6-10</td><td>Yes</td></tr>
+      <tr><td>RTX 3090 (used)</td><td>24 GB</td><td>7-11</td><td>Yes</td></tr>
+      <tr><td>RX 7900 XT</td><td>20 GB</td><td>5-8</td><td>Yes</td></tr>
+      <tr><td>RTX 4070 Super</td><td>12 GB</td><td>8-13</td><td>Yes (tight)</td></tr>
+      <tr><td>RX 7800 XT</td><td>16 GB</td><td>8-12</td><td>Yes</td></tr>
+      <tr><td>Apple M3 Max</td><td>up to 64 GB unified</td><td>10-17</td><td>Yes</td></tr>
+      <tr><td>RTX 4070</td><td>12 GB</td><td>9-14</td><td>Yes (tight)</td></tr>
+    </tbody>
+  </table>
+  <p>
+    Tier 2 is the practical creator tier. Generate 4-10 images per minute. Batch generation
+    works. LoRAs and ControlNet add ~30-50% overhead. Refiner stays enabled.
+  </p>
+
+  <h3>Tier 3: Mainstream (15-30 seconds per image)</h3>
+  <table class="bench-table">
+    <thead>
+      <tr>
+        <th>GPU</th>
+        <th>VRAM</th>
+        <th>SDXL 1024² (sec)</th>
+        <th>Refiner advised?</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>RTX 4060 Ti 16GB</td><td>16 GB</td><td>12-20</td><td>Yes</td></tr>
+      <tr><td>RTX 3080</td><td>10 GB</td><td>9-14</td><td>Yes (tight VRAM)</td></tr>
+      <tr><td>RTX 3070 Ti</td><td>8 GB</td><td>12-19</td><td>Disable for batch</td></tr>
+      <tr><td>RX 7700 XT</td><td>12 GB</td><td>10-15</td><td>Yes</td></tr>
+      <tr><td>RTX 4060 Laptop</td><td>8 GB</td><td>18-30</td><td>Disable for batch</td></tr>
+      <tr><td>RTX 4060</td><td>8 GB</td><td>14-22</td><td>Disable for batch</td></tr>
+      <tr><td>RX 6700 XT</td><td>12 GB</td><td>22-35</td><td>Yes</td></tr>
+      <tr><td>Apple M3 Pro</td><td>18-36 GB unified</td><td>14-24</td><td>Yes</td></tr>
+      <tr><td>RTX 3060 12GB</td><td>12 GB</td><td>20-32</td><td>Yes</td></tr>
+    </tbody>
+  </table>
+  <p>
+    Tier 3 is "it works but be patient". Generate 2-4 images per minute. Use SDXL-Turbo or LCM
+    LoRA for fast iteration; switch to full 30-step DPM++ for finals. 8 GB VRAM cards work but
+    require --medvram and disabling the refiner for stable batch generation.
+  </p>
+
+  <h3>Tier 4: Working (30-90 seconds per image)</h3>
+  <table class="bench-table">
+    <thead>
+      <tr>
+        <th>GPU</th>
+        <th>VRAM</th>
+        <th>SDXL 1024² (sec)</th>
+        <th>Tips</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>GTX 1080 Ti</td><td>11 GB</td><td>30-50</td><td>Use SDXL-Turbo (8 steps), no refiner</td></tr>
+      <tr><td>RTX 2060 / 2070</td><td>6-8 GB</td><td>35-70</td><td>--medvram, smaller resolution first</td></tr>
+      <tr><td>Apple M2 / M2 Pro</td><td>16+ GB unified</td><td>30-50</td><td>Use Diffusers with MPS backend</td></tr>
+      <tr><td>Apple M1 Max</td><td>32+ GB unified</td><td>18-30</td><td>Better than people expect</td></tr>
+      <tr><td>RX 6600 / 6650 XT</td><td>8 GB</td><td>28-45</td><td>ROCm or Vulkan path; --medvram</td></tr>
+      <tr><td>Apple M1 Pro</td><td>16+ GB unified</td><td>25-40</td><td>Diffusers MPS</td></tr>
+    </tbody>
+  </table>
+  <p>
+    Tier 4 is "you can do it but switch to SDXL-Turbo or LCM-LoRA for usable iteration".
+    Generate 1-2 images per minute on full 30-step. Generate 6-15 images per minute on Turbo
+    (8 steps, no refiner). Most users on this tier should default to Turbo workflows.
+  </p>
+
+  <h3>Tier 5: Patient (90+ seconds, or skip SDXL for SD 1.5)</h3>
+  <p>
+    On Intel Iris Xe, AMD Radeon 680M, low-end APUs, or ancient discrete GPUs (GTX 1060 6 GB,
+    RX 580): SDXL is technically possible but punishing. Better path:
+  </p>
+  <ul>
+    <li><strong>Use Stable Diffusion 1.5</strong> instead — generates 512×512 images in 5-15s on the same hardware. Quality is lower but practical.</li>
+    <li><strong>Use SDXL-Turbo at 1 step</strong> — yes, just 1 step. Quality drops noticeably but 90s images become 15s images.</li>
+    <li><strong>Use cloud</strong> — Hugging Face Spaces, Replicate, or RunPod give you 5-second SDXL for $0.001-0.01 per image. Cheaper than electricity for hours of local generation.</li>
+  </ul>
+
+  <h2>The 8 GB VRAM trap</h2>
+  <p>
+    SDXL was designed for 12+ GB VRAM but the community has built escape hatches. If you have
+    8 GB:
+  </p>
+  <ul>
+    <li><strong>Automatic1111 / Forge</strong>: add <code>--medvram-sdxl</code> to launch flags. ~30% slower but stable.</li>
+    <li><strong>ComfyUI</strong>: enable <code>--lowvram</code> or use Tile VAE node + sequential CPU offload.</li>
+    <li><strong>Disable the refiner</strong>: full SDXL pipeline = base + refiner. The refiner adds quality but doubles VRAM peak. Skip it on 8 GB cards.</li>
+    <li><strong>Smaller initial resolution</strong>: generate at 832×832, upscale via Hires Fix to 1.25×. Final image is similar to 1024×1024 but VRAM peak is lower.</li>
+    <li><strong>SDXL-Turbo or LCM</strong>: 8 steps instead of 30, no refiner. Half the VRAM peak.</li>
+  </ul>
+  <p>
+    All of these work. None are as comfortable as having 12+ GB. If you're shopping for a GPU
+    primarily for SDXL: spend the extra $100-150 for a 12 GB+ card. RTX 3060 12GB used at $200
+    is the price/perf champion for budget SDXL.
+  </p>
+
+  <div class="callout callout-warning">
+    <div class="callout-title">⚠️ The "8 GB is fine" myth</div>
+    Multiple YouTube tutorials and Reddit posts insist that 8 GB is "totally fine for SDXL".
+    Technically correct. Practically: it means slower generation, can't run refiner with batch,
+    can't use heavy ControlNet stacks, can't train LoRA on 1024² resolution. If SDXL is your
+    main use case, treat 12 GB as the floor. 8 GB is for "I'll occasionally generate one image".
+  </div>
+
+  <h2>Apple Silicon for SDXL: better than the reputation suggests</h2>
+  <p>
+    Common misconception: "Apple is bad for image generation". Reality is more nuanced.
+  </p>
+  <p>
+    What's true: on a per-image basis, NVIDIA wins. M3 Max takes 10-17s vs RTX 4090's 3-5s.
+    The 4090 is roughly 3× faster.
+  </p>
+  <p>
+    What's not true: Apple is unusably slow. M3 Pro at 14-24s/image is comparable to an RTX 3060
+    12GB at 20-32s. M3 Max at 10-17s/image beats RTX 4060 Ti and RTX 3070. M3 Ultra at 5-9s/image
+    beats everything except RTX 4080 Super and up.
+  </p>
+  <p>
+    Apple specifics:
+  </p>
+  <ul>
+    <li>Use <strong>Diffusers with MPS backend</strong> (Hugging Face Diffusers library) — fastest on Apple. Roughly 2× faster than CoreML route.</li>
+    <li>Use <strong>DrawThings</strong> app (free, App Store) — easiest UI, well-optimised for Apple Silicon</li>
+    <li>Avoid Automatic1111 directly — works but slower than Diffusers/DrawThings on Mac</li>
+    <li><strong>Unified memory advantage:</strong> not useful for SDXL (model fits in 24 GB anyway). It's an LLM win, not an SDXL win.</li>
+  </ul>
+
+  <h2>SDXL in the browser (yes, this works in 2026)</h2>
+  <p>
+    Browser-based SDXL via WebGPU is now a real option. Hugging Face Spaces hosts dozens of
+    SDXL/Turbo demos. ONNX Runtime Web supports SDXL inference. Browser performance:
+  </p>
+
+  <table class="bench-table">
+    <thead>
+      <tr>
+        <th>Hardware</th>
+        <th>Native SDXL (s)</th>
+        <th>Browser SDXL (s)</th>
+        <th>Slowdown</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>RTX 4090</td><td>3-5</td><td>20-40</td><td>~6-8×</td></tr>
+      <tr><td>RTX 4070</td><td>9-14</td><td>50-90</td><td>~6×</td></tr>
+      <tr><td>M3 Max</td><td>10-17</td><td>40-80</td><td>~4-5×</td></tr>
+      <tr><td>RTX 3060 12GB</td><td>20-32</td><td>90-150</td><td>~5×</td></tr>
+    </tbody>
+  </table>
+  <p>
+    The slowdown ratio is similar to <a href="/articles/browser-vs-native-llm-performance/">browser vs native LLM</a>:
+    5-8× depending on hardware. Browser SDXL works well for demos, "try this without installing
+    anything" pages, and quick triage. Not a replacement for native ComfyUI workflows.
+  </p>
+
+  <h2>What 9bench specifically tells you about SDXL</h2>
+  <p>
+    Run <a href="/test/">9bench.com</a>, scroll to AI Capabilities. You'll see:
+  </p>
+  <ul>
+    <li><strong>SDXL feasibility verdict</strong>: "Easy" / "Comfortable" / "Memory-saver mode required" / "Painful" / "Don't bother"</li>
+    <li><strong>Calibrated time-per-image range</strong>: e.g. "8-13 seconds per 1024×1024 image" — sourced from your detected GPU's class</li>
+    <li><strong>Browser vs Native breakdown</strong>: what the same hardware would do in ComfyUI native vs browser-only WebGPU</li>
+    <li><strong>VRAM verdict</strong>: enough for refiner, enough for batch, enough for LoRA training</li>
+    <li><strong>Recommended workflow</strong>: SDXL-Turbo vs full 30-step, refiner on/off, --medvram or no</li>
+  </ul>
+  <p>
+    All this in the same 15-second test that benchmarks your CPU/GPU/RAM. Free, no install,
+    no signup. Open methodology — every number traceable to a public benchmark source.
+  </p>
+
+  <h2>Common questions</h2>
+  <p>
+    <strong>"Can I run SDXL on my GTX 1060 6GB?"</strong> Technically yes with --lowvram, but
+    expect 60-120s/image and frequent crashes. SD 1.5 is the better fit for a 1060 6GB.
+  </p>
+  <p>
+    <strong>"Should I buy a used RTX 3090 for SDXL?"</strong> Yes — best price/perf VRAM at
+    $700-900. 24 GB lets you run massive ControlNet stacks, train LoRAs, batch-generate without
+    OOM. Faster than a new RTX 4070 for SDXL despite being 4 years old.
+  </p>
+  <p>
+    <strong>"Is SDXL faster on Linux or Windows?"</strong> Linux is 5-10% faster on NVIDIA
+    (better CUDA driver overhead) and notably faster on AMD (ROCm 6.0+ matures Linux first).
+    For most users the difference isn't worth dual-booting.
+  </p>
+  <p>
+    <strong>"Will SDXL ever run faster on my hardware?"</strong> Yes, every 6 months. SDXL
+    optimisations keep landing — TensorRT for NVIDIA cuts 30%, ROCm Composable Kernels for AMD
+    cut 20%, LCM-LoRA cuts steps by 4-8×. A GPU bought today will be ~2× faster in 2 years on
+    the same SDXL workload.
+  </p>
+  <p>
+    <strong>"What about Stable Diffusion 3 / Flux / SDXL Lightning?"</strong> Flux.1 (Black
+    Forest Labs) is heavier than SDXL — needs 12 GB minimum, 16 GB+ comfortable, ~50% slower
+    per image. SD3 Medium is similar to SDXL. SDXL Lightning is much faster (1-step) but lower
+    quality. The hardware tiers above scale similarly: if your tier handles SDXL, it handles
+    SD3 and most Flux quants. Flux fp16 is the exception — that's an RTX 4080+ workload.
+  </p>
+
+  <div class="cta-box">
+    <h3>Test your PC for SDXL — 15 seconds</h3>
+    <p>
+      9bench detects your GPU, checks FP16 / VRAM / WebGPU support, and predicts SDXL generation
+      time on your specific hardware. Browser-only, no install, no signup. Calibrated against
+      ComfyUI / Automatic1111 public benchmarks.
+    </p>
+    <a href="/test/" class="cta-btn">Test my PC for SDXL →</a>
+  </div>
+</ArticleLayout>
+
+<style>
+  .tldr a { color: #00D9FF; }
+  .bench-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1.5rem 0;
+    font-size: 0.95rem;
+  }
+  .bench-table th, .bench-table td {
+    text-align: left;
+    padding: 0.6rem 0.8rem;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .bench-table th {
+    background: rgba(236, 72, 153, 0.06);
+    font-weight: 600;
+    color: #EC4899;
+    border-bottom: 1px solid rgba(236,72,153,0.25);
+  }
+  .bench-table tr:hover td {
+    background: rgba(255,255,255,0.02);
+  }
+  .callout {
+    border: 1px solid rgba(0,217,255,0.25);
+    background: rgba(0,217,255,0.04);
+    padding: 1rem 1.2rem;
+    margin: 1.5rem 0;
+    border-radius: 6px;
+  }
+  .callout-warning {
+    border-color: rgba(251,191,36,0.35);
+    background: rgba(251,191,36,0.06);
+  }
+  .callout-title {
+    font-weight: 700;
+    margin-bottom: 0.4rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.95rem;
+  }
+  .cta-box {
+    margin: 2.5rem 0 1rem;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, rgba(236,72,153,0.1), rgba(0,217,255,0.06));
+    border: 1px solid rgba(236,72,153,0.3);
+    border-radius: 8px;
+    text-align: center;
+  }
+  .cta-box h3 {
+    margin-top: 0;
+    color: #fff;
+    font-size: 1.4rem;
+  }
+  .cta-box p {
+    margin: 0.5rem 0 1rem;
+    line-height: 1.6;
+  }
+  .cta-btn {
+    display: inline-block;
+    padding: 0.75rem 1.6rem;
+    background: #00D9FF;
+    color: #0A0A0A !important;
+    font-weight: 700;
+    text-decoration: none;
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    transition: transform 0.15s;
+  }
+  .cta-btn:hover {
+    transform: translateY(-1px);
+  }
+</style>

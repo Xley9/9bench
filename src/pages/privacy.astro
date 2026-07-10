@@ -4,9 +4,10 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 
 <BaseLayout
   title="Privacy Policy — 9bench"
-  description="9bench privacy policy: what data we collect, what we don't, how to delete your data. GDPR-compliant."
+  description="9bench privacy policy: what data we collect, what we don't, how to delete your data. GDPR + TTDSG compliant."
   keywords="9bench privacy policy, gdpr benchmark privacy, data protection"
   schemaType="WebPage"
+  breadcrumbItems={[{ name: 'Privacy Policy' }]}
 >
   <main class="max-w-3xl mx-auto px-5 py-12">
     <header class="text-center mb-10">
@@ -22,8 +23,9 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         <h2>The TL;DR</h2>
         <p>
           The benchmark runs entirely in your browser. No data leaves your device <em>during the test</em>.
-          When the test finishes, your scores are automatically submitted to our global ranking database
-          (anonymously). If you don't want this, disable JavaScript or close the tab before the test completes.
+          When the test finishes, an anonymous summary of your scores is submitted to our global ranking
+          database — but only if you tick the consent box on the test page (it is the default state, so
+          unticking it before clicking Start runs the benchmark without storing anything).
         </p>
       </section>
 
@@ -33,35 +35,75 @@ import BaseLayout from '../layouts/BaseLayout.astro';
           <li>Your benchmark numbers: scores (overall, GPU, CPU, RAM), GFLOPS, hash rates, GB/s, latency</li>
           <li>GPU adapter name (only if your browser exposes it — many privacy-focused browsers don't)</li>
           <li>CPU core count (from <code>navigator.hardwareConcurrency</code>)</li>
-          <li>An anonymous user-agent fragment (e.g. "Chrome 130 / Windows / x64") — truncated to 200 chars</li>
-          <li>An anonymous fingerprint (optional, hashed if provided — used to deduplicate test runs)</li>
+          <li>
+            A short, low-entropy User-Agent string of the form
+            <code>"Browser-Major / OS / Arch"</code> (e.g. <code>"Chrome 130 / Windows / x64"</code>) —
+            parsed server-side from the request headers, never stored as the raw User-Agent. Maximum 64
+            characters. No build numbers, no patch level, no mobile device model.
+          </li>
           <li>The timestamp of submission</li>
+          <li>
+            An optional AI capability snapshot if your browser exposed it during the test:
+            largest allocatable GPU buffer (in GB), FP16 support (boolean), and an AI score derived
+            from those numbers. Used to populate the AI Capabilities section of the result page.
+          </li>
         </ul>
       </section>
 
       <section>
         <h2>What we don't collect</h2>
         <ul>
-          <li>Your IP address (Cloudflare may have it for routing — we don't store it)</li>
+          <li>Your IP address (Cloudflare may have it for routing — we don't store it in our database)</li>
           <li>Your name, email, or any account info — you can't have an account here</li>
           <li>Your exact location (no geo-IP lookup, no GPS)</li>
           <li>Your browsing history</li>
-          <li>Cookies for tracking (only Google Analytics' standard, see below)</li>
+          <li>Browser fingerprints, canvas hashes, or persistent device IDs</li>
+          <li>Cookies for tracking (we use Cloudflare Web Analytics — cookieless, see below)</li>
           <li>Any data while the test is running (zero network activity during measurement)</li>
+          <li>Prompts or output from the optional Live LLM test (runs entirely client-side)</li>
         </ul>
       </section>
 
       <section>
-        <h2>Google Analytics 4 (third-party)</h2>
+        <h2>Analytics — Cloudflare Web Analytics (cookieless)</h2>
         <p>
-          We use Google Analytics 4 (Measurement ID: G-6DGWR5Y2CS) to count visitors and understand which
-          pages get used. GA4 is configured with <code>anonymize_ip: true</code>, so no precise IP is sent.
+          We use <strong>Cloudflare Web Analytics</strong> to count anonymous visitors and understand which
+          pages get used. It is <strong>cookieless</strong>, does not fingerprint browsers, and does not require
+          a consent banner under EU ePrivacy / German TTDSG § 25 — there is no client-side storage to consent to.
         </p>
         <p>
-          To opt out: enable "Do Not Track" in your browser, use a tracking blocker (uBlock Origin, Privacy
-          Badger), or visit our site in incognito/private mode. We don't have a separate cookie-consent banner
-          because we don't use cookies beyond GA4's standard ones — the EU ePrivacy directive allows this for
-          aggregate statistics under "legitimate interest".
+          The data Cloudflare aggregates: visit count per page, country (broad), referrer, browser type
+          (broad). No individual user is trackable across sessions. We can see "1,200 people visited /test
+          today, 80% from Germany"; we cannot see "user X visited at time Y".
+        </p>
+        <p>
+          To opt out: enable "Do Not Track" or use a tracking blocker. The site works identically.
+        </p>
+      </section>
+
+      <section>
+        <h2>The optional "Run live AI test" button</h2>
+        <p>
+          If you click <em>Run live AI test</em> on the result page, your browser fetches:
+        </p>
+        <ul>
+          <li>
+            The transformers.js library (~30 MB) from <code>cdn.jsdelivr.net</code>. jsDelivr can see
+            your IP and User-Agent during this download.
+          </li>
+          <li>
+            A small open LLM (~250 MB to 1.7 GB depending on your browser memory headroom) from
+            Hugging Face's CDN. Hugging Face can see your IP and User-Agent during this download.
+          </li>
+        </ul>
+        <p>
+          After download, the model runs <strong>entirely on your machine</strong> via WebAssembly + WebGPU.
+          Prompts, generated tokens, and inference timings stay in your browser tab. Nothing about what
+          you generate is sent to us, jsDelivr, or Hugging Face.
+        </p>
+        <p>
+          If you'd rather not pay this network cost / disclosure, simply don't click the button. The
+          calibrated estimates above the button work without it.
         </p>
       </section>
 
@@ -78,11 +120,12 @@ import BaseLayout from '../layouts/BaseLayout.astro';
         <h2>Result URLs and discoverability</h2>
         <p>
           When your benchmark completes, you get a permalink like <code>9bench.com/r/abc12345</code>. This URL
-          is shareable but <strong>not search-engine indexed</strong> (we set <code>noindex</code> via robots.txt
-          for /r/ paths). Only people you share the link with can see your result.
+          is shareable. We mark it <code>noindex,nofollow</code> via meta tag and <code>Disallow: /r/</code>
+          in <code>robots.txt</code>, so respectful search engines won't index it. (Crawlers that ignore
+          <code>robots.txt</code> can still find it — treat the URL as semi-public.)
         </p>
         <p>
-          The result is also visible on the leaderboard at <code>/top</code> if your score is in the top 50.
+          The result may also be visible on the leaderboard at <code>/top</code> if your score is in the top 50.
           The leaderboard shows: anonymous result ID, overall score, GPU name (if available), core count,
           timestamp. No identifying information.
         </p>
@@ -91,20 +134,31 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       <section>
         <h2>Deletion / Right to be forgotten</h2>
         <p>
-          To delete your submitted result: email <a href="mailto:atillakrk@gmail.com">atillakrk@gmail.com</a>
+          To delete your submitted result: email <a href="mailto:contact@9bench.com">contact@9bench.com</a>
           with the result ID (visible in the URL: <code>/r/&lt;id&gt;</code>). We'll delete it within 7 days.
+          The deletion is permanent — the row is removed from D1, not just hidden.
         </p>
         <p>
-          To delete your local history: visit <a href="/history" class="text-brand hover:underline">/history</a>
+          To delete your local history: visit <a href="/history/" class="text-brand hover:underline">/history</a>
           and click "Clear all history". This removes data stored in your browser only.
         </p>
       </section>
 
       <section>
-        <h2>GDPR + EU users</h2>
+        <h2>GDPR + TTDSG (EU / Germany)</h2>
         <p>
-          The legal basis for processing benchmark submissions is "legitimate interest" (improving the service,
-          providing percentile rankings). Submissions are voluntary — you can simply not visit the site.
+          The operator (Atilla Kürük) is based in Germany — both GDPR and German TTDSG apply.
+        </p>
+        <p>
+          Legal basis for benchmark submission: <strong>explicit consent</strong> (Art. 6(1)(a) GDPR). The
+          consent box on the test page is the consent mechanism. You can withdraw consent at any time by
+          requesting deletion (see above). The benchmark itself runs without submitting if you uncheck the
+          box before starting the test.
+        </p>
+        <p>
+          No cookies or local-storage writes occur for analytics (we use Cloudflare Web Analytics, which is
+          cookieless), so § 25 TTDSG does not require an additional consent banner. Local-storage writes
+          for benchmark history (only on /history) are strictly necessary for that feature.
         </p>
         <p>
           You have the right to: access (your data is what's at the result URL), rectification (we'll correct
@@ -116,24 +170,38 @@ import BaseLayout from '../layouts/BaseLayout.astro';
       <section>
         <h2>Children</h2>
         <p>
-          The site has no age verification. The benchmark itself is harmless. If your child submits a result
-          and you'd like it removed, email us with the result ID.
+          The site has no age verification. The benchmark itself is harmless. If your child submitted a
+          result and you'd like it removed, email us with the result ID.
+        </p>
+      </section>
+
+      <section id="terms">
+        <h2>Terms of use</h2>
+        <p>
+          9bench is provided "as is" without warranty of any kind. The benchmark results are
+          approximate measurements constrained by browser APIs and should not be used as the
+          sole basis for purchasing decisions. You may use 9bench for personal, educational,
+          and commercial purposes (including IT audits and hardware reviews). Automated bulk
+          testing or score manipulation is not permitted. By submitting a benchmark result,
+          you grant 9bench a non-exclusive license to store and display the anonymous data
+          on the leaderboard and in aggregate statistics.
         </p>
       </section>
 
       <section>
         <h2>Changes to this policy</h2>
         <p>
-          We'll update this page if anything changes. The last-modified date appears in the page meta and
-          on commits at <a href="https://github.com/atillakuruk/9bench" rel="external">github.com/atillakuruk/9bench</a>.
-          Last meaningful update: 2026-04-27.
+          We'll update this page if anything changes. The last-modified date appears below.
+          Last meaningful update: 2026-04-29 (privacy hardening pass — removed fingerprint
+          claim, server-side User-Agent shortening, swapped GA4 for Cloudflare Web Analytics,
+          disclosed CDN fetches for the Live LLM test, added pre-test consent box).
         </p>
       </section>
 
       <section>
         <h2>Contact</h2>
         <p>
-          Atilla Kürük (operator) — <a href="mailto:atillakrk@gmail.com">atillakrk@gmail.com</a>
+          Atilla Kürük (operator) — <a href="mailto:contact@9bench.com">contact@9bench.com</a>
         </p>
       </section>
     </article>

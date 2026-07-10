@@ -3,6 +3,96 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 
 const articles = [
   {
+    slug: 'how-much-vram-do-you-need-for-local-llm-2026',
+    title: 'How Much VRAM Do You Need for Local LLMs in 2026? (Tested + Tabled)',
+    description: 'Concrete VRAM requirements for Llama 3.3 70B, Qwen 2.5, Phi-4, Flux.1, HunyuanVideo. Tested tokens/s on 8/12/16/24/48 GB GPUs. The most-asked r/LocalLLaMA question, finally with calibrated numbers.',
+    category: 'Buying Guide',
+    emoji: '💾',
+    date: '2026-04-29',
+    readMins: 17,
+    from: '#06B6D4', to: '#155E75'
+  },
+  {
+    slug: 'run-local-llm-on-8gb-vram-2026-reality-check',
+    title: 'Run Local LLMs on 8 GB VRAM in 2026: The Honest Reality Check',
+    description: 'RTX 4060 / 3060 / 3070 owners — what actually works on 8 GB? Calibrated tokens/s for Qwen 2.5 7B, Llama 3.3 8B, Flux.1-schnell, SDXL, plus what to avoid (and why --lowvram has real costs).',
+    category: 'Buying Guide',
+    emoji: '🪙',
+    date: '2026-04-29',
+    readMins: 13,
+    from: '#10B981', to: '#064E3B'
+  },
+  {
+    slug: 'best-laptop-for-local-ai-2026',
+    title: 'Best Laptop for Local AI 2026: M4 Max vs RTX 4090 Mobile vs Strix Halo',
+    description: 'Three contenders for the best AI laptop in 2026. Apple M4 Max wins on battery + 70B capability, RTX 4090 Laptop wins raw speed, AMD Ryzen AI Max+ 395 (Strix Halo) is the new dark horse with 96 GB unified at half Apple\'s price.',
+    category: 'Buying Guide',
+    emoji: '💻',
+    date: '2026-04-29',
+    readMins: 16,
+    from: '#7C3AED', to: '#1E3A8A'
+  },
+  {
+    slug: 'can-my-pc-run-it-15-second-test-2026',
+    title: 'Can My PC Run It? Test Hardware for Games, AI & Apps in 15 Seconds',
+    description: 'No download needed. Test if your PC can run modern games, local LLMs (Llama, Phi-3), Stable Diffusion XL, and productivity apps — all in your browser. Calibrated against 50+ GPUs.',
+    category: 'How-To',
+    emoji: '🎮',
+    date: '2026-04-29',
+    readMins: 14,
+    from: '#00D9FF', to: '#0891B2'
+  },
+  {
+    slug: 'best-gpu-for-local-llm-2026',
+    title: 'Best GPU for Local LLM in 2026: Tested + Real Tokens/Second',
+    description: 'Calibrated tokens/second benchmarks for 30+ GPUs running Llama 7B Q4. RTX 4090, 5090, 7900 XTX, M3 Max, M3 Ultra, used 3090 — honest tier breakdown.',
+    category: 'Buying Guide',
+    emoji: '🧠',
+    date: '2026-04-29',
+    readMins: 16,
+    from: '#8B5CF6', to: '#3B0764'
+  },
+  {
+    slug: 'userbenchmark-banned-honest-alternatives-2026',
+    title: 'UserBenchmark Was Banned by r/Hardware — 5 Honest Alternatives 2026',
+    description: 'Why r/hardware, r/pcmasterrace, and r/AMD all banned UserBenchmark. The 2019 scoring change explained, plus 5 actually-honest alternatives including AI-aware 9bench.',
+    category: 'Comparisons',
+    emoji: '🚫',
+    date: '2026-04-29',
+    readMins: 13,
+    from: '#DC2626', to: '#7F1D1D'
+  },
+  {
+    slug: 'browser-vs-native-llm-performance',
+    title: 'Browser vs Native LLM: Why transformers.js Is 5-10× Slower Than llama.cpp',
+    description: 'Honest measurements of LLM inference in browser vs native. Why WebAssembly + WebGPU is slower, when the browser is fast enough, what changes in 2026-2027.',
+    category: 'Deep Dive',
+    emoji: '⚡',
+    date: '2026-04-29',
+    readMins: 14,
+    from: '#F59E0B', to: '#9A3412'
+  },
+  {
+    slug: 'test-pc-stable-diffusion-xl-15-seconds',
+    title: 'Test Your PC for Stable Diffusion XL in 15 Seconds (No Install)',
+    description: 'Will your PC run SDXL? Test in your browser. Calibrated 1024² generation times for 30+ GPUs (RTX 4090, 4070, 3060, M3 Max, RX 7900 XTX) plus 8 GB VRAM workarounds.',
+    category: 'Hardware Testing',
+    emoji: '🎨',
+    date: '2026-04-29',
+    readMins: 13,
+    from: '#EC4899', to: '#831843'
+  },
+  {
+    slug: 'apple-m3-max-vs-rtx-4090-local-ai',
+    title: 'Apple M3 Max vs RTX 4090 for Local AI in 2026: Side-by-Side',
+    description: 'Llama 7B, 70B, SDXL, fine-tuning — all benchmarked on M3 Max (64GB unified) vs RTX 4090 (24GB VRAM). Where each wins, where each loses, what to actually buy.',
+    category: 'Comparisons',
+    emoji: '🍎',
+    date: '2026-04-29',
+    readMins: 15,
+    from: '#10B981', to: '#1E3A8A'
+  },
+  {
     slug: 'userbenchmark-alternatives-2026',
     title: 'UserBenchmark Alternatives 2026: Why It\'s Banned + What to Use',
     description: 'r/hardware and r/pcmasterrace banned UserBenchmark for documented anti-AMD bias. Here\'s the honest 2026 list of alternatives — what each does well, what they cost.',
@@ -80,6 +170,7 @@ const articles = [
   description="In-depth articles on hardware benchmarking, CPU/GPU/RAM performance, browser-based testing, UserBenchmark alternatives, and more."
   keywords="hardware benchmark articles, cpu gpu ram guides, browser benchmark explained, userbenchmark alternative articles"
   ogImage="https://9bench.com/og?p=articles"
+  breadcrumbItems={[{ name: 'Articles' }]}
 >
   <section class="articles-hero">
     <div class="articles-hero-tag">⚡ TRUTH SERIES · ARTICLES</div>

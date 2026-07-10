@@ -1,53 +1,72 @@
 User-agent: *
 Allow: /
+# Result pages are user-shared, not search-indexable.
+# Privacy policy promises this — enforce it here.
+Disallow: /r/
 
-# AI crawlers — explicit allow
+# AI crawlers — explicit allow on public pages, but no result pages.
 User-agent: GPTBot
 Allow: /
+Disallow: /r/
 
 User-agent: ClaudeBot
 Allow: /
+Disallow: /r/
 
 User-agent: Claude-Web
 Allow: /
+Disallow: /r/
 
 User-agent: PerplexityBot
 Allow: /
+Disallow: /r/
 
 User-agent: Google-Extended
 Allow: /
+Disallow: /r/
 
 User-agent: Bytespider
 Allow: /
+Disallow: /r/
 
 User-agent: CCBot
 Allow: /
+Disallow: /r/
 
 User-agent: anthropic-ai
 Allow: /
+Disallow: /r/
 
 User-agent: Applebot-Extended
 Allow: /
+Disallow: /r/
 
 User-agent: cohere-ai
 Allow: /
+Disallow: /r/
 
 User-agent: Diffbot
 Allow: /
+Disallow: /r/
 
 User-agent: FacebookBot
 Allow: /
+Disallow: /r/
 
 User-agent: ImagesiftBot
 Allow: /
+Disallow: /r/
 
 User-agent: Meta-ExternalAgent
 Allow: /
+Disallow: /r/
 
 User-agent: Omgilibot
 Allow: /
+Disallow: /r/
 
 User-agent: YouBot
 Allow: /
+Disallow: /r/
 
 Sitemap: https://9bench.com/sitemap.xml

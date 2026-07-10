@@ -18,6 +18,7 @@ import { tierFor } from '../components/bench/tier-system';
   title="Top scores — 9bench"
   description="The fastest computers measured by 9bench, anonymously. Browser hardware benchmark leaderboard, last 7 days."
   keywords="top hardware benchmark scores, fastest computer 9bench, leaderboard, gpu benchmark ranking, cpu benchmark top, browser benchmark leaderboard"
+  breadcrumbItems={[{ name: 'Top Scores' }]}
 >
   <main class="container top-page">
 
@@ -89,7 +90,7 @@ import { tierFor } from '../components/bench/tier-system';
     <!-- CTA -->
     <section class="top-page__cta">
       <a href="/test/" class="run-btn">▶ TEST MY HARDWARE</a>
-      <a href="/methodology" class="btn-outline">Read the methodology</a>
+      <a href="/methodology/" class="btn-outline">Read the methodology</a>
     </section>
   </main>
 </BaseLayout>
@@ -230,6 +231,21 @@ import { tierFor } from '../components/bench/tier-system';
   function shortCpu(cores: number) {
     return `${cores}-core`;
   }
+  /**
+   * HTML-escape user-supplied strings before injecting into innerHTML.
+   * GPU name comes from user submissions (browser-supplied via WebGL
+   * debug-renderer) and could contain attacker-injected HTML if a
+   * malicious client spoofed the field. This protects every visitor
+   * to /top from a stored XSS.
+   */
+  function escapeHtml(s: string | null | undefined): string {
+    return String(s ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
 
   async function loadPeriod(period: 'week' | 'month' | 'all') {
     currentPeriod = period;
@@ -266,16 +282,20 @@ import { tierFor } from '../components/bench/tier-system';
 
       // Render rows
       const tbody = $('#leaderboard-rows')!;
-      tbody.innerHTML = results.map((r: any) => `
-        <tr data-href="/r/${r.id}/">
+      tbody.innerHTML = results.map((r: any) => {
+        // ID is regex-validated server-side (^[a-f0-9]{8}$) but we
+        // re-validate here to be paranoid (defence in depth).
+        const safeId = String(r.id || '').replace(/[^a-f0-9]/g, '').slice(0, 8);
+        return `
+        <tr data-href="/r/${safeId}/">
           <td class="rank-cell">#${String(r.rank).padStart(2, '0')}</td>
           <td class="score-cell tnum">${fmt(r.scores.overall)}</td>
           <td>${shortCpu(r.cpu.cores)}</td>
-          <td class="gpu-cell" title="${r.gpu.name || ''}">${shortGpu(r.gpu.name)}</td>
-          <td class="hash-cell">-${r.id.slice(0, 6)}-</td>
+          <td class="gpu-cell" title="${escapeHtml(r.gpu.name || '')}">${escapeHtml(shortGpu(r.gpu.name))}</td>
+          <td class="hash-cell">-${escapeHtml(safeId.slice(0, 6))}-</td>
           <td class="date-cell num tnum">${shortDate(r.createdAt)}</td>
-        </tr>
-      `).join('');
+        </tr>`;
+      }).join('');
 
       // Make rows clickable
       tbody.querySelectorAll<HTMLElement>('tr[data-href]').forEach((tr) => {

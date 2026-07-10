@@ -19,8 +19,48 @@ import TruthDisclaimer from '../components/bench/TruthDisclaimer.astro';
 <BaseLayout
   title="Testing your hardware — 9bench"
   description="9bench is benchmarking your CPU, GPU, and RAM in real time. ~15 seconds, all in your browser."
+  noindex={true}
 >
   <main class="container test-running">
+
+    <!-- ── Pre-test consent screen (GDPR Art. 6(1)(a) explicit consent) ── -->
+    <!-- Visible by default. The actual benchmark UI below is hidden until
+         the user clicks "Start Test". The checkbox state determines whether
+         we submit the result to D1 — uncheck to keep everything local. -->
+    <section class="test-intro" id="test-intro">
+      <h1 class="test-intro__title">Ready to test your hardware?</h1>
+      <p class="test-intro__lead">
+        15-second benchmark via WebGPU + WebAssembly + Web Workers.
+        Runs entirely in your browser. No download, no signup.
+      </p>
+
+      <div class="consent-box">
+        <label class="consent-box__row">
+          <input type="checkbox" id="consent-submit" checked />
+          <span class="consent-box__label">
+            Submit my anonymous result to the global ranking
+          </span>
+        </label>
+        <p class="consent-box__detail">
+          What gets submitted: score breakdown, GPU name (if exposed by your browser),
+          CPU core count, AI capability snapshot, a short
+          <code>Browser-Major / OS / Arch</code> string, timestamp.
+          No IP address, no cookies, no fingerprints.
+          <a href="/privacy/" class="consent-box__link">Privacy details →</a>
+        </p>
+        <p class="consent-box__detail consent-box__detail--muted">
+          Uncheck to run the benchmark without storing anything — you'll see your
+          result locally on this page.
+        </p>
+      </div>
+
+      <button type="button" id="start-btn" class="test-intro__start-btn">
+        ▶ START 15-SECOND TEST
+      </button>
+    </section>
+
+    <!-- ── Benchmark UI (hidden until Start clicked) ───────────────── -->
+    <div id="test-ui" hidden>
 
     <!-- ── Status bar ───────────────────────────────────────────────── -->
     <div class="status-bar" id="status-bar">
@@ -142,6 +182,9 @@ import TruthDisclaimer from '../components/bench/TruthDisclaimer.astro';
         <a href="/" class="btn-outline">← Back to home</a>
       </p>
     </div>
+
+    </div>
+    <!-- end #test-ui -->
   </main>
 </BaseLayout>
 
@@ -151,6 +194,101 @@ import TruthDisclaimer from '../components/bench/TruthDisclaimer.astro';
     display: flex;
     flex-direction: column;
     gap: 20px;
+  }
+
+  /* ── Pre-test intro / consent screen ──────────────────────────── */
+  .test-intro {
+    max-width: 720px;
+    margin: 40px auto 0;
+    padding: 32px 28px;
+    border: 1px solid var(--line);
+    background: var(--bg-2);
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .test-intro__title {
+    font-family: var(--sans);
+    font-size: 28px;
+    font-weight: 800;
+    margin: 0;
+    line-height: 1.1;
+  }
+  .test-intro__lead {
+    color: var(--fg-2);
+    line-height: 1.55;
+    margin: 0;
+  }
+  .consent-box {
+    border: 1px solid var(--line);
+    padding: 16px 18px;
+    background: rgba(0, 217, 255, 0.04);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  :root[data-accent="orange"] .consent-box {
+    background: rgba(255, 107, 43, 0.04);
+  }
+  .consent-box__row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    cursor: pointer;
+  }
+  .consent-box__row input[type="checkbox"] {
+    margin-top: 3px;
+    width: 18px;
+    height: 18px;
+    accent-color: var(--accent);
+    flex: 0 0 auto;
+  }
+  .consent-box__label {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: var(--fg);
+  }
+  .consent-box__detail {
+    font-family: var(--mono);
+    font-size: 11px;
+    line-height: 1.55;
+    color: var(--fg-2);
+    margin: 0;
+    padding-left: 28px;
+  }
+  .consent-box__detail--muted {
+    color: var(--fg-3);
+  }
+  .consent-box__detail code {
+    font-family: var(--mono);
+    background: rgba(255,255,255,0.06);
+    padding: 1px 5px;
+    border-radius: 2px;
+  }
+  .consent-box__link {
+    color: var(--accent);
+    text-decoration: none;
+  }
+  .consent-box__link:hover { text-decoration: underline; }
+  .test-intro__start-btn {
+    align-self: stretch;
+    padding: 16px 24px;
+    background: var(--accent);
+    color: #0A0A0A;
+    border: 0;
+    font-family: var(--mono);
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: transform 0.15s, background 0.15s;
+  }
+  .test-intro__start-btn:hover {
+    background: var(--fg);
+    transform: translateY(-1px);
   }
 
   /* Status bar — top of screen, accent-bordered */
@@ -644,6 +782,15 @@ import TruthDisclaimer from '../components/bench/TruthDisclaimer.astro';
     setStatus('✓ TEST COMPLETE', `${(result.durationMs / 1000).toFixed(1)}s · submitting…`);
     appendLog(`score → ${result.scores.overall.toLocaleString()} (overall)`);
 
+    // ── Consent check (GDPR Art. 6(1)(a)) ─────────────────────────
+    // If the consent box was unchecked before clicking Start, we don't
+    // submit — the user sees their result locally on this page only.
+    if (!userConsent) {
+      appendLog('consent → not given · result stays local (not submitted)');
+      setStatus('✓ TEST COMPLETE (LOCAL)', 'no submission per your consent setting');
+      return;
+    }
+
     // ── Submit + redirect ─────────────────────────────────────────
     try {
       const submitRes = await fetch('/api/submit', {
@@ -688,8 +835,31 @@ import TruthDisclaimer from '../components/bench/TruthDisclaimer.astro';
     }
   }
 
-  // ── Auto-start on mount ─────────────────────────────────────────
-  // Wait one tick so the layout settles + canvases get their measured size
-  // before we start drawing.
-  requestAnimationFrame(() => requestAnimationFrame(runBench));
+  // ── User consent state (set on Start click) ─────────────────────
+  // GDPR Art. 6(1)(a): the consent box on the intro screen determines
+  // whether we submit results to D1. Default is "checked" (submit).
+  // If the user unchecks before clicking Start, we run the benchmark
+  // but don't submit — they see their result locally on /test.
+  let userConsent = true;
+
+  // ── Gate the benchmark behind explicit Start click ──────────────
+  // Previously auto-started on mount → not GDPR-compliant for auto-submit.
+  // Now: user reads the consent screen, makes their choice, clicks Start.
+  function onStartClicked() {
+    const consentBox = document.getElementById('consent-submit') as HTMLInputElement | null;
+    userConsent = consentBox?.checked ?? true;
+
+    // Hide intro, show test UI
+    const intro = document.getElementById('test-intro');
+    const ui    = document.getElementById('test-ui');
+    if (intro) intro.setAttribute('hidden', '');
+    if (ui)    ui.removeAttribute('hidden');
+
+    // Wait one tick so the test-ui layout settles + canvases get their
+    // measured size before we start drawing.
+    requestAnimationFrame(() => requestAnimationFrame(runBench));
+  }
+
+  const startBtn = document.getElementById('start-btn');
+  if (startBtn) startBtn.addEventListener('click', onStartClicked);
 </script>

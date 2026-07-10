@@ -4,7 +4,7 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 const faqs = [
   {
     q: 'What is 9bench?',
-    a: 'A free, browser-based hardware benchmark. Tests your CPU, GPU, and RAM in 15 seconds with no download, no account, no upload of personal data. Built by Atilla Kürük as part of the Truth Series — utility tools that tell the truth.'
+    a: 'A free, browser-based hardware benchmark. Tests your CPU, GPU, and RAM in 15 seconds with no download, no account, no upload of personal data. Built independently as part of the Truth Series — utility tools that tell the truth.'
   },
   {
     q: 'How accurate are the scores?',
@@ -64,7 +64,7 @@ const faqs = [
   },
   {
     q: 'Can I delete my submitted result?',
-    a: 'Yes. Email atillakrk@gmail.com with the result ID (visible in URL: /r/abc12345) and we\'ll delete it. We don\'t store anything that identifies you, but we respect deletion requests.'
+    a: 'Yes. Email contact@9bench.com with the result ID (visible in URL: /r/abc12345) and we\'ll delete it. We don\'t store anything that identifies you, but we respect deletion requests.'
   }
 ];
 ---
@@ -74,6 +74,7 @@ const faqs = [
   description="Common questions about 9bench: how it works, accuracy, privacy, comparing to Geekbench, browser support."
   schemaType="FAQPage"
   ogImage="https://9bench.com/og?p=faq"
+  breadcrumbItems={[{ name: 'FAQ' }]}
 >
   <main class="max-w-3xl mx-auto px-5 py-12">
     <header class="text-center mb-10">
@@ -94,7 +95,7 @@ const faqs = [
     </div>
 
     <div class="text-center mt-12">
-      <a href="/methodology" class="text-brand underline">Read the full methodology →</a>
+      <a href="/methodology/" class="text-brand underline">Read the full methodology →</a>
     </div>
 
     <script type="application/ld+json" set:html={JSON.stringify({

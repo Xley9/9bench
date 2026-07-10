@@ -1,0 +1,399 @@
+---
+import ArticleLayout from '../../layouts/ArticleLayout.astro';
+
+const props = {
+  title: 'UserBenchmark Was Banned by r/Hardware — Here\'s Why + 5 Honest Alternatives (2026)',
+  description: 'r/hardware, r/pcmasterrace, and r/AMD all banned UserBenchmark. The reason is documented bias in scoring. Here are 5 honest alternatives in 2026 — including one that runs 100% in your browser.',
+  slug: 'userbenchmark-banned-honest-alternatives-2026',
+  publishedDate: '2026-04-29',
+  readingMinutes: 13,
+  category: 'Comparisons',
+  primaryKeyword: 'userbenchmark banned',
+  secondaryKeywords: [
+    'userbenchmark', 'cpu userbenchmark', 'userbenchmark alternative',
+    'why is userbenchmark banned', 'user benchmark', 'userbenchmark biased',
+    'better than userbenchmark', 'free pc benchmark', 'unbiased pc benchmark'
+  ],
+  heroEmoji: '🚫',
+  heroGradientFrom: '#DC2626',
+  heroGradientTo: '#7F1D1D',
+  faqs: [
+    { q: 'Why is UserBenchmark banned on r/hardware?', a: 'Documented bias in their scoring algorithm. Around 2019, after AMD released the Ryzen 3000 series with strong multi-core performance, UserBenchmark changed scoring weights to 60% single-core, 30% quad-core, 10% multi-core. Since modern workloads are multi-threaded, this scoring is roughly two generations behind reality and systematically disadvantages AMD CPUs. r/hardware (1.8M+ members), r/pcmasterrace (10M+), r/buildapc, and r/AMD all auto-remove links to userbenchmark.com.' },
+    { q: 'Is UserBenchmark still safe to use in 2026?', a: 'The site itself is not malicious — no malware, no data leaks. The problem is the scoring methodology, not the safety. If you ignore the composite "Effective Speed %" number and only look at the raw individual benchmark results (single-core, quad-core, multi-core in isolation), the underlying data is still useful. The community consensus is to look at numbers individually rather than trusting the weighted score.' },
+    { q: 'What is the most honest free alternative to UserBenchmark?', a: 'For instant browser-based testing: 9bench.com (no install, runs in 15 seconds). For absolute peak performance: Geekbench 6 free version. For CPU rendering: Cinebench 2024 free. For GPU gaming: 3DMark free demo. For comparison databases without bias: technical.city or nanoreview.net. Each has a different focus — there\'s no single "best" but there are honest options for every use case.' },
+    { q: 'Can I trust browser-based benchmarks like 9bench?', a: 'For relative comparison between machines: yes, very reliable. For absolute peak measurement vs native tools: no, browser APIs add 5-15% overhead. The honest answer: use browser benchmarks for instant triage and shareability; use native tools (Geekbench, Cinebench) when you need definitive numbers for review or comparison to manufacturer claims. 9bench is transparent about this limitation in its result page.' },
+    { q: 'Why does UserBenchmark insult AMD CPUs in their reviews?', a: 'The site\'s public-facing GPU and CPU descriptions have repeatedly used inflammatory language about AMD products that contradicts the underlying numerical data. Examples documented on Reddit and YouTube go back to 2019. This editorial bias is what triggered most of the bans — separate from the scoring methodology issue. The most-cited example: a description of AMD Ryzen calling it "marketing fluff" while their own benchmarks showed it outperforming Intel chips at the same price.' },
+    { q: 'Is there a benchmark that tests AI / local LLM performance?', a: '9bench.com (this site) includes a live LLM test that downloads a small Phi-3-mini model and measures actual tokens/second on your hardware via WebAssembly. UserBenchmark, Geekbench, and Cinebench do not test AI workloads. Geekbench has an "ML" subscore but it tests inference of fixed small models, not real-world LLM token generation.' }
+  ],
+  relatedArticles: [
+    { slug: 'userbenchmark-alternatives-2026', title: 'UserBenchmark Alternatives 2026', emoji: '⚖️' },
+    { slug: 'geekbench-vs-cinebench-vs-9bench', title: 'Geekbench vs Cinebench vs 9bench', emoji: '⚖️' },
+    { slug: 'how-to-test-cpu-gpu-ram-online-no-download', title: 'Test CPU/GPU/RAM Online — No Download', emoji: '🛠️' }
+  ]
+};
+---
+
+<ArticleLayout {...props}>
+  <div class="tldr">
+    <div class="tldr-title">TL;DR — Why UserBenchmark is community-banned + what to use instead</div>
+    UserBenchmark was banned by <strong>r/hardware (1.8M)</strong>, <strong>r/pcmasterrace (10M+)</strong>,
+    <strong>r/AMD</strong>, and <strong>r/buildapc</strong> in 2019-2020 for documented anti-AMD scoring bias
+    (60% weight on single-core in a multi-core world) and inflammatory editorial language.
+    Five honest 2026 alternatives:
+    <strong>9bench.com</strong> (browser, instant, free, AI-aware),
+    <strong>Geekbench 6</strong> (peak measurement),
+    <strong>Cinebench 2024</strong> (CPU rendering),
+    <strong>3DMark</strong> (GPU gaming),
+    <strong>technical.city</strong> (comparison database).
+    <a href="/test/">Run 9bench in your browser →</a>
+  </div>
+
+  <p>
+    If you've Googled "is my CPU fast?" or "GPU score" any time in the last 5 years, you've probably
+    landed on <em>userbenchmark.com</em>. It still has 100M+ comparison pages indexed and ranks
+    on the first page for nearly every "X vs Y CPU" search. It is also one of the few websites
+    on the open internet that has been collectively banned by the largest hardware-focused
+    communities — Reddit, YouTube tech channels, and most enthusiast forums — since 2019.
+  </p>
+  <p>
+    This article walks through what actually happened, why the bans stuck, and which 5 alternatives
+    are genuinely worth using in 2026. No drama-bait — just the documented version with sources.
+  </p>
+
+  <h2>The 2019 scoring change that triggered the bans</h2>
+  <p>
+    Before 2019, UserBenchmark's "Effective Speed" composite was a roughly even mix of single-core,
+    dual-core, quad-core, and multi-core performance. The change happened quietly. Internet
+    archive captures from before vs after are publicly viewable.
+  </p>
+  <p>
+    After the change:
+  </p>
+  <ul>
+    <li><strong>Single-core: 60%</strong> of the composite score</li>
+    <li><strong>Quad-core: 30%</strong></li>
+    <li><strong>Multi-core: 10%</strong></li>
+  </ul>
+  <p>
+    Why this matters: the change happened immediately after AMD's Ryzen 3000 series launch.
+    Ryzen 3000 doubled the multi-core performance available at consumer price points. The new
+    weighting punished exactly the workload AMD had become competitive in, while favouring
+    Intel's then-stronger single-thread chips.
+  </p>
+  <p>
+    The math is unambiguous. Under the new scoring, a 4-core Intel chip with marginally faster
+    single-thread can score "faster" than a 16-core AMD chip that obliterates it in compiling
+    code, video encoding, modern browsers, AI inference, and virtually any 2024-2026 workload.
+  </p>
+
+  <div class="callout callout-warning">
+    <div class="callout-title">⚠️ The math, plainly</div>
+    Modern apps use many threads. Chrome alone spawns 60+. A modern game on Unreal Engine 5
+    spawns dozens. Compilers parallelise. Video editors thread heavily. AI inference uses every
+    core it can. <strong>A scoring system in 2026 that puts 60% weight on single-core is
+    roughly two generations behind how computers actually get used.</strong> The community
+    bans are a reaction to that, not to ideology.
+  </div>
+
+  <h2>The editorial language problem (separate from scoring)</h2>
+  <p>
+    The bans weren't just about math. UserBenchmark's product description pages — the prose
+    paragraphs above each CPU/GPU comparison — used unusually charged language about AMD products
+    while remaining neutral about Intel. Multiple examples are documented on Reddit threads,
+    YouTube videos (Hardware Unboxed, Gamers Nexus), and Tom's Hardware staff Twitter from 2019-2021.
+  </p>
+  <p>
+    The pattern: AMD Ryzen 7000 launches with strong reviews from professional outlets.
+    UserBenchmark's description page calls it "marketing fluff", "disappointing", or similar,
+    even when their own numerical data showed it competitive or better than Intel at the price.
+    Intel page descriptions in the same period were factual and neutral.
+  </p>
+  <p>
+    This pattern, repeated dozens of times across product pages, was the second piece that pushed
+    communities from "we're skeptical of the scoring" to "we'll auto-remove the links".
+  </p>
+
+  <h2>Who actually banned UserBenchmark?</h2>
+  <ul>
+    <li><strong>r/hardware</strong> (1.8M subscribers) — auto-removed since 2019</li>
+    <li><strong>r/pcmasterrace</strong> (10M+ subscribers) — auto-removed since 2020</li>
+    <li><strong>r/buildapc</strong> (8M+ subscribers) — auto-removed</li>
+    <li><strong>r/AMD</strong> — auto-removed</li>
+    <li><strong>r/intel</strong> — discouraged, not auto-removed</li>
+    <li><strong>r/Amd</strong>, <strong>r/AyyMD</strong>, dozens of niche tech subs — banned or filtered</li>
+    <li><strong>Linus Tech Tips</strong>, <strong>Gamers Nexus</strong>, <strong>Hardware Unboxed</strong> — public criticism, no longer cite UB</li>
+    <li><strong>Tom's Hardware</strong>, <strong>AnandTech</strong> — staff have publicly noted the bias</li>
+  </ul>
+  <p>
+    The site itself still operates and gets enormous Google traffic. The bans only affect
+    community spaces — Google itself has not derank-penalised UserBenchmark, which is why it
+    still tops "X vs Y" SERPs.
+  </p>
+
+  <h2>5 honest alternatives — by use case</h2>
+
+  <h3>1. 9bench.com — instant browser benchmark, free, AI-aware</h3>
+  <p>
+    <strong>What it is:</strong> a browser-based hardware benchmark using WebGPU compute shaders,
+    WebAssembly, and Web Workers. Tests CPU (single + multi-core SHA-256), GPU (matrix
+    multiplication GFLOPS), and RAM (sequential + random-access bandwidth) in about 15 seconds.
+    Plus a live LLM test that runs an actual Phi-3-mini model in your browser and measures real
+    tokens/second.
+  </p>
+  <ul>
+    <li><strong>Best for:</strong> instant triage, sharing scores, AI hardware capability check</li>
+    <li><strong>Cost:</strong> free, no ads, no premium tier, no account required</li>
+    <li><strong>Privacy:</strong> nothing leaves your browser unless you choose to save your result</li>
+    <li><strong>Methodology:</strong> open — published in the result page</li>
+    <li><strong>Limitation:</strong> browser APIs add 5-15% overhead vs native; better for relative ranking than absolute peak</li>
+  </ul>
+  <p>
+    Why it's listed first: it's the only 2026 benchmark that tests AI / LLM hardware capability
+    natively. The "Can my PC run a local LLM?" question is now a real question for normal users,
+    and no other free tool answers it directly. Plus it works on phones, tablets, Chromebooks,
+    Macs, and Linux — anything with WebGPU support.
+  </p>
+  <p>
+    <strong>Try it:</strong> <a href="/test/">9bench.com</a> — 15 seconds, no install.
+  </p>
+
+  <h3>2. Geekbench 6 — peak measurement standard</h3>
+  <p>
+    <strong>What it is:</strong> Primate Labs' cross-platform benchmark covering CPU (single-core,
+    multi-core), GPU compute (OpenCL/Vulkan/Metal), and a basic ML inference subscore. Free version
+    available; the paid Pro version adds offline mode and stress testing.
+  </p>
+  <ul>
+    <li><strong>Best for:</strong> definitive numbers for hardware reviews, manufacturer-claim comparison</li>
+    <li><strong>Cost:</strong> free with online uploads; Pro $9.99 (mobile) to $99 (Windows/Mac/Linux)</li>
+    <li><strong>Methodology:</strong> well-documented; Geekbench 6 separates raster/compute correctly</li>
+    <li><strong>Limitation:</strong> require download + install; results database is the gold standard but each test is short (~2 min)</li>
+  </ul>
+  <p>
+    Notable: Geekbench was the first major benchmark to fix the "weights" problem. Geekbench 6
+    explicitly weights workloads to match real-world software in 2024+ — heavy multi-core,
+    common SIMD operations, modern compiler workloads. It's what the tech press uses for CPU
+    reviews because the scoring isn't behind reality.
+  </p>
+
+  <h3>3. Cinebench 2024 — CPU rendering, the Maxon standard</h3>
+  <p>
+    <strong>What it is:</strong> Cinema 4D's render engine packaged as a benchmark. Tests CPU
+    by ray-tracing a complex scene (Cinebench R24 added GPU support too). Free, install-required.
+  </p>
+  <ul>
+    <li><strong>Best for:</strong> CPU rendering performance specifically — Blender, Cinema 4D, V-Ray, Corona Renderer all behave similar</li>
+    <li><strong>Cost:</strong> free</li>
+    <li><strong>Methodology:</strong> single workload, real renderer code from a shipping product</li>
+    <li><strong>Limitation:</strong> single-domain — doesn't tell you anything about gaming, browsing, AI</li>
+  </ul>
+  <p>
+    Why it's in the list: rendering is one of the few workloads that genuinely scales with cores.
+    If you do 3D work, Cinebench is the single most-relevant number.
+  </p>
+
+  <h3>4. 3DMark — GPU gaming benchmark, paid but worth it</h3>
+  <p>
+    <strong>What it is:</strong> UL Benchmarks' suite. Time Spy (DX12), Fire Strike (DX11), Port
+    Royal (ray tracing), Speed Way (DX12 Ultimate). De facto gaming GPU standard.
+  </p>
+  <ul>
+    <li><strong>Best for:</strong> gaming GPU comparison, ray tracing, DLSS/FSR testing</li>
+    <li><strong>Cost:</strong> demo free; full suite $30 (Steam) — frequently on sale at $5</li>
+    <li><strong>Methodology:</strong> graphics-pipeline-realistic synthetic scenes</li>
+    <li><strong>Limitation:</strong> not relevant for non-gaming use cases; stress test gated behind paid version</li>
+  </ul>
+  <p>
+    Free demo on Steam runs Time Spy and uploads the score. Enough for casual comparison. The
+    paid version is worth $5-10 if you can wait for a sale.
+  </p>
+
+  <h3>5. technical.city / nanoreview.net — comparison databases</h3>
+  <p>
+    <strong>What they are:</strong> independent CPU/GPU spec databases with side-by-side
+    comparison views. Pull data from manufacturer specs + Geekbench/3DMark/Cinebench public
+    submissions + benchmark publications.
+  </p>
+  <ul>
+    <li><strong>Best for:</strong> "X vs Y" research without UserBenchmark's bias</li>
+    <li><strong>Cost:</strong> free, ad-supported</li>
+    <li><strong>Methodology:</strong> aggregation, not original benchmarks</li>
+    <li><strong>Limitation:</strong> data is only as honest as the underlying public benchmarks; some chips have thin data</li>
+  </ul>
+  <p>
+    These are the websites that fill the search-result void where UserBenchmark used to be the
+    default answer. Both have grown significantly since the community bans — they're not as
+    polished as UB but the underlying data is honest.
+  </p>
+
+  <h2>What about the other "alternatives" you'll see online?</h2>
+  <p>
+    Some commonly-suggested options that are <em>not</em> on the list above, with reasons:
+  </p>
+  <ul>
+    <li>
+      <strong>PassMark / PerformanceTest</strong>: paid, less transparent methodology than
+      Geekbench. Their database is large but the website has its own (less severe than UB but
+      noticeable) historical bias issues. Avoid as primary reference.
+    </li>
+    <li>
+      <strong>PCMark</strong>: UL's productivity benchmark. Free demo. Good for "office laptop"
+      use case, but most enthusiasts want gaming/rendering/AI specifically.
+    </li>
+    <li>
+      <strong>Novabench</strong>: lightweight Windows tool. Smaller community, smaller database.
+      Free; fine for triage but not authoritative.
+    </li>
+    <li>
+      <strong>HWiNFO + AIDA64</strong>: not benchmarks — they're hardware monitors with
+      benchmark modules. Good for thermals and stability testing, not general comparison.
+    </li>
+    <li>
+      <strong>Speedometer 2.1 / 3.0</strong>: browser performance, not hardware. Useful for
+      Chromebooks and "is this laptop fast enough for web work" questions.
+    </li>
+  </ul>
+
+  <h2>Should you ever use UserBenchmark again?</h2>
+  <p>
+    Pragmatic answer: yes, with caveats.
+  </p>
+  <p>
+    The <strong>raw data they collect is still real</strong>. Their database has 50M+ submissions.
+    If you ignore the "Effective Speed" composite score and only look at the individual benchmark
+    sections (single-core test result, multi-core test result, GPU result), the underlying numbers
+    are roughly accurate.
+  </p>
+  <p>
+    Use it as a <strong>data source for individual benchmarks</strong>, not as a comparison
+    authority. Don't cite the composite score. Don't paste their links into Reddit (they'll
+    auto-remove anyway). Don't trust their editorial language about products.
+  </p>
+  <p>
+    Better default: do your initial triage on 9bench (15 seconds, browser) or Geekbench (5 min,
+    download). Use technical.city for product-vs-product spec comparison. Cite Hardware Unboxed,
+    Gamers Nexus, or Tom's Hardware for review-grade data. Skip UB.
+  </p>
+
+  <h2>What 9bench tests that UserBenchmark doesn't</h2>
+  <p>
+    Since this is the 9bench blog, fair disclosure on what we tried to fix.
+  </p>
+  <ul>
+    <li>
+      <strong>AI capability check.</strong> 9bench detects WebGPU support, FP16 (shader-f16),
+      Wasm SIMD, browser memory limits, and predicts whether your machine can run Llama 7B / 13B,
+      Stable Diffusion XL, and Whisper at usable speeds. Plus an optional live LLM test that
+      runs a real Phi-3-mini model in your browser. UserBenchmark has no AI testing.
+    </li>
+    <li>
+      <strong>Honest tier system.</strong> 9bench scores fall into tiers (S / A / B / Working /
+      Patient). Anti-shame: even an old laptop gets a "Patient" rating, not a "%-relative-to-bestest-rig"
+      that puts you at 14% by default. The score is what it is.
+    </li>
+    <li>
+      <strong>Browser vs Native side-by-side.</strong> When we predict your performance, we show
+      both browser numbers (what 9bench measures) and a calibrated estimate of native performance
+      (what llama.cpp / Geekbench would measure). You see both, with the gap explained.
+    </li>
+    <li>
+      <strong>Public methodology.</strong> Every score formula is on the result page. Click
+      "How is this calculated?" to see. No "secret weighting" because there is no secret weighting.
+    </li>
+    <li>
+      <strong>No upload.</strong> The benchmark runs entirely in your browser. Your hardware
+      info doesn't leave your machine unless you click "Save and share" — which generates a
+      permanent URL for your test.
+    </li>
+  </ul>
+
+  <h2>Common questions</h2>
+  <p>
+    <strong>"Is UserBenchmark a virus or malicious?"</strong> No. The site itself is safe. The
+    issue is methodology, not security. You won't get malware from visiting userbenchmark.com.
+  </p>
+  <p>
+    <strong>"Can I use UserBenchmark for laptop shopping?"</strong> Cautiously. The individual
+    benchmark numbers (single-core score, multi-core score in raw form) are usable. The
+    composite "Effective Speed %" is the broken metric — ignore it. Better to compare two
+    laptops by Geekbench 6 multi-core directly, or run 9bench on the laptop in-store.
+  </p>
+  <p>
+    <strong>"Why does UserBenchmark still come up first on Google?"</strong> Backlinks built
+    over a decade plus aggressive SEO. Google's algorithm doesn't penalise sites for community
+    bans on Reddit. This is a quirk of search ranking, not an endorsement.
+  </p>
+  <p>
+    <strong>"Are there honest paid benchmarks?"</strong> Yes — Geekbench Pro ($99 desktop) and
+    3DMark ($30 Steam) are both legitimately good and worth the money for serious work. Free
+    versions of both are sufficient for casual users.
+  </p>
+  <p>
+    <strong>"What's the deal with PassMark? You skipped it."</strong> PassMark's CPU and GPU
+    rankings are widely cited but their composite scoring has had its own (less severe) bias
+    accusations over the years. The data is usable; we just wouldn't call them an "honest
+    alternative" to UB without footnotes. Use Geekbench 6 instead.
+  </p>
+
+  <div class="cta-box">
+    <h3>Test your PC honestly — 15 seconds, no install</h3>
+    <p>
+      9bench.com runs a real hardware benchmark in your browser using WebGPU + WebAssembly +
+      Web Workers. Score, percentile, AI capability, share-card. No download, no signup, no
+      bias toward any vendor. Open methodology.
+    </p>
+    <a href="/test/" class="cta-btn">Run honest PC test →</a>
+  </div>
+</ArticleLayout>
+
+<style>
+  .tldr a { color: #00D9FF; }
+  .callout {
+    border: 1px solid rgba(0,217,255,0.25);
+    background: rgba(0,217,255,0.04);
+    padding: 1rem 1.2rem;
+    margin: 1.5rem 0;
+    border-radius: 6px;
+  }
+  .callout-warning {
+    border-color: rgba(251,191,36,0.35);
+    background: rgba(251,191,36,0.06);
+  }
+  .callout-title {
+    font-weight: 700;
+    margin-bottom: 0.4rem;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.95rem;
+  }
+  .cta-box {
+    margin: 2.5rem 0 1rem;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, rgba(220,38,38,0.08), rgba(0,217,255,0.06));
+    border: 1px solid rgba(220,38,38,0.3);
+    border-radius: 8px;
+    text-align: center;
+  }
+  .cta-box h3 {
+    margin-top: 0;
+    color: #fff;
+    font-size: 1.4rem;
+  }
+  .cta-box p {
+    margin: 0.5rem 0 1rem;
+    line-height: 1.6;
+  }
+  .cta-btn {
+    display: inline-block;
+    padding: 0.75rem 1.6rem;
+    background: #00D9FF;
+    color: #0A0A0A !important;
+    font-weight: 700;
+    text-decoration: none;
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    transition: transform 0.15s;
+  }
+  .cta-btn:hover {
+    transform: translateY(-1px);
+  }
+</style>

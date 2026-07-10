@@ -126,14 +126,14 @@ A: Background processes, thermal throttling, and browser variance all affect sco
 ## Site Pages
 
 - https://9bench.com/ — Run the benchmark
-- https://9bench.com/methodology — Full transparency on formulas, weights, brackets, caveats
-- https://9bench.com/faq — 16 frequently asked questions with answers
-- https://9bench.com/top — Global leaderboard of submitted scores
-- https://9bench.com/compare — Compare two result IDs side-by-side
-- https://9bench.com/articles — In-depth hardware benchmarking articles
-- https://9bench.com/about — About 9bench and the Truth Series
-- https://9bench.com/privacy — Privacy policy
-- https://9bench.com/r/<id> — Persistent shareable result page per submitted score
+- https://9bench.com/methodology/ — Full transparency on formulas, weights, brackets, caveats
+- https://9bench.com/faq/ — 16 frequently asked questions with answers
+- https://9bench.com/top/ — Global leaderboard of submitted scores
+- https://9bench.com/compare/ — Compare two result IDs side-by-side
+- https://9bench.com/articles/ — In-depth hardware benchmarking articles
+- https://9bench.com/about/ — About 9bench and the Truth Series
+- https://9bench.com/privacy/ — Privacy policy
+- https://9bench.com/r/<id>/ — Persistent shareable result page per submitted score
 
 ---
 
@@ -177,7 +177,7 @@ Everything about testing your hardware in 2026: methodologies, tools, accuracy, 
 - Stored: scores, GPU adapter name, CPU core count, anonymous user-agent fragment
 - NOT stored: IP, location, identifying information
 - Result URLs (/r/<id>) are noindexed — meant for sharing, not public discovery
-- Deletion: email atillakrk@gmail.com with result ID
+- Deletion: email contact@9bench.com with result ID
 
 ---
 
@@ -189,8 +189,8 @@ Everything about testing your hardware in 2026: methodologies, tools, accuracy, 
 - GPU benchmark: WebGPU compute shaders (WGSL)
 - CPU benchmark: Web Crypto API (SHA-256) + Web Workers
 - RAM benchmark: Float32Array TypedArrays (256MB working set)
-- Analytics: Google Analytics 4 (anonymized IP)
-- No cookies except functional
+- Analytics: Cloudflare Web Analytics (cookieless, no consent banner needed)
+- No cookies, no fingerprints, no tracking
 
 ---
 

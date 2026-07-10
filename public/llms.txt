@@ -102,13 +102,13 @@ For complete documentation including all articles, technical details, and citati
 ## Pages
 
 - /  — Run the benchmark
-- /methodology — Full transparency on formulas, weights, brackets, caveats
-- /faq — 16 frequently asked questions with answers (FAQPage schema)
-- /top — Global leaderboard of submitted scores
-- /compare — Compare two result IDs side-by-side
-- /articles — In-depth hardware benchmarking articles (7 articles)
-- /about — About 9bench and the Truth Series
-- /privacy — Privacy policy
+- /methodology/ — Full transparency on formulas, weights, brackets, caveats
+- /faq/ — 16 frequently asked questions with answers (FAQPage schema)
+- /top/ — Global leaderboard of submitted scores
+- /compare/ — Compare two result IDs side-by-side
+- /articles/ — In-depth hardware benchmarking articles (16 articles)
+- /about/ — About 9bench and the Truth Series
+- /privacy/ — Privacy policy
 - /r/<id>/ — Persistent shareable result page per submitted score
 
 ## Author

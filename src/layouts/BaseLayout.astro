@@ -2,14 +2,23 @@
 import '../styles/global.css';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
-import { GSC_META_VERIFICATION, BING_META_VERIFICATION, YANDEX_META_VERIFICATION, GA4_ID } from '../config';
+import { GSC_META_VERIFICATION, BING_META_VERIFICATION, YANDEX_META_VERIFICATION } from '../config';
 
 export interface Props {
   title: string;
   description: string;
   keywords?: string;
   ogImage?: string;
+  ogType?: 'website' | 'article';
+  articleMeta?: { publishedTime?: string; modifiedTime?: string; author?: string; section?: string };
   schemaType?: 'WebApplication' | 'Article' | 'FAQPage' | 'WebPage';
+  breadcrumbItems?: { name: string; item?: string }[];
+  /**
+   * If true, emit `<meta name="robots" content="noindex,nofollow">` so search
+   * engines don't index this page. Used for /r/[id] result pages — they're
+   * shareable but not search-discoverable, per privacy policy.
+   */
+  noindex?: boolean;
 }
 
 const {
@@ -17,14 +26,18 @@ const {
   description,
   keywords,
   ogImage,
-  schemaType = 'WebApplication'
+  ogType = 'website',
+  articleMeta,
+  schemaType = 'WebApplication',
+  breadcrumbItems,
+  noindex = false
 } = Astro.props;
 
 const SITE = 'https://9bench.com';
 const fullTitle = title.includes('9bench') ? title : `${title} — 9bench`;
 const canonicalUrl = new URL(Astro.url.pathname, SITE).toString();
 const ogImageUrl = ogImage || `${SITE}/og`;
-const dateModified = '2026-04-27';
+const dateModified = '2026-04-30';
 
 // ── KEYWORD STRATEGY (SEO + AEO + GEO) ───────────────────────────────
 // Default keyword set covers high-volume search terms + AI-citation-friendly
@@ -116,10 +129,12 @@ const orgNode = {
   logo: {
     '@type': 'ImageObject',
     url: `${SITE}/icon-512.png`,
-    width: '512',
-    height: '512'
+    width: 512,
+    height: 512
   },
-  sameAs: ['https://toololis.com']
+  foundingDate: '2026',
+  description: 'The honest browser-based hardware benchmark. Tests CPU, GPU, and RAM in 15 seconds using WebGPU + WebAssembly.',
+  sameAs: ['https://toololis.com', 'https://github.com/Xley9/9bench']
 };
 
 const websiteNode = {
@@ -129,14 +144,46 @@ const websiteNode = {
   name: '9bench',
   description: 'The honest browser-based hardware benchmark.',
   publisher: { '@id': `${SITE}#org` },
-  inLanguage: 'en-US'
+  inLanguage: 'en-US',
+  potentialAction: {
+    '@type': 'SearchAction',
+    target: `${SITE}/r/{search_term_string}`,
+    'query-input': 'required name=search_term_string'
+  }
+};
+
+// Speakable — tells voice assistants which parts of the page to read aloud
+const speakableNode = {
+  '@type': 'WebPage',
+  '@id': canonicalUrl,
+  name: fullTitle,
+  speakable: {
+    '@type': 'SpeakableSpecification',
+    cssSelector: ['h1', 'h2', 'meta[name=description]', '.seo-body', '.seo-faq']
+  },
+  dateModified
+};
+
+// BreadcrumbList — always present (homepage = root only, subpages add items)
+const breadcrumbNode = {
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: '9bench', item: SITE },
+    ...(breadcrumbItems || []).map((b, i) => ({
+      '@type': 'ListItem',
+      position: i + 2,
+      name: b.name,
+      ...(b.item ? { item: b.item } : {})
+    }))
+  ]
 };
 
 // Only include WebApplication on app pages (home, top, compare, history, results)
 const appPages = ['WebApplication'];
-const graphNodes = appPages.includes(schemaType)
-  ? [webAppNode, personNode, orgNode, websiteNode]
-  : [personNode, orgNode, websiteNode];
+const graphNodes = [
+  ...(appPages.includes(schemaType) ? [webAppNode] : []),
+  personNode, orgNode, websiteNode, speakableNode, breadcrumbNode
+];
 
 const baseSchema = {
   '@context': 'https://schema.org',
@@ -190,9 +237,19 @@ const baseSchema = {
     <link rel="alternate" hreflang="x-default" href={canonicalUrl} />
 
     <!-- Robots / AI crawl -->
-    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
-    <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large" />
-    <meta name="bingbot" content="index, follow" />
+    {noindex ? (
+      <>
+        <meta name="robots" content="noindex, nofollow" />
+        <meta name="googlebot" content="noindex, nofollow" />
+        <meta name="bingbot" content="noindex, nofollow" />
+      </>
+    ) : (
+      <>
+        <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+        <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large" />
+        <meta name="bingbot" content="index, follow" />
+      </>
+    )}
 
     <!-- Author + Publisher -->
     <meta name="author" content="Atilla Kürük" />
@@ -200,7 +257,7 @@ const baseSchema = {
     <meta name="last-modified" content={dateModified} />
 
     <!-- Open Graph -->
-    <meta property="og:type" content="website" />
+    <meta property="og:type" content={ogType} />
     <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonicalUrl} />
@@ -211,6 +268,10 @@ const baseSchema = {
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="9bench — The honest browser-based hardware benchmark" />
     <meta property="og:image:type" content="image/png" />
+    {articleMeta?.publishedTime && <meta property="article:published_time" content={articleMeta.publishedTime} />}
+    {articleMeta?.modifiedTime && <meta property="article:modified_time" content={articleMeta.modifiedTime} />}
+    {articleMeta?.author && <meta property="article:author" content={articleMeta.author} />}
+    {articleMeta?.section && <meta property="article:section" content={articleMeta.section} />}
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image" />
@@ -232,8 +293,10 @@ const baseSchema = {
     <link rel="sitemap" type="application/xml" href="/sitemap.xml" />
 
     <!-- DNS Prefetch -->
-    <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
-    <link rel="dns-prefetch" href="https://www.google-analytics.com" />
+    <!-- (Removed googletagmanager / google-analytics — swapped to
+         Cloudflare Web Analytics, cookieless, no consent banner needed
+         under EU ePrivacy / German TTDSG § 25.) -->
+    <link rel="dns-prefetch" href="https://static.cloudflareinsights.com" />
 
     <!-- Search Console Verifications -->
     {GSC_META_VERIFICATION && <meta name="google-site-verification" content={GSC_META_VERIFICATION} />}
@@ -246,18 +309,14 @@ const baseSchema = {
     <!-- Per-page additional schema slot -->
     <slot name="head" />
 
-    <!-- Google Analytics 4 -->
-    {GA4_ID && (
-      <>
-        <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA4_ID}`}></script>
-        <script set:html={`
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
-          gtag('js', new Date());
-          gtag('config', '${GA4_ID}', { anonymize_ip: true });
-        `}></script>
-      </>
-    )}
+    <!--
+      Cloudflare Web Analytics — cookieless, no consent banner needed.
+      Privacy-first replacement for GA4. NO manual script tag needed:
+      Cloudflare auto-injects the beacon at the edge (Web Analytics
+      "Automatic setup" mode is on for this site). Adding a manual
+      <script data-cf-beacon> tag here would result in a duplicate
+      beacon fire — so we don't.
+    -->
   </head>
   <body class="theme-bg">
     <Header />

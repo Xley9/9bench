@@ -66,25 +66,40 @@ export interface LLMTestProgress {
  *   - distilgpt2 (~250 MB): fallback. Older but tiny. Works on
  *     even Firefox-strict / low-RAM Chromebooks.
  */
-function selectModel(maxAllocatableGB: number): { id: string; displayName: string; sizeMB: number } {
-  if (maxAllocatableGB >= 2.5) {
+function selectModel(maxAllocatableGB: number): { id: string; displayName: string; sizeMB: number; isChat: boolean } {
+  // Phi-3-mini needs comfortable headroom because of KV cache + intermediate
+  // tensors during inference. 2.5 GB browser allocation isn't actually enough
+  // for the 1.7 GB weights + activations — bumping to 3.5 GB so users with
+  // marginal headroom don't get a half-loading model.
+  if (maxAllocatableGB >= 3.5) {
     return {
       id: 'Xenova/Phi-3-mini-4k-instruct',
       displayName: 'Phi-3-mini-4k-instruct (Q4)',
       sizeMB: 1740,
+      isChat: true,
     };
   }
-  if (maxAllocatableGB >= 0.6) {
+  // Qwen 0.5B Chat needs ~1.5 GB practical headroom (weights ~460MB +
+  // activations + KV cache + tokenizer overhead). At 1.0 GB it loads
+  // but inference produces 0 tokens because the model fails silently.
+  // Bumping the threshold so we fall through to distilgpt2 (a base model
+  // that reliably generates text without chat templating).
+  if (maxAllocatableGB >= 1.8) {
     return {
       id: 'Xenova/Qwen1.5-0.5B-Chat',
       displayName: 'Qwen1.5-0.5B-Chat',
       sizeMB: 460,
+      isChat: true,
     };
   }
+  // DistilGPT-2 is a base (non-chat) model. Reliably generates from any
+  // prompt without chat templates. ~250 MB weights, fits comfortably in
+  // 1 GB browser headroom.
   return {
     id: 'Xenova/distilgpt2',
     displayName: 'DistilGPT-2',
     sizeMB: 250,
+    isChat: false,
   };
 }
 
@@ -188,9 +203,26 @@ export async function runLLMLiveTest(
     percent: 90,
   });
 
-  const prompt = 'List five things every solo software builder should know about hardware benchmarking, with concrete examples:';
-  const maxTokens = 200;  // Hard cap — we'll usually hit time before tokens
-  const timeCap = 30_000; // 30 second wall-clock cap
+  // Chat-tuned models (Phi-3, Qwen Chat) need their chat template applied
+  // or they immediately emit end-of-sequence and produce 0 tokens.
+  // Base models (DistilGPT-2) just take raw text. Hand-build the chat
+  // template per model rather than relying on tokenizer.apply_chat_template
+  // which isn't always exposed in transformers.js v2.
+  const userQuestion = 'List five things every solo software builder should know about hardware benchmarking, with concrete examples:';
+  let prompt: string;
+  if (modelChoice.id.includes('Phi-3')) {
+    // Phi-3 chat template: <|user|>...<|end|><|assistant|>
+    prompt = `<|user|>\n${userQuestion}<|end|>\n<|assistant|>\n`;
+  } else if (modelChoice.id.includes('Qwen')) {
+    // Qwen 1.5 chat template: <|im_start|>user...<|im_end|><|im_start|>assistant
+    prompt = `<|im_start|>user\n${userQuestion}<|im_end|>\n<|im_start|>assistant\n`;
+  } else {
+    // Base models: raw prompt
+    prompt = userQuestion;
+  }
+
+  const maxTokens = 100;  // Hard cap — we'll usually hit time before tokens
+  const timeCap = 30_000; // 30 second wall-clock cap (informational; we don't actively cap here)
 
   // Manually track tokens because transformers.js doesn't easily
   // expose per-token callbacks for time-capping. We use max_new_tokens
@@ -200,8 +232,10 @@ export async function runLLMLiveTest(
   try {
     output = await generator(prompt, {
       max_new_tokens: maxTokens,
-      do_sample: false,  // greedy decoding for reproducibility
+      min_new_tokens: 8,  // Force at least some generation; prevents instant-stop bug
+      do_sample: false,   // greedy decoding for reproducibility
       temperature: 1.0,
+      repetition_penalty: 1.1,
     });
   } catch (e: any) {
     onProgress({
@@ -237,6 +271,22 @@ export async function runLLMLiveTest(
     // Close enough for the headline number — exact tokenization isn't
     // user-visible and char/4 is the industry-standard rough estimate.
     tokensGenerated = Math.round(generatedText.length / 4);
+  }
+
+  // Guard against silent-failure cases: 0 tokens or absurdly short
+  // inference (model emitted EOS immediately). Surface as a real error
+  // rather than displaying "0.0 tokens/s" — which looks like the
+  // benchmark is broken even though the actual issue is the model.
+  if (tokensGenerated === 0 || inferenceSeconds < 0.5) {
+    const errMsg = tokensGenerated === 0
+      ? `Model generated 0 tokens — likely chat-template mismatch or memory exhaustion. Try refreshing the page or increasing browser memory limits.`
+      : `Inference completed in <0.5s with no meaningful output. Model may have failed to load fully.`;
+    onProgress({
+      phase: 'error',
+      message: 'Inference produced no output',
+      error: errMsg,
+    });
+    throw new Error(errMsg);
   }
 
   const tokensPerSecond = tokensGenerated / inferenceSeconds;
