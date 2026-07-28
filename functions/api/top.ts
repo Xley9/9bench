@@ -12,7 +12,8 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
 
   // Leaderboard only ranks runs with a measured GPU — no-WebGPU runs use a
   // renormalized CPU+RAM formula and would compete on a different basis.
-  let timeFilter = ' WHERE score_gpu > 0';
+  // gpu_gflops is the discriminator everywhere (see api/r/[id].ts, og.ts).
+  let timeFilter = ' WHERE gpu_gflops > 0';
   if (period === 'week') {
     const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
     timeFilter += ` AND created_at > ${weekAgo}`;

@@ -402,12 +402,14 @@ function computeAIScore(
   const memComp = largestAllocatableGB * 250;  // 4 GB → 1000
   const fp16Bonus = fp16 ? 300 : 0;
 
-  return Math.round(
-    gpuComp * 0.40 +
-    ramComp * 0.35 +
-    memComp * 0.15 +
-    fp16Bonus * 0.10
-  );
+  // Mirror runner.ts: when the GPU could not be measured, renormalize the
+  // remaining weights instead of silently dropping the 40% GPU term. Without
+  // this a perfectly capable Ryzen desktop on Firefox/Linux lands in
+  // 'AI-Limited', which aiTierLabel then prints as a *hardware* verdict
+  // ("Cloud-only — not a local-AI machine") for what is really just a
+  // browser-support gap. The WebGPU path is byte-identical.
+  const base = ramComp * 0.35 + memComp * 0.15 + fp16Bonus * 0.10;
+  return Math.round(gpuGflops > 0 ? gpuComp * 0.40 + base : base / 0.60);
 }
 
 /**

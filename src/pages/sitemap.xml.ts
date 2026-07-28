@@ -6,12 +6,12 @@ export const GET: APIRoute = () => {
   // Use real last-modified dates per URL (not dynamic today) so Google
   // trusts lastmod signals. Update these when content actually changes.
   const urls = [
-    { loc: `${SITE}/`, lastmod: '2026-07-10', priority: '1.0', changefreq: 'weekly' },
-    { loc: `${SITE}/top/`, lastmod: '2026-07-10', priority: '0.9', changefreq: 'daily' },
+    { loc: `${SITE}/`, lastmod: '2026-07-28', priority: '1.0', changefreq: 'weekly' },
+    { loc: `${SITE}/top/`, lastmod: '2026-07-28', priority: '0.9', changefreq: 'daily' },
     { loc: `${SITE}/compare/`, lastmod: '2026-04-27', priority: '0.85', changefreq: 'monthly' },
-    { loc: `${SITE}/methodology/`, lastmod: '2026-07-10', priority: '0.9', changefreq: 'monthly' },
-    { loc: `${SITE}/faq/`, lastmod: '2026-07-10', priority: '0.9', changefreq: 'monthly' },
-    { loc: `${SITE}/about/`, lastmod: '2026-07-10', priority: '0.7', changefreq: 'monthly' },
+    { loc: `${SITE}/methodology/`, lastmod: '2026-07-28', priority: '0.9', changefreq: 'monthly' },
+    { loc: `${SITE}/faq/`, lastmod: '2026-07-28', priority: '0.9', changefreq: 'monthly' },
+    { loc: `${SITE}/about/`, lastmod: '2026-07-28', priority: '0.7', changefreq: 'monthly' },
     { loc: `${SITE}/privacy/`, lastmod: '2026-03-15', priority: '0.5', changefreq: 'yearly' },
     { loc: `${SITE}/articles/`, lastmod: '2026-04-30', priority: '0.95', changefreq: 'weekly' },
     // Articles

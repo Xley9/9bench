@@ -99,10 +99,12 @@ function resultCard(args: {
   total: number;
   percentile: number;
   aiTier: string | null;
+  /** false when this run had no WebGPU — the card must say so */
+  gpuMeasured: boolean;
 }): string {
   const { score, tier, hash, gpuName, cores, gflops, ram,
           scoreGpu, scoreCpuSingle, scoreCpuMulti, scoreRam,
-          total, percentile, aiTier } = args;
+          total, percentile, aiTier, gpuMeasured } = args;
 
   // HTML-escape user-supplied strings before interpolating into the
   // workers-og template. gpu_name and ai_tier come from D1 → originally
@@ -119,18 +121,27 @@ function resultCard(args: {
   const safeGpuName = escape(gpuName);
   const safeAiTier  = escape(aiTier);
 
-  // Show percentile only when N ≥ minimum (matches in-page gate logic)
+  // Show percentile only when N ≥ minimum (matches in-page gate logic).
+  // Counts are class-scoped, so name the pool rather than say "all runs".
   const percentileLine = total >= PERCENTILE_MIN_N
-    ? `Faster than ${percentile}% of all runs · ${fmt(total)} tests submitted`
-    : `Early days · ${fmt(total)} test${total === 1 ? '' : 's'} so far · percentile unlocks at 100+`;
+    ? (gpuMeasured
+        ? `Faster than ${percentile}% of all runs · ${fmt(total)} tests submitted`
+        : `Faster than ${percentile}% of CPU+RAM-only runs · ${fmt(total)} in this pool`)
+    : (gpuMeasured
+        ? `Early days · ${fmt(total)} test${total === 1 ? '' : 's'} so far · percentile unlocks at 100+`
+        : `Early days · ${fmt(total)} CPU+RAM-only test${total === 1 ? '' : 's'} · percentile unlocks at 100+`);
 
-  // Hardware sub-line — fall back gracefully when GPU is masked
-  const hwLine = safeGpuName
-    ? `${safeGpuName} · ${cores}-core CPU`
-    : `${cores}-core CPU · GPU hidden by browser`;
+  // Hardware sub-line — fall back gracefully when GPU is masked.
+  // "hidden by browser" is the wrong cause when there was no WebGPU at all.
+  const hwLine = gpuMeasured
+    ? (safeGpuName ? `${safeGpuName} · ${cores}-core CPU` : `${cores}-core CPU · GPU hidden by browser`)
+    : (safeGpuName ? `${safeGpuName} · ${cores}-core CPU · GPU not benchmarked`
+                   : `${cores}-core CPU · GPU not benchmarked`);
 
-  // AI tier badge (only shown if Phase G data is present)
-  const aiBadge = safeAiTier ? `
+  // AI tier badge — suppressed without a GPU measurement: it renders in
+  // accent cyan like an achievement, and the tier it would show is derived
+  // from hardware we never probed.
+  const aiBadge = (safeAiTier && gpuMeasured) ? `
     <div style="
       display: flex; align-items: center; gap: 8px;
       padding: 6px 12px; border: 1px solid ${TOKENS.accent};
@@ -213,19 +224,19 @@ function resultCard(args: {
             <div style="
               font-family: 'Inter', sans-serif; font-size: 16px;
               color: ${TOKENS.fg2}; display: flex;
-            ">${tier.sub}</div>
+            ">${gpuMeasured ? tier.sub : 'CPU + RAM ONLY · GPU NOT MEASURED'}</div>
           </div>
 
           ${aiBadge}
 
           <!-- Component breakdown (4 small cells) -->
           <div style="display: flex; gap: 0; border: 1px solid ${TOKENS.line};">
-            ${[
-              ['GPU',   scoreGpu],
-              ['CPU·1', scoreCpuSingle],
-              ['CPU·M', scoreCpuMulti],
-              ['RAM',   scoreRam],
-            ].map(([lbl, val], i) => `
+            ${([
+              ['GPU',   gpuMeasured ? fmt(scoreGpu) : '—'],
+              ['CPU·1', fmt(scoreCpuSingle)],
+              ['CPU·M', fmt(scoreCpuMulti)],
+              ['RAM',   fmt(scoreRam)],
+            ] as Array<[string, string]>).map(([lbl, val], i) => `
               <div style="
                 flex: 1; display: flex; flex-direction: column;
                 padding: 10px 12px;
@@ -241,7 +252,7 @@ function resultCard(args: {
                   font-family: 'Inter', sans-serif; font-weight: 700;
                   font-size: 22px; color: ${TOKENS.fg};
                   font-variant-numeric: tabular-nums; display: flex;
-                ">${fmt(val as number)}</div>
+                ">${val}</div>
               </div>
             `).join('')}
           </div>
@@ -259,7 +270,7 @@ function resultCard(args: {
           font-family: 'JetBrains Mono', monospace; font-size: 14px;
           color: ${TOKENS.fg2}; display: flex;
           font-variant-numeric: tabular-nums;
-        ">${hwLine} · ${gflops.toFixed(0)} GFLOPS · ${ram.toFixed(1)} GB/s</div>
+        ">${hwLine}${gpuMeasured ? ` · ${gflops.toFixed(0)} GFLOPS` : ''} · ${ram.toFixed(1)} GB/s</div>
         <div style="
           font-family: 'JetBrains Mono', monospace; font-size: 12px;
           color: ${TOKENS.fg3}; display: flex; letter-spacing: 0.04em;
@@ -503,9 +514,17 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
       `).bind(id).first<any>();
 
       if (row) {
-        const totalRow = await env.DB.prepare('SELECT COUNT(*) as c FROM results').first<{ c: number }>();
-        const lowerRow = await env.DB.prepare('SELECT COUNT(*) as c FROM results WHERE score_overall < ?')
-          .bind(row.score_overall).first<{ c: number }>();
+        // Percentile must be scoped to the same measurement class as the
+        // result page (functions/api/r/[id].ts), otherwise the shared card
+        // and the page state different things about the same result: an
+        // unfiltered count ranks a CPU+RAM-only score against GPU-inclusive
+        // ones and crosses the N>=100 gate on a different total.
+        const gpuMeasured = Number(row.gpu_gflops ?? 0) > 0;
+        const hasGpu = gpuMeasured ? 1 : 0;
+        const totalRow = await env.DB.prepare('SELECT COUNT(*) as c FROM results WHERE (gpu_gflops > 0) = ?')
+          .bind(hasGpu).first<{ c: number }>();
+        const lowerRow = await env.DB.prepare('SELECT COUNT(*) as c FROM results WHERE score_overall < ? AND (gpu_gflops > 0) = ?')
+          .bind(row.score_overall, hasGpu).first<{ c: number }>();
         const total = totalRow?.c || 1;
         const percentile = Math.round(((lowerRow?.c || 0) / total) * 100);
 
@@ -524,6 +543,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
           total,
           percentile,
           aiTier:         row.ai_tier || null,
+          gpuMeasured,
         });
         isResult = true;
       }

@@ -117,13 +117,26 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
            "what your hardware can really do" answer. -->
       <section class="ai-section" id="ai-section" hidden>
         <header class="ai-section__head">
-          <div class="eyebrow eyebrow--accent">// LOCAL AI · WHAT YOUR PC CAN RUN</div>
+          <div class="eyebrow eyebrow--accent" id="ai-eyebrow">// LOCAL AI · WHAT YOUR PC CAN RUN</div>
+
+          <!-- Shown instead of the score blocks + prediction table when the
+               GPU was never benchmarked. Everything in this section derives
+               from GPU GFLOPS; without them the only honest move is to say
+               so rather than extrapolate from a zero. -->
+          <div class="ai-nogpu" id="ai-nogpu" hidden>
+            <p class="ai-nogpu__text">
+              Your GPU was never benchmarked (no WebGPU), so we won't guess what it
+              can run. What's below is measured, not estimated: memory headroom, and
+              — if you run it — real tokens/s from a small model in this tab via
+              WebAssembly.
+            </p>
+          </div>
 
           <!-- Two score blocks: Browser (measured) vs Native (estimated).
                Both shown side-by-side so users can compare at a glance.
                Browser has the live measurement authority, Native has the
                "what your hardware really should do" guidance. -->
-          <div class="ai-scoreblocks">
+          <div class="ai-scoreblocks" id="ai-scoreblocks">
             <article class="ai-scoreblock ai-scoreblock--browser">
               <div class="ai-scoreblock__head">
                 <span class="ai-scoreblock__label">Browser</span>
@@ -177,7 +190,7 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
         <!-- Predictions — TWO-COLUMN table: Browser | Native side-by-side.
              Each row is one workload (Llama 7B, SDXL, etc) with both
              contexts shown. Mobile collapses to stacked rows. -->
-        <div class="ai-pred-table">
+        <div class="ai-pred-table" id="ai-pred-table">
           <header class="ai-pred-table__head">
             <div class="ai-pred-table__h-name">Workload</div>
             <div class="ai-pred-table__h-col">
@@ -286,7 +299,7 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
         </div>
 
         <!-- Methodology footnote with the 2-context explanation -->
-        <p class="ai-section__note">
+        <p class="ai-section__note" id="ai-pred-note">
           <strong>How these predictions work:</strong>
           <span class="text-accent">Browser</span> values reflect what your
           browser can actually run today (transformers.js, web-llm) — sandbox
@@ -837,6 +850,25 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
     margin-top: 20px;
     flex-wrap: wrap;
   }
+
+  /* Shown instead of the score blocks when the GPU wasn't benchmarked */
+  .ai-nogpu {
+    margin-top: 20px;
+    padding: 14px 16px;
+    border: 1px solid var(--line);
+    border-left: 2px solid var(--fg-3);
+    background: var(--bg-2);
+  }
+  .ai-nogpu__text {
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--fg-2);
+    margin: 0;
+  }
+  /* Elements the no-GPU path hides use the hidden attribute; these are
+     grid/flex containers whose display would otherwise override it. */
+  .ai-scoreblocks[hidden], .ai-pred-table[hidden], .ai-feat[hidden] { display: none !important; }
 
   /* ── Score blocks (Browser / Native side-by-side) ──────────── */
   .ai-scoreblocks {
@@ -1977,10 +2009,14 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
     // Identify component imbalance (RAM is structurally low in browsers,
     // so don't shame it — but if GPU or CPU is much weaker than the others,
     // call it out)
-    const components = [
-      ['GPU', r.scores.gpu],
-      ['CPU', r.scores.cpuMulti],
-    ] as Array<[string, number]>;
+    // Exclude an unmeasured GPU — otherwise a strong desktop on Firefox/Linux
+    // is told "Strong overall, but GPU lags noticeably" about a GPU we never
+    // benchmarked. With a single entry min === max, so imbalanced is false and
+    // the non-imbalanced wording applies.
+    const gpuMeasured = Number(r.gpu?.gflops ?? 0) > 0;
+    const components = (gpuMeasured
+      ? [['GPU', r.scores.gpu], ['CPU', r.scores.cpuMulti]]
+      : [['CPU', r.scores.cpuMulti]]) as Array<[string, number]>;
     const max = Math.max(...components.map(c => c[1]));
     const min = Math.min(...components.map(c => c[1]));
     const weakest = components.find(c => c[1] === min)?.[0];
@@ -2022,6 +2058,14 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
       const total      = data.total ?? 0;
       const tier       = tierFor(r.scores.overall);
 
+      // Did this run actually measure the GPU? gpu_gflops is the one
+      // unambiguous discriminator: runWebGPUBench returns 0 for every
+      // failure mode (no navigator.gpu, null adapter, device acquire
+      // failure, shader verification failure, timer floor), and a real
+      // measurement is never 0. Runs without it are scored on CPU + RAM
+      // with renormalized weights and must be labelled as such everywhere.
+      const gpuMeasured = Number(r.gpu?.gflops ?? 0) > 0;
+
       // r.createdAt is already milliseconds (set via Date.now() in submit.ts).
       // The previous *1000 multiplied to nanoseconds → invalid date "Mar 10, 58295".
       const dateStr = new Date(r.createdAt).toLocaleString('en-US', {
@@ -2030,10 +2074,12 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
       }) + ' UTC';
 
       // ── Document title with score ────────────────────────────
-      document.title = `9bench ${fmt(r.scores.overall)} (${tier.label}) — your hardware in 15 seconds`;
+      document.title = gpuMeasured
+        ? `9bench ${fmt(r.scores.overall)} (${tier.label}) — your hardware in 15 seconds`
+        : `9bench ${fmt(r.scores.overall)} (CPU+RAM only) — your hardware in 15 seconds`;
 
       // ── Header strip ─────────────────────────────────────────
-      setText('#result-status', '✓ TEST COMPLETE');
+      setText('#result-status', gpuMeasured ? '✓ TEST COMPLETE' : '✓ PARTIAL RUN · CPU + RAM ONLY');
       setText('#result-date',   dateStr);
       // We don't store browser strings yet — placeholder until schema migration
       $('#result-browser')!.style.display = 'none';
@@ -2041,35 +2087,55 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
       // ── Hero ─────────────────────────────────────────────────
       setText('#result-score', fmt(r.scores.overall));
       setText('#tier-label',   tier.label);
-      setText('#tier-sub',     tier.sub);
+      // Keep the tier letter, but never let it stand unqualified on a
+      // CPU+RAM-only run — it's computed on a different basis. We do NOT
+      // invent separate thresholds: there is no calibration data for that
+      // pool yet, and inventing one would be the kind of unfounded number
+      // this benchmark exists to avoid.
+      setText('#tier-sub', gpuMeasured
+        ? tier.sub
+        : 'CPU + RAM BASIS · GPU NOT MEASURED · NOT COMPARABLE TO FULL RUNS');
       $('#tier-label')!.style.color = tier.color;
       setText('#result-narrative', narrativeFor(r, percentile, total));
 
       // ── Rank line: percentile gate at N ≥ 100 ────────────────
+      // The API already scopes both counts to this run's measurement class,
+      // so "of all runs" was literally false for CPU+RAM-only results.
+      const poolLabel = gpuMeasured ? 'runs' : 'CPU+RAM-only runs';
       if (total >= PERCENTILE_MIN_N) {
         setText('#result-rank',
-          `Faster than ${percentile}% of all runs · Ranked ${ordinal(total - Math.round(total * percentile / 100))} of ${fmt(total)}.`);
+          `Faster than ${percentile}% of ${poolLabel} · Ranked ${ordinal(total - Math.round(total * percentile / 100))} of ${fmt(total)}.`
+          + (gpuMeasured ? '' : ' Full CPU+GPU+RAM runs are ranked separately.'));
       } else {
-        setText('#result-rank',
-          `Early days — ${fmt(total)} test${total === 1 ? '' : 's'} so far. Percentile ranking unlocks at 100+ runs.`);
+        setText('#result-rank', gpuMeasured
+          ? `Early days — ${fmt(total)} test${total === 1 ? '' : 's'} so far. Percentile ranking unlocks at 100+ runs.`
+          : `Early days — ${fmt(total)} CPU+RAM-only test${total === 1 ? '' : 's'} so far. Percentile unlocks at 100+ runs in this pool.`);
       }
 
       // ── Component grid ───────────────────────────────────────
-      setText('#comp-gpu',  fmt(r.scores.gpu));
+      setText('#comp-gpu',  gpuMeasured ? fmt(r.scores.gpu) : '—');
       setText('#comp-cpu1', fmt(r.scores.cpuSingle));
       setText('#comp-cpum', fmt(r.scores.cpuMulti));
       setText('#comp-ram',  fmt(r.scores.ram));
-      setText('#comp-gpu-sub',  `${r.gpu.gflops.toFixed(0)} GFLOPS`);
+      setText('#comp-gpu-sub', gpuMeasured ? `${Number(r.gpu.gflops).toFixed(0)} GFLOPS` : 'not measured');
       setText('#comp-ram-sub',  `${r.ram.readGBs.toFixed(1)} / ${r.ram.writeGBs.toFixed(1)} GB/s`);
 
       // ── Detected hardware rows ───────────────────────────────
-      setText('#hw-gpu',     r.gpu.name || 'Browser hides this — re-test to add manually');
+      // Three-way, not two-way: GPU *identification* uses WebGL, which works
+      // without WebGPU — so the name is usually present even when nothing was
+      // benchmarked. Printing "Mali-G610" next to a GPU score would imply we
+      // measured it.
+      setText('#hw-gpu', gpuMeasured
+        ? (r.gpu.name || 'Browser hides this — re-test to add manually')
+        : (r.gpu.name
+            ? `${r.gpu.name} · detected, not benchmarked (no WebGPU)`
+            : 'not exposed by this browser · not benchmarked (no WebGPU)'));
       setText('#hw-cpu',     `${r.cpu.cores} cores`);
       setText('#hw-ram',     `${r.ram.readGBs.toFixed(1)} GB/s read · ${r.ram.writeGBs.toFixed(1)} GB/s write · ${r.ram.latencyNs.toFixed(1)} ns latency`);
       setText('#hw-browser', 'Browser info per-test (not stored)');
 
       // ── Raw measurements ─────────────────────────────────────
-      setText('#raw-gflops',     `${r.gpu.gflops.toFixed(1)} GFLOPS`);
+      setText('#raw-gflops', gpuMeasured ? `${Number(r.gpu.gflops).toFixed(1)} GFLOPS` : 'not measured — no WebGPU');
       setText('#raw-cores',      String(r.cpu.cores));
       setText('#raw-sha-single', `${fmt(Math.round(r.cpu.hashesSingle))} h/s`);
       setText('#raw-sha-multi',  `${fmt(Math.round(r.cpu.hashesMulti))} h/s`);
@@ -2084,18 +2150,26 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
       // rendered as a 36px superscript right next to the score number,
       // which looked like a typo on the PNG export).
       // S-tier → "S-TIER · ENTHUSIAST / WORKSTATION", D-tier → "PATIENT & HONEST · IT STILL GETS THE JOB DONE", etc.
-      setText('#card-tier', `${tier.label.toUpperCase()} · ${tier.sub.toUpperCase()}`);
+      // This card is what toPng() exports and users post to X/Reddit — an
+      // unlabelled card is the claim that escapes the site.
+      setText('#card-tier', gpuMeasured
+        ? `${tier.label.toUpperCase()} · ${tier.sub.toUpperCase()}`
+        : `${tier.label.toUpperCase()} · CPU+RAM ONLY`);
       setText('#card-hw',     [
-        r.gpu.name || 'GPU details hidden',
+        gpuMeasured
+          ? (r.gpu.name || 'GPU details hidden')
+          : (r.gpu.name ? `${r.gpu.name} (not benchmarked)` : 'GPU not benchmarked'),
         `${r.cpu.cores}-core CPU`,
       ].join(' · '));
-      setText('#card-gpu',    fmt(r.scores.gpu));
+      setText('#card-gpu',    gpuMeasured ? fmt(r.scores.gpu) : '—');
       setText('#card-cpu1',   fmt(r.scores.cpuSingle));
       setText('#card-cpum',   fmt(r.scores.cpuMulti));
       setText('#card-ram',    fmt(r.scores.ram));
       const cardPctText = total >= PERCENTILE_MIN_N
-        ? `Faster than ${percentile}% globally`
-        : `Early days · ${fmt(total)} test${total === 1 ? '' : 's'} so far`;
+        ? (gpuMeasured ? `Faster than ${percentile}% globally` : `Faster than ${percentile}% of CPU+RAM-only runs`)
+        : (gpuMeasured
+            ? `Early days · ${fmt(total)} test${total === 1 ? '' : 's'} so far`
+            : `Early days · ${fmt(total)} CPU+RAM-only test${total === 1 ? '' : 's'}`);
       setText('#card-pct', cardPctText);
       setText('#card-url', `9bench.com/r/${r.id}`);
 
@@ -2130,7 +2204,24 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
       wireLLMLiveTest(headroomGB, nativeCtxForCompare);
 
       // ── Load reference hardware comparison (async, non-blocking) ──
-      loadReferenceComparison(r.scores.overall);
+      // Reference hardware is all WebGPU-measured — a CPU+RAM-only score
+      // isn't on the same basis, so we say that instead of drawing bars.
+      if (gpuMeasured) {
+        loadReferenceComparison(r.scores.overall);
+      } else {
+        const cmpSection = $('#cmp-section');
+        const cmpBars = $('#cmp-bars');
+        if (cmpSection && cmpBars) {
+          cmpBars.innerHTML =
+            '<p style="font-family: var(--mono); font-size: 12px; line-height: 1.6; color: var(--fg-3); margin: 0;">'
+            + 'Reference hardware is measured with WebGPU. A CPU+RAM-only score isn\'t comparable, so we don\'t draw the bars.'
+            + '</p>';
+          cmpSection.querySelector('.result__section-h')?.replaceChildren(
+            document.createTextNode('— vs. known hardware')
+          );
+          cmpSection.removeAttribute('hidden');
+        }
+      }
     } catch (e: any) {
       console.error('Failed to load result', e);
       loadingEl.hidden = true;
@@ -2335,12 +2426,47 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
   }
 
   /**
+   * AI section for runs where the GPU was never benchmarked.
+   *
+   * Keeps only measured facts: memory headroom (a real probe) and the live
+   * LLM test (transformers.js runs on WebAssembly — it does not need WebGPU
+   * and still produces genuine tokens/s on these devices). Everything that
+   * would be extrapolated from GPU GFLOPS is hidden rather than guessed.
+   */
+  function renderAISectionNoGPU(r: any) {
+    $('#ai-section')!.removeAttribute('hidden');
+    $('#ai-nogpu')?.removeAttribute('hidden');
+    setText('#ai-eyebrow', '// LOCAL AI · PARTIALLY MEASURED');
+
+    // Hide everything derived from a GPU measurement.
+    $('#ai-scoreblocks')?.setAttribute('hidden', '');
+    $('#ai-pred-table')?.setAttribute('hidden', '');
+    $('#ai-pred-note')?.setAttribute('hidden', '');
+    $('#ai-feat-fp16')?.setAttribute('hidden', '');
+    $('#ai-feat-webgpu')?.setAttribute('hidden', '');
+
+    // Memory headroom is a real allocation probe — keep it.
+    const headroom = r.ai?.memory?.largestAllocatableGB;
+    if (typeof headroom === 'number' && headroom > 0) {
+      setText('#ai-feat-buffer-value', `${headroom.toFixed(1)} GB`);
+      setText('#ai-feat-buffer-sub', 'largest single allocation this browser granted');
+    } else {
+      $('#ai-feat-buffer')?.setAttribute('hidden', '');
+    }
+  }
+
+  /**
    * Render component imbalance callout when one of GPU/CPU lags
    * significantly behind the others. RAM is excluded (browser-cap).
    */
   function renderImbalanceCallout(r: any) {
+    // A GPU that was never benchmarked scores 0, which would make it the
+    // minimum every single time — every no-WebGPU visitor would be told
+    // "Bottleneck identified: GPU" about hardware we never touched. Only
+    // compare components we actually measured.
+    const gpuMeasured = Number(r.gpu?.gflops ?? 0) > 0;
     const components: Array<[string, number]> = [
-      ['GPU',         r.scores.gpu],
+      ...(gpuMeasured ? [['GPU', r.scores.gpu] as [string, number]] : []),
       ['CPU·1 (single-core)', r.scores.cpuSingle],
       ['CPU·M (multi-core)',  r.scores.cpuMulti],
     ];
@@ -2397,6 +2523,16 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
       return null;
     }
 
+    // Every number in this section — the AI score, the native extrapolation,
+    // every "can it run Llama 7B" verdict — is derived from GPU GFLOPS. With
+    // no GPU measurement they'd all be extrapolated from zero, which produced
+    // confident-looking lines like "Llama 7B → YES ~5-15 t/s · Estimated
+    // ~0 GFLOPS native". Suppress the fiction, keep what was really measured.
+    if (Number(r.gpu?.gflops ?? 0) <= 0) {
+      renderAISectionNoGPU(r);
+      return null;
+    }
+
     // ── Browser values (directly measured during the bench run) ──
     const browserFp16     = !!ai.webgpu?.fp16;
     const browserMaxAlloc = ai.memory?.largestAllocatableGB ?? 0;
@@ -2448,7 +2584,10 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
       browserMaxAlloc >= 2 ? 'Tight in-browser — but ~' + nativeCtx.estimatedTotalRamGB + ' GB system RAM available natively.' :
       'Browser sandbox-limited. Native estimated ~' + nativeCtx.estimatedTotalRamGB + ' GB available.');
 
-    const webgpuOk = ai.webgpu !== null && ai.webgpu !== undefined;
+    // The API always emits an ai.webgpu object for post-Phase-G rows, so a
+    // null check reported "✓ compute available" on devices with no WebGPU
+    // at all. Only an actual GPU measurement proves compute was available.
+    const webgpuOk = Number(r.gpu?.gflops ?? 0) > 0;
     setFeature('webgpu',
       webgpuOk ? 'ok' : 'limit',
       webgpuOk ? 'compute available' : 'compute unavailable',

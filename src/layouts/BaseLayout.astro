@@ -37,7 +37,7 @@ const SITE = 'https://9bench.com';
 const fullTitle = title.includes('9bench') ? title : `${title} — 9bench`;
 const canonicalUrl = new URL(Astro.url.pathname, SITE).toString();
 const ogImageUrl = ogImage || `${SITE}/og`;
-const dateModified = '2026-07-10';
+const dateModified = '2026-07-28';
 
 // ── KEYWORD STRATEGY (SEO + AEO + GEO) ───────────────────────────────
 // Default keyword set covers high-volume search terms + AI-citation-friendly
@@ -82,7 +82,7 @@ const webAppNode = {
   applicationSubCategory: 'Hardware Benchmark',
   operatingSystem: 'Any (browser-based)',
   description: 'The honest browser-based hardware benchmark. Tests CPU, GPU, and RAM in 15 seconds.',
-  browserRequirements: 'Requires WebGPU + WebAssembly + Web Workers (Chrome 113+, Firefox 147+, Safari 26+, Edge 113+)',
+  browserRequirements: 'Requires Web Workers + Web Crypto. WebGPU (Chrome/Edge 113+, Firefox 147+, Safari 26+) is needed only for the GPU sub-score; without it a CPU+RAM-only score is produced.',
   featureList: [
     'WebGPU compute shader GPU benchmark (GFLOPS)',
     'CPU single-core SHA-256 hash chain',

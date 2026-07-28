@@ -235,11 +235,12 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     // Percentiles are computed within the same measurement class — runs with a
     // measured GPU compare only against other GPU runs, no-WebGPU runs only
     // against no-WebGPU runs. Mixing the two bases would be unfair to both.
-    const hasGpu = Math.round(s.gpu) > 0 ? 1 : 0;
-    const totalRow = await env.DB.prepare('SELECT COUNT(*) as c FROM results WHERE (score_gpu > 0) = ?')
+    // gpu_gflops is the discriminator everywhere (api/r/[id].ts, top.ts, og.ts)
+    const hasGpu = body.gpu.gflops > 0 ? 1 : 0;
+    const totalRow = await env.DB.prepare('SELECT COUNT(*) as c FROM results WHERE (gpu_gflops > 0) = ?')
       .bind(hasGpu)
       .first<{ c: number }>();
-    const lowerRow = await env.DB.prepare('SELECT COUNT(*) as c FROM results WHERE score_overall < ? AND (score_gpu > 0) = ?')
+    const lowerRow = await env.DB.prepare('SELECT COUNT(*) as c FROM results WHERE score_overall < ? AND (gpu_gflops > 0) = ?')
       .bind(Math.round(s.overall), hasGpu)
       .first<{ c: number }>();
 

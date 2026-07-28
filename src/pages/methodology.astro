@@ -31,7 +31,7 @@ const FAQ = [
   },
   {
     q: 'Does it run on iPhone / iPad / Android?',
-    a: "Yes. Safari 26+ on iOS/iPadOS 26 supports WebGPU. Android Chrome 113+ does too. Older devices fall back to a CPU-only run with a clear notice."
+    a: "Partly. Safari 26+ on iOS/iPadOS 26 has WebGPU. On Android it depends on the GPU vendor and Android version, not just the Chrome version — many phones have it switched off. Those devices run the CPU + RAM tests and get a clearly-labelled CPU+RAM-only score, ranked in its own pool."
   },
   {
     q: 'Why is it free?',
@@ -69,11 +69,11 @@ const FAQ = [
   })} />
   <main class="container methodology">
 
-    <IssueNameplate middle="Methodology — Truth Series" right="v3.2 · Jul 2026" />
+    <IssueNameplate middle="Methodology — Truth Series" right="v3.3 · Jul 2026" />
 
     <!-- Hero -->
     <section class="methodology__hero">
-      <div class="eyebrow eyebrow--accent">// METHODOLOGY · v3.2</div>
+      <div class="eyebrow eyebrow--accent">// METHODOLOGY · v3.3</div>
       <h1 class="methodology__h1">
         Every formula.<br />
         <span class="text-fg-3">Every constant.</span><br />
@@ -205,6 +205,21 @@ const FAQ = [
         correlates strongly with multi-core for in-browser SHA workloads.
         Including it would double-count.
       </p>
+      <p class="methodology__p">
+        <strong>When WebGPU is unavailable</strong> — no adapter at all, or a GPU
+        vendor the browser doesn't allow — there is no GPU measurement, so the GPU
+        term is dropped and the remaining weights renormalize over CPU + RAM:
+      </p>
+      <div class="formula formula--composite">
+        <code class="formula__expr">overall = exp((0.45 × ln(CPU·M) + 0.20 × ln(RAM)) / 0.65)</code>
+      </div>
+      <p class="methodology__p">
+        Those runs are labelled <em>CPU + RAM only</em> everywhere they appear, are
+        ranked in their own percentile pool, and are kept off the main leaderboard.
+        A CPU+RAM-only score is not comparable to a full CPU+GPU+RAM score, and we
+        never present it as one. We also never report an unmeasured GPU as a score
+        of zero, and never name it as a bottleneck.
+      </p>
     </section>
 
     <!-- Section 4 -->
@@ -317,6 +332,40 @@ const FAQ = [
           GPU measurement collapsed the overall score. Now the weights
           renormalize over CPU + RAM (45/65 · 20/65), those runs rank in their
           own percentile pool, and the leaderboard only lists GPU-measured runs.
+        </li>
+      </ul>
+
+      <h3 class="methodology__h3">v3.3 — July 28, 2026</h3>
+      <ul class="methodology__list">
+        <li>
+          <strong>Browsers without WebGPU can finally run the benchmark.</strong>
+          The test page refused to start at all unless WebGPU was present — so
+          every Android phone whose GPU vendor isn't on the browser's allowlist,
+          and every Linux Firefox user, hit a dead end reading "your browser does
+          not support WebGPU" even though the CPU and RAM tests would have run
+          perfectly. They now run, and produce a CPU + RAM score under the
+          renormalized formula in Section 3.
+        </li>
+        <li>
+          <strong>An unmeasured GPU is never reported as a zero.</strong> It shows
+          as "not measured" on the test page, the result page and the share card.
+          Previously a CPU+RAM-only result would also have been told
+          "Bottleneck identified: GPU" — about hardware we never touched — because
+          the missing measurement always sorted lowest. Fixed.
+        </li>
+        <li>
+          <strong>Local-AI predictions are suppressed rather than guessed</strong>
+          when there is no GPU measurement. They are all derived from GPU GFLOPS;
+          extrapolating them from a zero produced confident-looking claims like
+          "Llama 7B → yes, ~5-15 tokens/s". The live in-browser LLM test still
+          runs on those devices — it uses WebAssembly, not WebGPU — and remains a
+          real measurement.
+        </li>
+        <li>
+          <strong>Runs whose tab was backgrounded are no longer submitted.</strong>
+          Browsers throttle timers in hidden tabs, which makes the timing
+          meaningless. You still see your result; it just stays out of the
+          shared pool.
         </li>
       </ul>
 

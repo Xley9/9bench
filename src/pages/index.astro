@@ -27,7 +27,7 @@ const HOME_FAQS = [
   },
   {
     q: 'Does 9bench work on iPhone, iPad, and Android?',
-    a: 'Yes. Safari 26+ on iOS/iPadOS supports WebGPU compute shaders. Chrome 113+ on Android does too. Older devices fall back to CPU + RAM tests with a clear notice.'
+    a: 'Partly. Safari 26+ on iOS/iPadOS has WebGPU. On Android it depends on the GPU vendor and Android version, not just the Chrome version — many phones have it switched off. Those devices run the CPU + RAM tests and get a clearly-labelled CPU+RAM-only score.'
   },
   {
     q: 'What data does 9bench collect?',
@@ -179,7 +179,7 @@ const FEATURES = [
         If you find a flaw, file an issue. We ship the patch the same week.
         <span class="text-accent">"</span>
       </blockquote>
-      <div class="pullquote__attr">— METHODOLOGY · v3.2 · JUL 2026</div>
+      <div class="pullquote__attr">— METHODOLOGY · v3.3 · JUL 2026</div>
     </section>
 
     <!-- ── Permalink paste box ────────────────────────────────────── -->
@@ -222,7 +222,7 @@ const FEATURES = [
           <li><strong>15-second test</strong> using WebGPU compute shaders, Web Workers, and Web Crypto API.</li>
           <li><strong>Vendor-neutral</strong> — zero money from chip companies. Open-source under MIT license.</li>
           <li><strong>Global percentile ranking</strong> against all submitted scores. Anonymous and opt-in.</li>
-          <li><strong>Works everywhere</strong> — Chrome 113+, Firefox 147+, Safari 26+, Edge 113+; desktop, iOS, Android.</li>
+          <li><strong>Runs in any modern browser</strong> — Chrome, Firefox, Safari, Edge; desktop and mobile. Full GPU benchmarking needs WebGPU; without it you get a labelled CPU + RAM score.</li>
         </ul>
       </div>
 
@@ -257,7 +257,7 @@ const FEATURES = [
         <dt>Download required</dt><dd>None — runs entirely in the browser</dd>
         <dt>Privacy</dt><dd>All measurements run locally; score submission is opt-in and anonymous</dd>
         <dt>License</dt><dd>MIT open source (<a href="https://github.com/Xley9/9bench" rel="external noopener">GitHub</a>)</dd>
-        <dt>Last updated</dt><dd><time datetime="2026-07-10">July 10, 2026</time> (methodology v3.2)</dd>
+        <dt>Last updated</dt><dd><time datetime="2026-07-28">July 28, 2026</time> (methodology v3.3)</dd>
       </dl>
 
       <h3 class="seo-body__h3" id="how-it-works">How does the 9bench benchmark work?</h3>
@@ -346,9 +346,9 @@ const FEATURES = [
 
       <h3 class="seo-body__h3" id="browser-support">Which browsers support 9bench?</h3>
       <p class="seo-body__p">
-        9bench requires <strong>WebGPU</strong> for GPU benchmarking, as defined in the
+        9bench uses <strong>WebGPU</strong> for the GPU sub-score, as defined in the
         <a href="https://www.w3.org/TR/webgpu/" rel="external noopener">W3C WebGPU specification</a>.
-        Supported browsers:
+        Browsers with full WebGPU support:
       </p>
       <ul class="seo-body__ul">
         <li><strong>Chrome 113+</strong> and <strong>Edge 113+</strong> — full WebGPU support since <time datetime="2023-05">May 2023</time></li>
@@ -356,8 +356,10 @@ const FEATURES = [
         <li><strong>Safari 26+</strong> — macOS Tahoe, iOS 26, iPadOS 26, visionOS 26</li>
       </ul>
       <p class="seo-body__p">
-        On older browsers without WebGPU, CPU and RAM tests still run — only the GPU score shows "0".
-        Try updating your browser if you see a WebGPU error.
+        Without WebGPU, the CPU and RAM tests still run. The GPU shows "not measured" (never zero),
+        the overall score is rebalanced over CPU + RAM, and the run is ranked against other CPU+RAM
+        runs rather than the main leaderboard. It isn't only old browsers: Android GPU-vendor
+        allowlists and Linux builds are affected too, so a current Chrome is no guarantee.
       </p>
 
       <h3 class="seo-body__h3" id="tips">Tips for accurate benchmark results</h3>
@@ -394,7 +396,7 @@ const FEATURES = [
         with schema-linked LinkedIn + GitHub profiles.
         9bench is part of the Truth Series — tools with transparent methodology and open-source code.
         First published <time datetime="2026-04-15">April 15, 2026</time>.
-        Last updated <time datetime="2026-07-10">July 10, 2026</time>.
+        Last updated <time datetime="2026-07-28">July 28, 2026</time>.
       </p>
     </section>
 

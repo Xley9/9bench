@@ -312,8 +312,11 @@ import { tierFor } from '../components/bench/tier-system';
 
       // Meta line
       const total = data.total ?? results.length;
+      // The API filters to GPU-measured runs, so this count is not "all
+      // submissions" — say which pool it is.
       $('#leaderboard-meta')!.textContent =
-        `Showing ${results.length} of ${fmt(total)} submitted runs · period: ${periodLabel[period]}.`;
+        `Showing ${results.length} of ${fmt(total)} GPU-measured runs · period: ${periodLabel[period]}. `
+        + `Runs without WebGPU are scored on CPU + RAM only and ranked separately.`;
 
       // Filter meta on top filter row
       $('#filter-meta')!.textContent = `${fmt(total)} TESTS · LIVE`;

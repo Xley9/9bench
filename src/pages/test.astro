@@ -9,8 +9,10 @@
  * UI: V1 Terminal (matched to drop spec) — status bar, progress bar,
  * 3 live graph blocks (GPU/CPU/RAM), console log, truth disclaimer.
  *
- * If user lands here without WebGPU/Wasm support, redirect home with a
- * caps query so the Landing can show a graceful failure message.
+ * Without WebGPU the run continues: the GPU block is marked "not measured"
+ * and the score is composed from CPU + RAM with renormalized weights (see
+ * bench/runner.ts). Only a missing Web Workers or Web Crypto implementation
+ * is fatal — those are what the CPU test is actually built on.
  */
 import BaseLayout from '../layouts/BaseLayout.astro';
 import TruthDisclaimer from '../components/bench/TruthDisclaimer.astro';
@@ -30,7 +32,7 @@ import TruthDisclaimer from '../components/bench/TruthDisclaimer.astro';
     <section class="test-intro" id="test-intro">
       <h1 class="test-intro__title">Ready to test your hardware?</h1>
       <p class="test-intro__lead">
-        15-second benchmark via WebGPU + WebAssembly + Web Workers.
+        15-second benchmark: CPU, RAM, and — where WebGPU is available — GPU.
         Runs entirely in your browser. No download, no signup.
       </p>
 
@@ -67,7 +69,7 @@ import TruthDisclaimer from '../components/bench/TruthDisclaimer.astro';
       <span class="status-bar__pulse" aria-hidden="true"></span>
       <span class="status-bar__primary" id="status-primary">● BENCHMARK IN PROGRESS</span>
       <span class="status-bar__sep">·</span>
-      <span class="status-bar__secondary" id="status-secondary">WEBGPU + WASM SIMD ACTIVE · DO NOT SWITCH TABS</span>
+      <span class="status-bar__secondary" id="status-secondary">STARTING · DO NOT SWITCH TABS</span>
       <span class="status-bar__pct tnum" id="status-pct">00%</span>
     </div>
 
@@ -76,6 +78,24 @@ import TruthDisclaimer from '../components/bench/TruthDisclaimer.astro';
       <div class="progress-track__fill" id="progress-fill"></div>
     </div>
 
+    <!-- ── No-WebGPU notice (revealed by JS when the probe finds none) ── -->
+    <aside class="nogpu-notice" id="nogpu-notice" hidden>
+      <p class="nogpu-notice__head">// GPU TEST SKIPPED — WEBGPU UNAVAILABLE</p>
+      <p class="nogpu-notice__body">
+        WebGPU needs a recent browser <em>and</em> a GPU driver the browser trusts.
+        Plenty of Android phones, Linux desktops and older Macs run current Chrome
+        or Firefox and still have it switched off by the vendor. Nothing you did.
+      </p>
+      <p class="nogpu-notice__body">
+        Running CPU + RAM anyway. You get a CPU + RAM score — the weights are
+        rebalanced over the two parts we could actually measure. It is not
+        comparable to a full CPU+GPU+RAM score and it is not on the leaderboard.
+      </p>
+      <p class="nogpu-notice__body">
+        <a href="/methodology/#changelog">methodology → v3.2</a>
+      </p>
+    </aside>
+
     <!-- ── Three live blocks (GPU / CPU / RAM) ──────────────────────── -->
     <div class="live-blocks">
       <article class="live-block" data-block="gpu">
@@ -83,7 +103,7 @@ import TruthDisclaimer from '../components/bench/TruthDisclaimer.astro';
           <span class="live-block__icon" aria-hidden="true">🎮</span>
           <div class="live-block__titles">
             <h3 class="live-block__label">GPU · COMPUTE</h3>
-            <p class="live-block__sub">1024×1024 FP32 MATMUL · WEBGPU</p>
+            <p class="live-block__sub">1024×1024 FP32 MATMUL · WEBGPU (IF AVAILABLE)</p>
           </div>
           <span class="live-block__pct" data-pct>0%</span>
         </header>
@@ -176,7 +196,7 @@ import TruthDisclaimer from '../components/bench/TruthDisclaimer.astro';
 
     <!-- ── Failure card (hidden until error) ───────────────────────── -->
     <div class="error-card" id="error-card" hidden>
-      <h2 class="section-h" style="font-size: 28px; margin-top: 32px;">Something went wrong</h2>
+      <h2 class="section-h" style="font-size: 28px; margin-top: 32px;">Can't run the benchmark here</h2>
       <p id="error-message" class="text-fg-2" style="font-family: var(--mono); font-size: 13px;">—</p>
       <p style="margin-top: 24px;">
         <a href="/" class="btn-outline">← Back to home</a>
@@ -397,6 +417,41 @@ import TruthDisclaimer from '../components/bench/TruthDisclaimer.astro';
     flex: 0 0 auto;
   }
   .live-block--warn .live-block__pct { color: var(--warn); }
+
+  /* "Not measured" — deliberately grey, NOT --warn. Nothing failed here;
+     the browser simply doesn't expose the API. Warn orange would read as
+     an error the user caused. */
+  .live-block--unmeasured .live-block__pct   { color: var(--fg-3); }
+  .live-block--unmeasured .live-block__icon  { opacity: 0.35; filter: grayscale(1); }
+  .live-block--unmeasured .live-block__label { color: var(--fg-2); }
+  .live-block--unmeasured .live-block__graph-tag,
+  .live-block--unmeasured .live-block__graph-stage { color: var(--fg-3); }
+  .live-block--unmeasured [data-value] { color: var(--fg-3); }
+
+  /* No-WebGPU explainer, shown above the blocks when the probe finds none */
+  .nogpu-notice {
+    border: 1px solid var(--line);
+    border-left: 2px solid var(--fg-3);
+    background: var(--bg-2);
+    padding: 14px 16px;
+  }
+  .nogpu-notice__head {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: var(--fg-2);
+    margin: 0 0 8px 0;
+  }
+  .nogpu-notice__body {
+    font-family: var(--sans);
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--fg-2);
+    margin: 0 0 8px 0;
+  }
+  .nogpu-notice__body:last-child { margin-bottom: 0; }
+  .nogpu-notice__body a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+
   .live-block__body {
     padding: 14px;
     flex: 1;
@@ -542,6 +597,28 @@ import TruthDisclaimer from '../components/bench/TruthDisclaimer.astro';
     if (tagEl) tagEl.textContent = active ? '● LIVE' : '○ IDLE';
   }
 
+  /**
+   * Mark a block as "we could not measure this" — distinct from both
+   * "idle" and "failed". Never shows 0 or 100%: a 0 next to GFLOPS reads
+   * as "your GPU scored zero", and 100% reads as "the GPU test finished".
+   */
+  function setBlockUnmeasured(stage: 'gpu' | 'cpu' | 'ram', reason = 'WEBGPU UNAVAILABLE') {
+    const el = blockEls[stage];
+    if (!el) return;
+    el.classList.remove('is-active');
+    el.classList.add('live-block--unmeasured');
+    const pctEl = el.querySelector<HTMLElement>('[data-pct]');
+    if (pctEl) pctEl.textContent = 'N/A';
+    const v = el.querySelector<HTMLElement>('[data-value]');
+    if (v) v.textContent = '—';
+    const tagEl = el.querySelector<HTMLElement>('.live-block__graph-tag');
+    if (tagEl) tagEl.textContent = '○ NOT MEASURED';
+    const stageEl = el.querySelector<HTMLElement>('.live-block__graph-stage');
+    if (stageEl) stageEl.textContent = '—';
+    const subEl = el.querySelector<HTMLElement>('.live-block__sub');
+    if (subEl) subEl.textContent = `NOT MEASURED · ${reason}`;
+  }
+
   function setBlockValue(stage: 'gpu' | 'cpu' | 'ram', value: string) {
     const el = blockEls[stage];
     if (!el) return;
@@ -589,6 +666,12 @@ import TruthDisclaimer from '../components/bench/TruthDisclaimer.astro';
     setStatus('● ERROR', message);
     document.querySelector('.status-bar')?.setAttribute('style',
       'border-color: var(--warn); background: rgba(255,87,34,0.06);');
+    // Stop any running graph so a frozen waveform doesn't imply work is
+    // still happening, and re-enable Start — otherwise every error is a
+    // dead end that needs a page reload.
+    stopGraph('gpu'); stopGraph('cpu'); stopGraph('ram');
+    const sb = document.getElementById('start-btn') as HTMLButtonElement | null;
+    if (sb) sb.disabled = false;
   }
 
   // ── Live graph drawing (lightweight canvas, no React) ────────────
@@ -697,20 +780,64 @@ import TruthDisclaimer from '../components/bench/TruthDisclaimer.astro';
   async function runBench() {
     appendLog('init  → checking browser capabilities…');
 
-    // Hard caps check before we waste time spinning up a benchmark
-    if (!('gpu' in navigator)) {
-      showError('Your browser does not support WebGPU. Try Chrome 113+ or Safari 26+.');
+    // Phones background the tab the moment the user switches apps, and the
+    // browser then throttles timers to ~1/minute. Any timing measured across
+    // that is worthless. We don't abort (the user would lose the run) — we
+    // just refuse to submit it to the shared pool.
+    let wentHidden = document.hidden;
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) wentHidden = true;
+    });
+
+    // Hard caps — only for things the CPU/RAM tests genuinely cannot run
+    // without. WebGPU is NOT one of them: without it we skip the GPU test
+    // and still produce an honest CPU+RAM score (runner.ts renormalizes
+    // the weights). Blocking the whole run here was a dead end for every
+    // Android phone whose GPU vendor isn't on the WebGPU allowlist.
+    if (typeof Worker === 'undefined') {
+      showError('Web Workers are blocked, so the CPU test can\'t run. Usually a privacy extension or a hardened browser profile — try a normal window.');
       return;
     }
-    if (typeof Worker === 'undefined') {
-      showError('Your browser does not support Web Workers.');
+    if (!globalThis.crypto?.subtle) {
+      showError('Web Crypto isn\'t available, so the CPU test can\'t run. It needs an https:// page — check the address bar.');
       return;
     }
 
-    appendLog('init  → webgpu adapter found · web workers ready');
-    startGraph('gpu');
-    setBlockActive('gpu', true, 0);
-    setStatus('● BENCHMARK IN PROGRESS', 'GPU MATMUL · DO NOT SWITCH TABS');
+    // Probe WebGPU for real before we claim anything in the UI. Checking
+    // `'gpu' in navigator` is not enough: the common Android case is the
+    // property being present while requestAdapter() resolves null.
+    let webgpuAvailable = false;
+    let webgpuReason = 'webgpu not present in this browser';
+    if ('gpu' in navigator) {
+      try {
+        const adapter = await Promise.race([
+          (navigator as any).gpu.requestAdapter(),
+          new Promise(resolve => setTimeout(() => resolve(null), 3000)),
+        ]);
+        webgpuAvailable = !!adapter;
+        if (!adapter) webgpuReason = 'no webgpu adapter for this gpu/driver';
+      } catch {
+        webgpuReason = 'webgpu adapter request failed';
+      }
+    }
+
+    if (webgpuAvailable) {
+      appendLog('init  → webgpu adapter found · web workers ready');
+      startGraph('gpu');
+      setBlockActive('gpu', true, 0);
+      setStatus('● BENCHMARK IN PROGRESS', 'GPU MATMUL · DO NOT SWITCH TABS');
+    } else {
+      appendLog('init  → web workers ready · web crypto ready');
+      appendLog(`init  → webgpu unavailable · gpu test skipped`);
+      // Deliberately do NOT startGraph('gpu') — the RAF re-arms outside the
+      // running guard, so a started-then-stopped graph freezes a realistic
+      // looking waveform on screen forever. A blank canvas is the honest state.
+      setBlockUnmeasured('gpu');
+      $('#nogpu-notice')?.removeAttribute('hidden');
+      startGraph('cpu');
+      setBlockActive('cpu', true, 0);
+      setStatus('● BENCHMARK IN PROGRESS', 'CPU + RAM ONLY · NO WEBGPU · DO NOT SWITCH TABS');
+    }
 
     let result: any;
     try {
@@ -718,6 +845,13 @@ import TruthDisclaimer from '../components/bench/TruthDisclaimer.astro';
         // Map runner stages to our 3-block UI. We fake a smooth 0→100
         // global progress by weighting: GPU 35%, CPU 35%, RAM 30%.
         if (stage === 'gpu') {
+          // Without WebGPU the GPU stage still fires (the runner calls the
+          // probe and reports "not available") — but the block must stay in
+          // its unmeasured state and the CPU graph is already running.
+          if (!webgpuAvailable) {
+            if (percent >= 100) appendLog(`gpu   → skipped · ${webgpuReason}`);
+            return;
+          }
           setBlockActive('gpu', percent < 100, percent);
           if (percent >= 100) {
             stopGraph('gpu');
@@ -741,7 +875,9 @@ import TruthDisclaimer from '../components/bench/TruthDisclaimer.astro';
           } else if (percent === 0) {
             appendLog('cpu   → spawning workers · sha256 single + multi');
           }
-          setProgress(35 + percent * 0.35);
+          // Reweight when the GPU stage contributes nothing, so the bar
+          // rises smoothly instead of jumping 0→35% in a few milliseconds.
+          setProgress(webgpuAvailable ? 35 + percent * 0.35 : percent * 0.55);
         } else if (stage === 'ram') {
           setBlockActive('ram', percent < 100, percent);
           if (percent >= 100) {
@@ -752,7 +888,7 @@ import TruthDisclaimer from '../components/bench/TruthDisclaimer.astro';
           } else if (percent === 0) {
             appendLog('ram   → seq.read.64k commencing · sandboxed (browser-cap)');
           }
-          setProgress(70 + percent * 0.30);
+          setProgress(webgpuAvailable ? 70 + percent * 0.30 : 55 + percent * 0.45);
         } else if (stage === 'done') {
           setProgress(100);
           appendLog('done  → ' + message.toLowerCase());
@@ -766,7 +902,16 @@ import TruthDisclaimer from '../components/bench/TruthDisclaimer.astro';
     }
 
     // ── Update blocks with final values ───────────────────────────
-    setBlockValue('gpu', Math.round(result.gpu.gflops).toLocaleString());
+    // result.gpu.supported is the post-run truth: it also covers the case
+    // where the adapter existed but the bench then failed (device acquire,
+    // shader verification, timer floor). Never print Math.round(0) here —
+    // "0" next to GFLOPS reads as a measured zero.
+    if (result.gpu.supported) {
+      setBlockValue('gpu', Math.round(result.gpu.gflops).toLocaleString());
+    } else {
+      setBlockUnmeasured('gpu');
+      $('#nogpu-notice')?.removeAttribute('hidden');
+    }
     setBlockValue('cpu', Math.round(result.cpu.hashesPerSecondMulti / 1000).toLocaleString() + 'k');
     setBlockValue('ram', result.ram.readBandwidthGBs.toFixed(1));
 
@@ -779,7 +924,12 @@ import TruthDisclaimer from '../components/bench/TruthDisclaimer.astro';
       setBlockVariance('gpu', min, avg, max);
     }
 
-    setStatus('✓ TEST COMPLETE', `${(result.durationMs / 1000).toFixed(1)}s · submitting…`);
+    setStatus(
+      result.gpu.supported ? '✓ TEST COMPLETE' : '✓ TEST COMPLETE (CPU + RAM)',
+      result.gpu.supported
+        ? `${(result.durationMs / 1000).toFixed(1)}s · submitting…`
+        : `${(result.durationMs / 1000).toFixed(1)}s · gpu not measured · submitting…`
+    );
     appendLog(`score → ${result.scores.overall.toLocaleString()} (overall)`);
 
     // ── Consent check (GDPR Art. 6(1)(a)) ─────────────────────────
@@ -788,6 +938,14 @@ import TruthDisclaimer from '../components/bench/TruthDisclaimer.astro';
     if (!userConsent) {
       appendLog('consent → not given · result stays local (not submitted)');
       setStatus('✓ TEST COMPLETE (LOCAL)', 'no submission per your consent setting');
+      return;
+    }
+
+    // Timing measured across a backgrounded tab is throttled and therefore
+    // meaningless. Show the user their run, but keep it out of the pool.
+    if (wentHidden) {
+      appendLog('run   → tab was backgrounded · result kept local (timing unreliable)');
+      setStatus('✓ TEST COMPLETE (LOCAL)', 'tab lost focus mid-run — not submitted');
       return;
     }
 
@@ -861,8 +1019,14 @@ import TruthDisclaimer from '../components/bench/TruthDisclaimer.astro';
     if (ui)    ui.removeAttribute('hidden');
 
     // Wait one tick so the test-ui layout settles + canvases get their
-    // measured size before we start drawing.
-    requestAnimationFrame(() => requestAnimationFrame(runBench));
+    // measured size before we start drawing. rAF is throttled to zero in a
+    // backgrounded tab, so a user who clicks Start and immediately switches
+    // apps would never start the run at all and be left with a dead button —
+    // a timer fallback guarantees the run begins either way.
+    let started = false;
+    const kickOff = () => { if (started) return; started = true; runBench(); };
+    requestAnimationFrame(() => requestAnimationFrame(kickOff));
+    setTimeout(kickOff, 250);
   }
 
   const startBtn = document.getElementById('start-btn');

@@ -32,11 +32,14 @@ export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => {
     // Recompute percentile against current global distribution — but only
     // within the same measurement class (GPU-measured vs no-WebGPU), so the
     // two incompatible score bases never mix in one ranking.
-    const hasGpu = row.score_gpu > 0 ? 1 : 0;
-    const totalRow = await env.DB.prepare('SELECT COUNT(*) as c FROM results WHERE (score_gpu > 0) = ?')
+    // Discriminator is gpu_gflops, not score_gpu: score_gpu rounds to 0 below
+    // 0.167 GFLOPS, while gpu_gflops is exactly 0 for every unmeasured run.
+    // og.ts and top.ts use the same column.
+    const hasGpu = row.gpu_gflops > 0 ? 1 : 0;
+    const totalRow = await env.DB.prepare('SELECT COUNT(*) as c FROM results WHERE (gpu_gflops > 0) = ?')
       .bind(hasGpu)
       .first<{ c: number }>();
-    const lowerRow = await env.DB.prepare('SELECT COUNT(*) as c FROM results WHERE score_overall < ? AND (score_gpu > 0) = ?')
+    const lowerRow = await env.DB.prepare('SELECT COUNT(*) as c FROM results WHERE score_overall < ? AND (gpu_gflops > 0) = ?')
       .bind(row.score_overall, hasGpu)
       .first<{ c: number }>();
 
