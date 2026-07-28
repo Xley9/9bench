@@ -7,8 +7,8 @@
 //
 // IMPLEMENTATION:
 //   - transformers.js loaded lazily from CDN (only when user clicks)
-//   - Tiny model: Xenova/Phi-3-mini-4k-instruct-4bit (~1.7 GB Q4)
-//     OR fallback to Xenova/distilgpt2 (~250 MB) for low-RAM machines
+//   - Tiny model: Xenova/Qwen1.5-0.5B-Chat (~482 MB) on desktop,
+//     Xenova/distilgpt2 (~85 MB quantized) on mobile and as the fallback
 //   - 30-second cap on inference, then report measured tps
 //   - Warm-up pass + measurement pass for stable numbers
 //
@@ -55,53 +55,48 @@ export interface LLMTestProgress {
   result?: LLMTestResult;
 }
 
-/**
- * Choose which model to load based on user's hardware capability.
- * We prefer larger models (better signal) when memory permits, but
- * fall back to tiny ones for constrained browsers.
- *
- * Model selection rationale:
- *   - Phi-3-mini-4bit (~1.7 GB): great signal, modern Microsoft model.
- *     Requires ~2.5 GB browser memory headroom.
- *   - distilgpt2 (~250 MB): fallback. Older but tiny. Works on
- *     even Firefox-strict / low-RAM Chromebooks.
- */
-function selectModel(maxAllocatableGB: number): { id: string; displayName: string; sizeMB: number; isChat: boolean } {
-  // Phi-3-mini needs comfortable headroom because of KV cache + intermediate
-  // tensors during inference. 2.5 GB browser allocation isn't actually enough
-  // for the 1.7 GB weights + activations — bumping to 3.5 GB so users with
-  // marginal headroom don't get a half-loading model.
-  if (maxAllocatableGB >= 3.5) {
-    return {
-      id: 'Xenova/Phi-3-mini-4k-instruct',
-      displayName: 'Phi-3-mini-4k-instruct (Q4)',
-      sizeMB: 1740,
-      isChat: true,
-    };
-  }
-  // Qwen 0.5B Chat needs ~1.5 GB practical headroom (weights ~460MB +
-  // activations + KV cache + tokenizer overhead). At 1.0 GB it loads
-  // but inference produces 0 tokens because the model fails silently.
-  // Bumping the threshold so we fall through to distilgpt2 (a base model
-  // that reliably generates text without chat templating).
-  if (maxAllocatableGB >= 1.8) {
-    return {
-      id: 'Xenova/Qwen1.5-0.5B-Chat',
-      displayName: 'Qwen1.5-0.5B-Chat',
-      sizeMB: 460,
-      isChat: true,
-    };
-  }
-  // DistilGPT-2 is a base (non-chat) model. Reliably generates from any
-  // prompt without chat templates. ~250 MB weights, fits comfortably in
-  // 1 GB browser headroom.
-  return {
-    id: 'Xenova/distilgpt2',
-    displayName: 'DistilGPT-2',
-    sizeMB: 250,
-    isChat: false,
-  };
+interface ModelChoice { id: string; displayName: string; sizeMB: number; isChat: boolean }
+
+const QWEN_05B: ModelChoice = {
+  id: 'Xenova/Qwen1.5-0.5B-Chat',
+  displayName: 'Qwen1.5-0.5B-Chat',
+  sizeMB: 482,
+  isChat: true,
+};
+const DISTILGPT2: ModelChoice = {
+  // Base (non-chat) model: generates from any prompt without chat templates.
+  id: 'Xenova/distilgpt2',
+  displayName: 'DistilGPT-2',
+  sizeMB: 85,   // quantized, which is what transformers.js v2 fetches by default
+  isChat: false,
+};
+
+/** Rough mobile check — mobile WASM memory ceilings are set by the OS, not by RAM. */
+function isMobileLike(): boolean {
+  const uaData = (navigator as any).userAgentData;
+  if (uaData && typeof uaData.mobile === 'boolean') return uaData.mobile;
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
 }
+
+/**
+ * Choose which model to load.
+ *
+ * Phi-3-mini was removed: Xenova/Phi-3-mini-4k-instruct ships its weights as
+ * external data (model_q4.onnx + .onnx_data), which transformers.js v2 cannot
+ * load — that branch was a guaranteed 404 for every desktop with headroom.
+ *
+ * Mobile is capped at DistilGPT-2 regardless of probed headroom. probeMemory-
+ * Headroom() measures JS heap allocations, which under Android overcommit can
+ * "succeed" at 2 GB while ONNX Runtime cannot get a few hundred MB of WASM
+ * linear memory — the exact failure behind "Can't create a session".
+ */
+function selectModel(maxAllocatableGB: number): ModelChoice {
+  if (isMobileLike()) return DISTILGPT2;
+  return maxAllocatableGB >= 1.8 ? QWEN_05B : DISTILGPT2;
+}
+
+/** Signatures that mean "ran out of memory", not "network problem". */
+const OOM_SIGNATURE = /can't create a session|cannot create a session|failed to allocate|out of memory|Aborted|RangeError/i;
 
 /**
  * Run a live LLM inference test.
@@ -117,7 +112,7 @@ export async function runLLMLiveTest(
   const startTime = performance.now();
 
   // ── 1. Pick a model that fits the user's memory ────────────────
-  const modelChoice = selectModel(maxAllocatableGB);
+  let modelChoice = selectModel(maxAllocatableGB);
 
   onProgress({
     phase: 'loading',
@@ -136,11 +131,19 @@ export async function runLLMLiveTest(
       'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2'
     );
     pipeline = transformers.pipeline;
-    // Configure: transformers.js v2 runs on WASM (SIMD, multi-threaded).
-    // WebGPU inference needs the v3 API — revisit when we migrate.
+    // transformers.js v2 runs on WASM. WebGPU inference needs the v3 API.
     transformers.env.allowLocalModels = false;
     transformers.env.useBrowserCache = true;
-    transformers.env.backends.onnx.wasm.numThreads = navigator.hardwareConcurrency || 4;
+    // Threaded WASM needs SharedArrayBuffer, which needs cross-origin
+    // isolation (COOP/COEP) — 9bench sets neither, so ORT has been silently
+    // single-threaded all along and hardwareConcurrency was never applied.
+    // Say so honestly rather than setting a number that does nothing. We
+    // deliberately do NOT add COOP/COEP: shared memory must reserve its
+    // maximum up front, which is precisely what mobile cannot satisfy, and
+    // it would break the jsdelivr + Hugging Face CDN fetches.
+    transformers.env.backends.onnx.wasm.numThreads = (self as any).crossOriginIsolated
+      ? Math.min(4, Math.max(1, (navigator.hardwareConcurrency || 4) >> 1))
+      : 1;
   } catch (e: any) {
     onProgress({
       phase: 'error',
@@ -157,27 +160,53 @@ export async function runLLMLiveTest(
   });
 
   // ── 3. Load the model ──────────────────────────────────────────
+  // One retry step down the ladder when the failure looks like memory
+  // exhaustion rather than a network problem. The browser cache is left
+  // alone: the download itself succeeded, and re-pulling hundreds of MB on
+  // mobile data would be hostile.
   let generator: any;
+  const loadWith = (choice: ModelChoice) => pipeline('text-generation', choice.id, {
+    progress_callback: (data: any) => {
+      if (data.status === 'progress' && typeof data.progress === 'number') {
+        onProgress({
+          phase: 'loading',
+          message: `Downloading ${data.file ?? choice.displayName}… ${data.progress.toFixed(0)}%`,
+          percent: 30 + (data.progress * 0.5),  // 30-80% bar fill during model download
+        });
+      }
+    },
+  });
+
   try {
-    generator = await pipeline('text-generation', modelChoice.id, {
-      // Progress callback updates the UI download bar
-      progress_callback: (data: any) => {
-        if (data.status === 'progress' && typeof data.progress === 'number') {
-          onProgress({
-            phase: 'loading',
-            message: `Downloading ${data.file ?? modelChoice.displayName}… ${data.progress.toFixed(0)}%`,
-            percent: 30 + (data.progress * 0.5),  // 30-80% bar fill during model download
-          });
-        }
-      },
-    });
+    generator = await loadWith(modelChoice);
   } catch (e: any) {
-    onProgress({
-      phase: 'error',
-      message: 'Failed to load model weights',
-      error: e?.message || `Could not load ${modelChoice.id}`,
-    });
-    throw e;
+    const msg = String(e?.message || e);
+    const canStepDown = OOM_SIGNATURE.test(msg) && modelChoice.id !== DISTILGPT2.id;
+    if (canStepDown) {
+      onProgress({
+        phase: 'loading',
+        message: `Not enough memory for ${modelChoice.displayName} — retrying with ${DISTILGPT2.displayName} (${DISTILGPT2.sizeMB} MB)…`,
+        percent: 30,
+      });
+      try {
+        modelChoice = DISTILGPT2;
+        generator = await loadWith(DISTILGPT2);
+      } catch (e2: any) {
+        onProgress({
+          phase: 'error',
+          message: 'Failed to load model weights',
+          error: e2?.message || `Could not load ${DISTILGPT2.id}`,
+        });
+        throw e2;
+      }
+    } else {
+      onProgress({
+        phase: 'error',
+        message: 'Failed to load model weights',
+        error: msg || `Could not load ${modelChoice.id}`,
+      });
+      throw e;
+    }
   }
 
   // ── 4. Warm-up pass (3 tokens, discard timing) ─────────────────
@@ -204,17 +233,14 @@ export async function runLLMLiveTest(
     percent: 90,
   });
 
-  // Chat-tuned models (Phi-3, Qwen Chat) need their chat template applied
-  // or they immediately emit end-of-sequence and produce 0 tokens.
-  // Base models (DistilGPT-2) just take raw text. Hand-build the chat
-  // template per model rather than relying on tokenizer.apply_chat_template
-  // which isn't always exposed in transformers.js v2.
+  // Chat-tuned models (Qwen Chat) need their chat template applied or they
+  // immediately emit end-of-sequence and produce 0 tokens. Base models
+  // (DistilGPT-2) just take raw text. Hand-build the chat template per model
+  // rather than relying on tokenizer.apply_chat_template, which isn't always
+  // exposed in transformers.js v2.
   const userQuestion = 'List five things every solo software builder should know about hardware benchmarking, with concrete examples:';
   let prompt: string;
-  if (modelChoice.id.includes('Phi-3')) {
-    // Phi-3 chat template: <|user|>...<|end|><|assistant|>
-    prompt = `<|user|>\n${userQuestion}<|end|>\n<|assistant|>\n`;
-  } else if (modelChoice.id.includes('Qwen')) {
+  if (modelChoice.id.includes('Qwen')) {
     // Qwen 1.5 chat template: <|im_start|>user...<|im_end|><|im_start|>assistant
     prompt = `<|im_start|>user\n${userQuestion}<|im_end|>\n<|im_start|>assistant\n`;
   } else {

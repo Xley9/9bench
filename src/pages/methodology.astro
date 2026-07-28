@@ -69,11 +69,11 @@ const FAQ = [
   })} />
   <main class="container methodology">
 
-    <IssueNameplate middle="Methodology — Truth Series" right="v3.3 · Jul 2026" />
+    <IssueNameplate middle="Methodology — Truth Series" right="v3.4 · Jul 2026" />
 
     <!-- Hero -->
     <section class="methodology__hero">
-      <div class="eyebrow eyebrow--accent">// METHODOLOGY · v3.3</div>
+      <div class="eyebrow eyebrow--accent">// METHODOLOGY · v3.4</div>
       <h1 class="methodology__h1">
         Every formula.<br />
         <span class="text-fg-3">Every constant.</span><br />
@@ -206,19 +206,36 @@ const FAQ = [
         Including it would double-count.
       </p>
       <p class="methodology__p">
-        <strong>When WebGPU is unavailable</strong> — no adapter at all, or a GPU
-        vendor the browser doesn't allow — there is no GPU measurement, so the GPU
-        term is dropped and the remaining weights renormalize over CPU + RAM:
+        <strong>When a component can't be measured</strong> — no WebGPU adapter, a
+        parallel phase that doesn't report, a memory allocation the browser
+        refuses — that component is dropped and the remaining weights renormalize
+        over what was actually measured. Written in general form, over the set
+        <em>S</em> of measured components with total weight <em>W</em>:
       </p>
       <div class="formula formula--composite">
-        <code class="formula__expr">overall = exp((0.45 × ln(CPU·M) + 0.20 × ln(RAM)) / 0.65)</code>
+        <code class="formula__expr">overall = exp( Σ<sub>i∈S</sub> w<sub>i</sub> × ln(score<sub>i</sub>) / W ),  where W = Σ<sub>i∈S</sub> w<sub>i</sub></code>
       </div>
       <p class="methodology__p">
-        Those runs are labelled <em>CPU + RAM only</em> everywhere they appear, are
-        ranked in their own percentile pool, and are kept off the main leaderboard.
-        A CPU+RAM-only score is not comparable to a full CPU+GPU+RAM score, and we
-        never present it as one. We also never report an unmeasured GPU as a score
-        of zero, and never name it as a bottleneck.
+        The two common cases fall straight out of it and produce exactly the same
+        numbers as before, so no stored score has ever changed:
+      </p>
+      <ul class="weight-list">
+        <li><strong>Everything measured</strong> (W = 1.00) — <code>exp(0.35·ln GPU + 0.45·ln CPU·M + 0.20·ln RAM)</code></li>
+        <li><strong>No WebGPU</strong> (W = 0.65) — <code>exp((0.45·ln CPU·M + 0.20·ln RAM) / 0.65)</code></li>
+        <li><strong>No memory measurement</strong> (W = 0.80) — <code>exp((0.35·ln GPU + 0.45·ln CPU·M) / 0.80)</code></li>
+      </ul>
+      <p class="methodology__p">
+        <strong>A run that measures less than 65% of the total weight is not
+        scored at all.</strong> It is shown to you with whatever did measure, but
+        it gets no composite, is never submitted, is in no percentile pool and is
+        not on the leaderboard. Below that threshold the number would be a
+        statement about our measurement failing rather than about your hardware.
+      </p>
+      <p class="methodology__p">
+        Partial runs are labelled by basis everywhere they appear — page, share
+        card and preview image — ranked only against runs measured the same way,
+        and kept off the main leaderboard. <strong>An unmeasured component is
+        never reported as a zero and never named as your bottleneck.</strong>
       </p>
     </section>
 
@@ -332,6 +349,71 @@ const FAQ = [
           GPU measurement collapsed the overall score. Now the weights
           renormalize over CPU + RAM (45/65 · 20/65), those runs rank in their
           own percentile pool, and the leaderboard only lists GPU-measured runs.
+        </li>
+      </ul>
+
+      <h3 class="methodology__h3">v3.4 — July 29, 2026</h3>
+      <ul class="methodology__list">
+        <li>
+          <strong>Slow devices were being given a near-zero score and told their
+          CPU was the bottleneck.</strong> The multi-core test ran a fixed 500,000
+          hash iterations per worker with a 60-second timeout. Any device slow
+          enough that a worker couldn't finish in time got no multi-core result at
+          all — and the missing measurement then entered the score as the number 0.
+          On an Android phone this produced an overall score of 5 and a callout
+          reading "Bottleneck identified: CPU·M — scored 18.0× lower than your
+          strongest component." That phone's multi-core performance was never
+          measured. We reported a failure of our own benchmark as a fact about
+          someone's hardware, which is the exact thing this site exists not to do.
+          60 stored runs were affected, including several fast desktops where the
+          workers failed for a different reason.
+        </li>
+        <li>
+          <strong>The workload now sizes itself to the device.</strong> Both CPU
+          phases calibrate against a short probe and pick an iteration count that
+          fits a fixed time budget, capped at the old constants so nothing ever
+          runs more work than before. The score is a throughput rate, so measuring
+          the same rate over a shorter window gives the same number — but it means
+          a low-end phone finishes the CPU section in about 12 seconds instead of
+          never. The formula and the way the rate is computed are unchanged.
+        </li>
+        <li>
+          <strong>No unmeasured component is ever a zero, anywhere.</strong> v3.3
+          fixed this for the GPU. It was still live for CPU single-core, CPU
+          multi-core, memory bandwidth and memory latency — including a latency
+          probe that could fail on its own and print "0.0 ns" as if it were
+          measured. Every component now carries an explicit measured state, shows
+          as "—" when absent, and is excluded from the bottleneck comparison.
+        </li>
+        <li>
+          <strong>The score formula is now stated once, in general form</strong>
+          (Section 3): the weighted geometric mean over the components that were
+          actually measured, renormalized over that set. Runs below 65% weight
+          coverage are shown but not scored, not submitted and not ranked. Runs
+          affected by the old bug are identified by a multi-core hash rate of
+          exactly zero — which no real measurement can produce — and are excluded
+          from every ranking. Their permalinks still work and now show what did
+          and didn't measure.
+        </li>
+        <li>
+          <strong>The in-browser LLM test works on phones again.</strong> It was
+          picking a model from a memory probe that measures JavaScript heap
+          allocation, which on Android can appear to succeed at 2 GB while
+          WebAssembly cannot get a few hundred megabytes — the failure users saw
+          as "Can't create a session". Mobile now always uses the smallest model,
+          desktop retries one step down on a memory failure, and the error message
+          explains the cause instead of quoting the runtime.
+        </li>
+        <li>
+          <strong>Known limitation, stated plainly.</strong> At the 64-byte payload
+          this benchmark uses, most of the measured time is
+          <code>crypto.subtle</code> dispatch overhead rather than SHA-256 itself.
+          That makes the CPU numbers a valid, reproducible measure of the
+          browser's crypto call path — which is what in-browser workloads actually
+          hit — but they are not native CPU throughput, and the single-core to
+          multi-core ratio should not be read as a hardware fact. Changing the
+          payload would rebase every score ever recorded here, so we document it
+          rather than quietly alter it.
         </li>
       </ul>
 

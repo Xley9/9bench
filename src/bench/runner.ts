@@ -6,11 +6,13 @@
 //   CPU Single   = round(SHA-hashes/sec ÷ 300)           — 400K h/s → 1333
 //   CPU Multi    = round(SHA-hashes/sec ÷ 600)           — 1.2M h/s → 2000
 //   RAM Score    = round(avg(read+write GB/s) × 60)
-//   Overall      = weighted geometric mean (GPU 35% · CPU-multi 45% · RAM 20%)
-//                  If WebGPU is unavailable, weights renormalize over
-//                  CPU+RAM (45/65 · 20/65) so the missing GPU term doesn't
-//                  collapse the score — those runs are excluded from the
-//                  GPU leaderboard and ranked in their own percentile pool.
+//   Overall      = weighted geometric mean over the MEASURED components
+//                  (GPU 35% · CPU-multi 45% · RAM 20%), weights renormalized
+//                  over whatever was measured. A component that could not be
+//                  measured is never entered as a zero. Runs measuring less
+//                  than 65% of the total weight are not scored at all.
+//                  Measurement classes are ranked in separate percentile
+//                  pools; the leaderboard lists full runs only.
 //
 // The geometric mean prevents a single weak component from being masked
 // by strong ones — better than arithmetic mean for hardware composites.
@@ -44,6 +46,21 @@ export interface BenchResult {
     ram: number;
     overall: number;
   };
+  /**
+   * Which components actually produced a measurement. An unmeasured component
+   * keeps a score of 0 (the D1 columns are NOT NULL) — these flags are what
+   * distinguish that from a genuine zero, and every renderer must consult them
+   * before printing a number.
+   */
+  measured: {
+    gpu: boolean;
+    cpuSingle: boolean;
+    cpuMulti: boolean;
+    ram: boolean;
+    ramLatency: boolean;
+  };
+  /** false ⇒ too little was measured to be a benchmark: don't score, don't submit */
+  scorable: boolean;
 }
 
 export type Stage = 'gpu' | 'cpu' | 'ram' | 'done';
@@ -87,25 +104,48 @@ export async function runFullBench(onProgress?: ProgressCallback): Promise<Bench
   // Worker pool limits, JIT inconsistency). Score formulas adjusted for what's
   // achievable in browser, not native ceiling.
   // Target: typical 2024 laptop ≈ 1200, mainstream ≈ 1800, high-end ≈ 3000+
-  const scoreGpu = gpu.supported ? Math.round(gpu.gflops * 3) : 0;       // 500 GFLOPS → 1500
-  const scoreCpuS = Math.round(cpu.hashesPerSecondSingle / 300);           // 400K h/s → 1333
-  const scoreCpuM = Math.round(cpu.hashesPerSecondMulti / 600);            // 1.2M h/s → 2000
-  const scoreRam = Math.round(((ram.readBandwidthGBs + ram.writeBandwidthGBs) / 2) * 60);
+  const measured = {
+    gpu:        gpu.supported && gpu.gflops > 0,
+    cpuSingle:  cpu.singleMeasured,
+    cpuMulti:   cpu.multiMeasured,
+    ram:        ram.measured,
+    ramLatency: ram.latencyMeasured,
+  };
 
-  // Geometric mean weighted: GPU 35%, CPU-multi 45%, RAM 20%.
-  // Use max(score, 1) to avoid log(0).
-  // When WebGPU is unavailable the GPU term would be ln(1)=0 and collapse
-  // the whole score — identical hardware would rank far lower on a browser
-  // without WebGPU. Instead, renormalize the remaining weights over CPU+RAM
-  // (0.45/0.65 and 0.20/0.65) so the score stays comparable within the
-  // no-GPU measurement class. The backend keeps the two classes in separate
-  // percentile pools and the leaderboard only ranks GPU-measured runs.
+  const scoreGpu = measured.gpu ? Math.round(gpu.gflops * 3) : 0;          // 500 GFLOPS → 1500
+  const scoreCpuS = measured.cpuSingle ? Math.round(cpu.hashesPerSecondSingle / 300) : 0;  // 400K h/s → 1333
+  const scoreCpuM = measured.cpuMulti ? Math.round(cpu.hashesPerSecondMulti / 600) : 0;    // 1.2M h/s → 2000
+  const scoreRam = measured.ram
+    ? Math.round(((ram.readBandwidthGBs + ram.writeBandwidthGBs) / 2) * 60)
+    : 0;
+
+  // ── Composite: weighted geometric mean over the MEASURED components ──
+  // Weights GPU 0.35 · CPU-multi 0.45 · RAM 0.20, renormalized over whatever
+  // was actually measured. This is the general form of the two cases already
+  // documented on /methodology — it reproduces both exactly:
+  //   {gpu,cpuM,ram} → exp(0.35·ln g + 0.45·ln c + 0.20·ln r)      (W = 1.00)
+  //   {cpuM,ram}     → exp((0.45·ln c + 0.20·ln r) / 0.65)         (W = 0.65)
+  //   {gpu,cpuM}     → exp((0.35·ln g + 0.45·ln c) / 0.80)         (W = 0.80, new)
+  // so no stored score changes.
+  //
+  // An unmeasured component must never contribute ln(1)=0 as if it were a
+  // real zero — that collapsed the composite (a phone whose multi-core test
+  // timed out scored 5) and then got that component named as the user's
+  // bottleneck. max(score,1) still applies to genuinely measured values.
   const ln = (v: number) => Math.log(Math.max(v, 1));
-  const overall = Math.round(
-    scoreGpu > 0
-      ? Math.exp(0.35 * ln(scoreGpu) + 0.45 * ln(scoreCpuM) + 0.20 * ln(scoreRam))
-      : Math.exp((0.45 * ln(scoreCpuM) + 0.20 * ln(scoreRam)) / 0.65)
-  );
+  const terms: Array<[number, number]> = [];
+  if (measured.gpu)      terms.push([0.35, scoreGpu]);
+  if (measured.cpuMulti) terms.push([0.45, scoreCpuM]);
+  if (measured.ram)      terms.push([0.20, scoreRam]);
+  const W = terms.reduce((a, [w]) => a + w, 0);
+
+  // Floor: W ≥ 0.65 ⟺ CPU-multi measured AND (GPU or RAM measured).
+  // CPU-multi alone would renormalize to exactly the CPU multi-core score
+  // published under the name "overall" — a comparability lie no label fixes.
+  const scorable = W >= 0.65 - 1e-9;
+  const overall = scorable
+    ? Math.round(Math.exp(terms.reduce((a, [w, s]) => a + w * ln(s), 0) / W))
+    : 0;
 
   const durationMs = performance.now() - startTotal;
 
@@ -140,6 +180,8 @@ export async function runFullBench(onProgress?: ProgressCallback): Promise<Bench
       cpuMulti: scoreCpuM,
       ram: scoreRam,
       overall
-    }
+    },
+    measured,
+    scorable
   };
 }

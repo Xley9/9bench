@@ -29,23 +29,42 @@ export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => {
       });
     }
 
-    // Recompute percentile against current global distribution — but only
-    // within the same measurement class (GPU-measured vs no-WebGPU), so the
-    // two incompatible score bases never mix in one ranking.
-    // Discriminator is gpu_gflops, not score_gpu: score_gpu rounds to 0 below
-    // 0.167 GFLOPS, while gpu_gflops is exactly 0 for every unmeasured run.
-    // og.ts and top.ts use the same column.
-    const hasGpu = row.gpu_gflops > 0 ? 1 : 0;
-    const totalRow = await env.DB.prepare('SELECT COUNT(*) as c FROM results WHERE (gpu_gflops > 0) = ?')
-      .bind(hasGpu)
-      .first<{ c: number }>();
-    const lowerRow = await env.DB.prepare('SELECT COUNT(*) as c FROM results WHERE score_overall < ? AND (gpu_gflops > 0) = ?')
-      .bind(row.score_overall, hasGpu)
-      .first<{ c: number }>();
+    // Which components this run actually measured. Derived from the raw
+    // columns: every metric is work/elapsed with a non-zero numerator, so a
+    // real measurement is never exactly 0. Same discriminator as submit.ts,
+    // top.ts and og.ts — no stored flag, no migration.
+    const measured = {
+      gpu:        Number(row.gpu_gflops) > 0,
+      cpuSingle:  Number(row.cpu_hashes_single) > 0,
+      cpuMulti:   Number(row.cpu_hashes_multi) > 0,
+      ram:        Number(row.ram_read_gbs) > 0 && Number(row.ram_write_gbs) > 0,
+      ramLatency: Number(row.ram_latency_ns) > 0,
+    };
+    const scorable = measured.cpuMulti && (measured.gpu || measured.ram);
+    const basis: 'full' | 'cpu+ram' | 'gpu+cpu' | 'insufficient' =
+      !scorable ? 'insufficient'
+      : measured.gpu && measured.ram ? 'full'
+      : measured.gpu ? 'gpu+cpu' : 'cpu+ram';
 
-    const total = totalRow?.c || 1;
-    const lower = lowerRow?.c || 0;
-    const percentile = Math.round((lower / total) * 100);
+    // Percentile only within the same measurement class, and only for runs
+    // that clear the scoring floor.
+    let percentile = 0;
+    let total = 0;
+    if (scorable) {
+      const POOL = `FROM results WHERE cpu_hashes_multi > 0
+        AND (gpu_gflops > 0) = ?
+        AND (ram_read_gbs > 0 AND ram_write_gbs > 0) = ?`;
+      const hasGpu = measured.gpu ? 1 : 0;
+      const hasRam = measured.ram ? 1 : 0;
+      const totalRow = await env.DB.prepare(`SELECT COUNT(*) as c ${POOL}`)
+        .bind(hasGpu, hasRam)
+        .first<{ c: number }>();
+      const lowerRow = await env.DB.prepare(`SELECT COUNT(*) as c ${POOL} AND score_overall < ?`)
+        .bind(hasGpu, hasRam, row.score_overall)
+        .first<{ c: number }>();
+      total = totalRow?.c || 1;
+      percentile = Math.round(((lowerRow?.c || 0) / total) * 100);
+    }
 
     // AI block is included only when this row was captured post-Phase-G
     // (older rows have NULL ai_* columns). UI should treat null as
@@ -74,6 +93,9 @@ export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => {
         ram: { readGBs: row.ram_read_gbs, writeGBs: row.ram_write_gbs, latencyNs: row.ram_latency_ns },
         ai: aiBlock,
       },
+      measured,
+      basis,
+      scorable,
       percentile,
       total
     }), {

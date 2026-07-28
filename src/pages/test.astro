@@ -906,14 +906,24 @@ import TruthDisclaimer from '../components/bench/TruthDisclaimer.astro';
     // where the adapter existed but the bench then failed (device acquire,
     // shader verification, timer floor). Never print Math.round(0) here —
     // "0" next to GFLOPS reads as a measured zero.
-    if (result.gpu.supported) {
+    if (result.measured.gpu) {
       setBlockValue('gpu', Math.round(result.gpu.gflops).toLocaleString());
     } else {
       setBlockUnmeasured('gpu');
       $('#nogpu-notice')?.removeAttribute('hidden');
     }
-    setBlockValue('cpu', Math.round(result.cpu.hashesPerSecondMulti / 1000).toLocaleString() + 'k');
-    setBlockValue('ram', result.ram.readBandwidthGBs.toFixed(1));
+    // Same rule for CPU and RAM: a failed phase used to render as "0k" / "0.0"
+    // right next to a correctly-marked GPU block.
+    if (result.measured.cpuMulti) {
+      setBlockValue('cpu', Math.round(result.cpu.hashesPerSecondMulti / 1000).toLocaleString() + 'k');
+    } else {
+      setBlockUnmeasured('cpu', 'MULTI-CORE PHASE DID NOT REPORT');
+    }
+    if (result.measured.ram) {
+      setBlockValue('ram', result.ram.readBandwidthGBs.toFixed(1));
+    } else {
+      setBlockUnmeasured('ram', 'MEMORY PHASE DID NOT REPORT');
+    }
 
     // Variance: GPU has measurements[]; CPU/RAM not yet — show '—'
     if (result.gpu.measurements && result.gpu.measurements.length >= 3) {
@@ -924,11 +934,32 @@ import TruthDisclaimer from '../components/bench/TruthDisclaimer.astro';
       setBlockVariance('gpu', min, avg, max);
     }
 
+    const secs = (result.durationMs / 1000).toFixed(1);
+    if (!result.scorable) {
+      // Below the scoring floor: too much of the benchmark failed for the
+      // composite to mean anything. Show what did measure, never a number
+      // built on the parts that didn't.
+      const missing = [
+        !result.measured.cpuMulti ? 'CPU multi-core' : null,
+        !result.measured.ram ? 'memory bandwidth' : null,
+        !result.measured.gpu ? 'GPU' : null,
+      ].filter(Boolean).join(', ');
+      appendLog(`run   → incomplete · not measured: ${missing}`);
+      appendLog('run   → not scored · not submitted');
+      setStatus('⚠ INCOMPLETE RUN', `${secs}s · not enough measured to score`);
+      showError(
+        `This run measured too little to produce a score. Missing: ${missing}. ` +
+        `We won't combine what's left into a composite and call it your machine's score — ` +
+        `the missing parts carry most of the weight. Try running the test again.`
+      );
+      return;
+    }
+
     setStatus(
-      result.gpu.supported ? '✓ TEST COMPLETE' : '✓ TEST COMPLETE (CPU + RAM)',
-      result.gpu.supported
-        ? `${(result.durationMs / 1000).toFixed(1)}s · submitting…`
-        : `${(result.durationMs / 1000).toFixed(1)}s · gpu not measured · submitting…`
+      result.measured.gpu ? '✓ TEST COMPLETE' : '✓ TEST COMPLETE (CPU + RAM)',
+      result.measured.gpu
+        ? `${secs}s · submitting…`
+        : `${secs}s · gpu not measured · submitting…`
     );
     appendLog(`score → ${result.scores.overall.toLocaleString()} (overall)`);
 

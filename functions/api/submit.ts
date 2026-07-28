@@ -131,28 +131,51 @@ function validate(body: Submission): string | null {
   if (!isNum(body.ram.writeBandwidthGBs) || body.ram.writeBandwidthGBs < 0 || body.ram.writeBandwidthGBs > 500) return 'Implausible RAM write';
   if (!isNum(body.ram.randomAccessLatencyNs) || body.ram.randomAccessLatencyNs < 0 || body.ram.randomAccessLatencyNs > 1e6) return 'Implausible RAM latency';
 
-  // Consistency: component scores must match the documented formulas.
-  if (!roughlyEqual(s.gpu, body.gpu.gflops * 3)) return 'Inconsistent GPU score';
-  if (!roughlyEqual(s.cpuSingle, body.cpu.hashesPerSecondSingle / 300)) return 'Inconsistent CPU single score';
-  if (!roughlyEqual(s.cpuMulti, body.cpu.hashesPerSecondMulti / 600)) return 'Inconsistent CPU multi score';
-  if (!roughlyEqual(s.ram, ((body.ram.readBandwidthGBs + body.ram.writeBandwidthGBs) / 2) * 60)) return 'Inconsistent RAM score';
+  // Which components were actually measured. Derived server-side from the raw
+  // metrics, never from a client flag — a trusted flag would let a submitter
+  // pick whichever denominator flatters them. No stored column is needed:
+  // every raw metric is `work / elapsed` with a non-zero numerator, so a
+  // genuine measurement can never be exactly 0.
+  const mGpu = body.gpu.gflops > 0;
+  const mSingle = body.cpu.hashesPerSecondSingle > 0;
+  const mMulti = body.cpu.hashesPerSecondMulti > 0;
+  const mRam = body.ram.readBandwidthGBs > 0 && body.ram.writeBandwidthGBs > 0;
 
-  // Overall: weighted geometric mean — GPU 35 / CPU-multi 45 / RAM 20.
-  // When the GPU couldn't be measured (no WebGPU) the client renormalizes
-  // over CPU+RAM; accept both formulas depending on scores.gpu.
+  // Consistency: a measured component's score must match the documented
+  // formula; an unmeasured one must be exactly 0 on both sides.
+  if (mGpu ? !roughlyEqual(s.gpu, body.gpu.gflops * 3) : s.gpu !== 0) return 'Inconsistent GPU score';
+  if (mSingle ? !roughlyEqual(s.cpuSingle, body.cpu.hashesPerSecondSingle / 300) : s.cpuSingle !== 0) return 'Inconsistent CPU single score';
+  if (mMulti ? !roughlyEqual(s.cpuMulti, body.cpu.hashesPerSecondMulti / 600) : s.cpuMulti !== 0) return 'Inconsistent CPU multi score';
+  if (mRam ? !roughlyEqual(s.ram, ((body.ram.readBandwidthGBs + body.ram.writeBandwidthGBs) / 2) * 60) : s.ram !== 0) return 'Inconsistent RAM score';
+
+  // Overall: weighted geometric mean over the measured components, weights
+  // renormalized over that set (GPU .35 / CPU-multi .45 / RAM .20).
   const ln = (v: number) => Math.log(Math.max(v, 1));
-  if (s.gpu > 0) {
-    const expected = Math.exp(0.35 * ln(s.gpu) + 0.45 * ln(s.cpuMulti) + 0.20 * ln(s.ram));
-    if (!roughlyEqual(s.overall, expected)) return 'Inconsistent overall score';
-  } else {
-    // No-WebGPU clients renormalize over CPU+RAM; clients running a stale
-    // cached page still use the old collapsed formula — accept either.
-    const renormalized = Math.exp((0.45 * ln(s.cpuMulti) + 0.20 * ln(s.ram)) / 0.65);
-    const legacy = Math.exp(0.45 * ln(s.cpuMulti) + 0.20 * ln(s.ram));
-    if (!roughlyEqual(s.overall, renormalized) && !roughlyEqual(s.overall, legacy)) return 'Inconsistent overall score';
+  const W = (mGpu ? 0.35 : 0) + (mMulti ? 0.45 : 0) + (mRam ? 0.20 : 0);
+  const sum = (mGpu ? 0.35 * ln(s.gpu) : 0)
+            + (mMulti ? 0.45 * ln(s.cpuMulti) : 0)
+            + (mRam ? 0.20 * ln(s.ram) : 0);
+  let ok = roughlyEqual(s.overall, Math.exp(sum / W));
+  if (!ok && !mGpu && mRam && mMulti) {
+    // Clients running a stale cached page still use the pre-v3.2 collapsed form.
+    ok = roughlyEqual(s.overall, Math.exp(0.45 * ln(s.cpuMulti) + 0.20 * ln(s.ram)));
   }
+  if (!ok) return 'Inconsistent overall score';
 
   return null;
+}
+
+/**
+ * Scoring floor: W >= 0.65, i.e. CPU-multi measured AND (GPU or RAM measured).
+ * Below that the composite is mostly a statement about our measurement
+ * failing rather than about the hardware — those runs are shown to the user
+ * but never stored, ranked or leaderboarded.
+ */
+function belowFloor(body: Submission): boolean {
+  const mGpu = body.gpu.gflops > 0;
+  const mMulti = body.cpu.hashesPerSecondMulti > 0;
+  const mRam = body.ram.readBandwidthGBs > 0 && body.ram.writeBandwidthGBs > 0;
+  return !mMulti || !(mGpu || mRam);
 }
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
@@ -166,6 +189,16 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
 
     const invalid = validate(body);
     if (invalid) return bad(invalid);
+
+    // 422, not 400: the payload is well-formed, it just doesn't contain
+    // enough measurement to be a benchmark result.
+    if (belowFloor(body)) {
+      return new Response(JSON.stringify({
+        ok: false,
+        error: 'Run did not measure enough components to be scored',
+      }), { status: 422, headers: { 'content-type': 'application/json' } });
+    }
+
     const s = body.scores;
 
     // Try a few times if random ID collides (extremely rare)
@@ -235,13 +268,20 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     // Percentiles are computed within the same measurement class — runs with a
     // measured GPU compare only against other GPU runs, no-WebGPU runs only
     // against no-WebGPU runs. Mixing the two bases would be unfair to both.
-    // gpu_gflops is the discriminator everywhere (api/r/[id].ts, top.ts, og.ts)
+    // Percentile pools, keyed on which components were measured. Raw columns
+    // are the discriminator everywhere (api/r/[id].ts, top.ts, og.ts) — no
+    // stored flag, because a genuine measurement can never be exactly 0.
+    // Rows below the scoring floor match no pool and skew no percentile.
+    const POOL = `FROM results WHERE cpu_hashes_multi > 0
+      AND (gpu_gflops > 0) = ?
+      AND (ram_read_gbs > 0 AND ram_write_gbs > 0) = ?`;
     const hasGpu = body.gpu.gflops > 0 ? 1 : 0;
-    const totalRow = await env.DB.prepare('SELECT COUNT(*) as c FROM results WHERE (gpu_gflops > 0) = ?')
-      .bind(hasGpu)
+    const hasRam = (body.ram.readBandwidthGBs > 0 && body.ram.writeBandwidthGBs > 0) ? 1 : 0;
+    const totalRow = await env.DB.prepare(`SELECT COUNT(*) as c ${POOL}`)
+      .bind(hasGpu, hasRam)
       .first<{ c: number }>();
-    const lowerRow = await env.DB.prepare('SELECT COUNT(*) as c FROM results WHERE score_overall < ? AND (gpu_gflops > 0) = ?')
-      .bind(Math.round(s.overall), hasGpu)
+    const lowerRow = await env.DB.prepare(`SELECT COUNT(*) as c ${POOL} AND score_overall < ?`)
+      .bind(hasGpu, hasRam, Math.round(s.overall))
       .first<{ c: number }>();
 
     const total = totalRow?.c || 1;

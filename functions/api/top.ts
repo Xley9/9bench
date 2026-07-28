@@ -10,10 +10,11 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   const limit = Math.min(200, Math.max(10, parseInt(url.searchParams.get('limit') || '50') || 50));
   const period = url.searchParams.get('period') || 'all'; // all|week|month
 
-  // Leaderboard only ranks runs with a measured GPU — no-WebGPU runs use a
-  // renormalized CPU+RAM formula and would compete on a different basis.
-  // gpu_gflops is the discriminator everywhere (see api/r/[id].ts, og.ts).
-  let timeFilter = ' WHERE gpu_gflops > 0';
+  // Leaderboard ranks FULL runs only — every component measured. Partial runs
+  // use a renormalized formula and compete on a different basis; runs with a
+  // failed sub-test (raw metric exactly 0) are excluded entirely.
+  let timeFilter = ' WHERE gpu_gflops > 0 AND cpu_hashes_multi > 0'
+                 + ' AND ram_read_gbs > 0 AND ram_write_gbs > 0';
   if (period === 'week') {
     const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
     timeFilter += ` AND created_at > ${weekAgo}`;

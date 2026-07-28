@@ -15,9 +15,21 @@ export interface RAMResult {
   randomAccessLatencyNs: number;
   durationMs: number;
   score: number;
+  /** True only when read AND write bandwidth were both timed successfully. */
+  measured: boolean;
+  /**
+   * Latency has its own flag: its index array is allocated after 512 MB of
+   * Float32Arrays and can fail on its own, which used to leave a fabricated
+   * "0.0 ns" on the result page next to perfectly real bandwidth numbers.
+   */
+  latencyMeasured: boolean;
   error?: string;
 }
 
+// NOTE: the working set is deliberately NOT adaptive. 256 MB is what forces
+// actual main-memory traffic past L3; shrinking it on a low-memory device
+// would silently start measuring cache and report it as RAM bandwidth. If the
+// allocation fails, the component is unmeasured — coverage loses to honesty.
 export async function runRAMBench(workingSetMB = 256): Promise<RAMResult> {
   const result: RAMResult = {
     workingSetMB,
@@ -26,7 +38,9 @@ export async function runRAMBench(workingSetMB = 256): Promise<RAMResult> {
     writeBandwidthGBs: 0,
     randomAccessLatencyNs: 0,
     durationMs: 0,
-    score: 0
+    score: 0,
+    measured: false,
+    latencyMeasured: false,
   };
 
   try {
@@ -50,7 +64,10 @@ export async function runRAMBench(workingSetMB = 256): Promise<RAMResult> {
     }
     const copyElapsed = performance.now() - copyStart;
     const copyBytes = bytes * 2 * copyIterations; // read + write
-    result.copyBandwidthGBs = (copyBytes / (copyElapsed / 1000)) / 1e9;
+    // Guard every division: under Firefox resistFingerprinting performance.now()
+    // clamps to 100ms, so a fast section can quantise to exactly 0 and produce
+    // Infinity — which JSON.stringify turns into null and the API rejects.
+    if (copyElapsed > 0) result.copyBandwidthGBs = (copyBytes / (copyElapsed / 1000)) / 1e9;
 
     // Test 2: Sequential READ bandwidth (sum)
     const readIterations = 5;
@@ -65,7 +82,7 @@ export async function runRAMBench(workingSetMB = 256): Promise<RAMResult> {
     }
     const readElapsed = performance.now() - readStart;
     const readBytes = bytes * readIterations;
-    result.readBandwidthGBs = (readBytes / (readElapsed / 1000)) / 1e9;
+    if (readElapsed > 0) result.readBandwidthGBs = (readBytes / (readElapsed / 1000)) / 1e9;
     if (sum === 0) console.warn('Read benchmark sum was 0 — possible JIT optimization');
 
     // Test 3: Sequential WRITE bandwidth
@@ -82,25 +99,38 @@ export async function runRAMBench(workingSetMB = 256): Promise<RAMResult> {
     }
     const writeElapsed = performance.now() - writeStart;
     const writeBytes = bytes * writeIterations;
-    result.writeBandwidthGBs = (writeBytes / (writeElapsed / 1000)) / 1e9;
+    if (writeElapsed > 0) result.writeBandwidthGBs = (writeBytes / (writeElapsed / 1000)) / 1e9;
 
-    // Test 4: Random-access latency (defeats cache prefetching)
-    const indexCount = 1_000_000;
-    const indices = new Uint32Array(indexCount);
-    // Pseudo-random walk through working set
-    let prev = 0;
-    for (let i = 0; i < indexCount; i++) {
-      prev = (prev * 1664525 + 1013904223) & 0xffffffff;
-      indices[i] = (prev >>> 0) % elements;
+    // Bandwidth is the component that feeds the score; both halves must be real.
+    result.measured = result.readBandwidthGBs > 0 && result.writeBandwidthGBs > 0;
+
+    // Test 4: Random-access latency (defeats cache prefetching).
+    // Wrapped separately — allocating another 4 MB after 512 MB of arrays can
+    // fail on a low-memory device, and that must not zero the bandwidth numbers
+    // measured above.
+    try {
+      const indexCount = 1_000_000;
+      const indices = new Uint32Array(indexCount);
+      // Pseudo-random walk through working set
+      let prev = 0;
+      for (let i = 0; i < indexCount; i++) {
+        prev = (prev * 1664525 + 1013904223) & 0xffffffff;
+        indices[i] = (prev >>> 0) % elements;
+      }
+      let acc = 0;
+      const latStart = performance.now();
+      for (let i = 0; i < indexCount; i++) {
+        acc += src[indices[i]];
+      }
+      const latElapsed = performance.now() - latStart;
+      if (acc === 0) console.warn('Latency benchmark sum was 0');
+      if (latElapsed > 0) {
+        result.randomAccessLatencyNs = (latElapsed * 1e6) / indexCount;
+        result.latencyMeasured = true;
+      }
+    } catch (e: any) {
+      console.warn('RAM latency probe failed (non-fatal):', e?.message || e);
     }
-    let acc = 0;
-    const latStart = performance.now();
-    for (let i = 0; i < indexCount; i++) {
-      acc += src[indices[i]];
-    }
-    const latElapsed = performance.now() - latStart;
-    if (acc === 0) console.warn('Latency benchmark sum was 0');
-    result.randomAccessLatencyNs = (latElapsed * 1e6) / indexCount;
 
     result.durationMs = performance.now() - startTotal;
 
