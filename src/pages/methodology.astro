@@ -383,6 +383,57 @@ const FAQ = [
         inversion.
       </p>
 
+      <h3 class="methodology__h3">Re-tested after the v3.6 estimator fix</h3>
+      <p class="methodology__p">
+        Both machines were re-run on v3.6, same day, same conditions. Two of the
+        three rankings are now correct. One is not.
+      </p>
+      <div class="table-scroll">
+        <table class="compare-table">
+          <thead>
+            <tr><th>A / B ratio</th><th>9bench v3.6</th><th>9bench before</th><th>Geekbench 7</th><th>Result</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>GPU</td><td>1.23×</td><td>1.62×</td><td>1.22×</td><td class="ok">matches</td></tr>
+            <tr><td>CPU single-core</td><td>0.88×</td><td>1.21×</td><td>0.96×</td><td class="ok">order fixed</td></tr>
+            <tr><td>CPU multi-core</td><td>1.14×</td><td>1.41×</td><td>0.89×</td><td class="bad">STILL INVERTED</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <ul class="weight-list">
+        <li><strong>GPU: essentially exact now.</strong> Replacing the
+          max-of-samples with a median moved the ratio from 1.62× to 1.23×
+          against Geekbench's 1.22×. The old figure was 33% too wide; the gap is
+          now about one percent. Absolute numbers dropped — Device A from 372.8 to
+          256.3 GFLOPS — which is the upward bias coming out, not the hardware
+          changing.</li>
+        <li><strong>CPU single-core: order corrected.</strong> Not by the
+          estimator, which does not touch the single-core path, but by letting the
+          2-second budget bind instead of the old iteration cap. The previous 21%
+          inversion was largely noise from a 0.4-second window. It now agrees with
+          Geekbench on which machine is faster, while overstating the margin
+          (14% vs 4%).</li>
+        <li><strong>CPU multi-core: still wrong.</strong> The gap narrowed from
+          41% to 14% in the wrong direction, but the ranking did not flip. The
+          per-worker telemetry shows why the estimator is no longer the problem:
+          on both machines every worker ran the full window within 25 ms of every
+          other (9,966–9,975 ms and 9,952–9,961 ms), so the barrier effect is
+          gone. What remains is the workload. Scaling is still 3.21× and 2.47× on
+          16 and 20 threads where Geekbench measures 5.01× and 5.38× — a shared
+          bottleneck in the browser's crypto dispatch path that gets worse with
+          more concurrent workers, which penalises exactly the machine with more
+          threads.</li>
+      </ul>
+      <p class="methodology__p">
+        <strong>So the v3.6 note that the estimator fix would correct the ranking
+        was itself too confident.</strong> It corrected two of three. The
+        multi-core ranking needs the workload replaced, not the estimator — that
+        is v4.0, and it does not ship until it has been validated against native
+        references on at least five machines. Until then the multi-core number
+        should be read as a measure of the browser's parallel crypto throughput,
+        which is a real thing and reproducible, but is not a CPU ranking.
+      </p>
+
       <h3 class="methodology__h3">What this does NOT establish</h3>
       <ul class="weight-list">
         <li><strong>n = 2 machines, one run each, one browser, one day.</strong> No
@@ -523,14 +574,19 @@ const FAQ = [
           shift; it just varies less.
         </li>
         <li>
-          <strong>What this does NOT fix: the magnitude.</strong> At a 64-byte
-          payload the CPU test still spends most of its time in
-          <code>crypto.subtle</code> dispatch rather than in SHA-256. Correcting
-          the estimator fixes <em>which machine ranks higher</em>; it does not make
-          the number a measure of native CPU throughput. Replacing the workload is
-          a genuinely different benchmark that needs its own validation against
+          <strong>What this does NOT fix: the magnitude — and, it turns out, the
+          multi-core ranking either.</strong> At a 64-byte payload the CPU test
+          still spends most of its time in <code>crypto.subtle</code> dispatch
+          rather than in SHA-256. When this entry was written we expected the
+          estimator fix to at least correct <em>which machine ranks higher</em>.
+          We then re-ran both validation machines and it corrected two of three:
+          GPU now matches Geekbench almost exactly and single-core order is right,
+          but <strong>the multi-core ranking is still inverted</strong>. The
+          numbers and the reason are in Section 6. Replacing the workload is a
+          genuinely different benchmark that needs its own validation against
           native references on at least five machines before it ships. That is
-          v4.0, and it will be announced the same way.
+          v4.0, and it will be announced the same way. We are leaving this
+          paragraph's original prediction visible rather than editing it away.
         </li>
       </ul>
 
