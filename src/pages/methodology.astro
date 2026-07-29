@@ -19,7 +19,7 @@ const SITE = 'https://9bench.com';
 const FAQ = [
   {
     q: 'Is 9bench accurate?',
-    a: "Within ~3-10% of native benchmarks for CPU and GPU compute. RAM is browser-sandboxed — it consistently scores 30-50% of native bandwidth. We say so loudly. For absolute peak measurement use Geekbench, Cinebench, or 3DMark. For instant cross-platform relative ranking, 9bench is built for the job."
+    a: "It depends which number, and we now have data instead of an assertion. GPU: a real relative measure. On our one paired test the GPU ranking matched Geekbench 7's order, with a wider gap (9bench 1.62x, Geekbench 1.22x) because our untiled matmul is bound by cache and memory bandwidth. CPU: currently not a reliable ranking. On the same pair, 9bench put machine A ahead by 21% single-core and 41% multi-core; Geekbench put machine B ahead by 4% and 12%. Both inverted. Two causes: at a 64-byte payload most of the measured time is crypto.subtle dispatch rather than SHA-256, and the multi-core estimator reduces to thread count times the slowest worker's rate. RAM: browser-sandboxed, 30-50% of native, as always stated. n=2, one run per machine — enough to disprove a claim, not enough to calibrate one. Section 6 has the full table. The earlier answer here claimed 'within 3-10% of native for CPU and GPU compute'; that figure was never measured against a native benchmark and is retracted."
   },
   {
     q: 'Does 9bench take money from chip vendors?',
@@ -69,11 +69,11 @@ const FAQ = [
   })} />
   <main class="container methodology">
 
-    <IssueNameplate middle="Methodology — Truth Series" right="v3.4 · Jul 2026" />
+    <IssueNameplate middle="Methodology — Truth Series" right="v3.5 · Jul 2026" />
 
     <!-- Hero -->
     <section class="methodology__hero">
-      <div class="eyebrow eyebrow--accent">// METHODOLOGY · v3.4</div>
+      <div class="eyebrow eyebrow--accent">// METHODOLOGY · v3.5</div>
       <h1 class="methodology__h1">
         Every formula.<br />
         <span class="text-fg-3">Every constant.</span><br />
@@ -95,9 +95,10 @@ const FAQ = [
         <li><a href="#composite">3. Composite weighting</a></li>
         <li><a href="#tiers">4. Tier brackets</a></li>
         <li><a href="#limits">5. What we cannot measure</a></li>
-        <li><a href="#faq">6. FAQ</a></li>
-        <li><a href="#license">7. License</a></li>
-        <li><a href="#changelog">8. Changelog</a></li>
+        <li><a href="#validation">6. Validation vs native</a></li>
+        <li><a href="#faq">7. FAQ</a></li>
+        <li><a href="#license">8. License</a></li>
+        <li><a href="#changelog">9. Changelog</a></li>
       </ul>
     </nav>
 
@@ -285,9 +286,128 @@ const FAQ = [
       </p>
     </section>
 
-    <!-- Section 6 — FAQ -->
+    <!-- Section 6 — Validation against native benchmarks -->
+    <section id="validation" class="methodology__section">
+      <h2 class="section-h">6. Validation against native benchmarks</h2>
+
+      <p class="methodology__p">
+        Until July 2026 this page claimed 9bench landed
+        <strong>"within 3-10% of native benchmarks for CPU and GPU compute."</strong>
+        That number was never measured. It was an estimate that got written down as
+        a fact and then repeated on the landing page. This section replaces it with
+        the only paired data we actually have, including the part that makes us
+        look bad.
+      </p>
+
+      <h3 class="methodology__h3">The test</h3>
+      <p class="methodology__p">
+        Two laptops, same chassis model, same session, same day, both on mains
+        power. Each ran 9bench once and Geekbench 7 once.
+        <strong>n = 2 machines, one run each.</strong>
+      </p>
+      <ul class="weight-list">
+        <li><strong>Device A</strong> — i7-12650H (6P+4E, 16 threads) · RTX 4060 Laptop, 24 CU · 32 GB</li>
+        <li><strong>Device B</strong> — i7-12700H (6P+8E, 20 threads) · RTX 4050 Laptop, 20 CU · 64 GB DDR4</li>
+      </ul>
+
+      <h3 class="methodology__h3">The numbers</h3>
+      <div class="table-scroll">
+        <table class="compare-table">
+          <thead>
+            <tr><th>Measurement</th><th>Device A</th><th>Device B</th><th>A / B</th><th>Agrees?</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>9bench GPU (GFLOPS)</td><td>372.8</td><td>230.3</td><td>1.62×</td><td>—</td></tr>
+            <tr><td>Geekbench 7 OpenCL</td><td>87,334</td><td>71,559</td><td>1.22×</td><td class="ok">same order</td></tr>
+            <tr><td>9bench CPU single (h/s)</td><td>468,274</td><td>387,297</td><td>1.21×</td><td>—</td></tr>
+            <tr><td>Geekbench 7 CPU single</td><td>1,932</td><td>2,011</td><td>0.96×</td><td class="bad">INVERTED</td></tr>
+            <tr><td>9bench CPU multi (h/s)</td><td>1,293,243</td><td>916,599</td><td>1.41×</td><td>—</td></tr>
+            <tr><td>Geekbench 7 CPU multi</td><td>9,675</td><td>10,816</td><td>0.89×</td><td class="bad">INVERTED</td></tr>
+            <tr><td>Multi ÷ single (9bench)</td><td>2.76×</td><td>2.37×</td><td>—</td><td>—</td></tr>
+            <tr><td>Multi ÷ single (Geekbench)</td><td>5.01×</td><td>5.38×</td><td>—</td><td class="bad">we understate</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="methodology__h3">What agrees</h3>
+      <p class="methodology__p">
+        The GPU ranking. Both benchmarks put Device A ahead; we simply show a wider
+        gap. Our test is a single untiled 1024×1024 FP32 matmul with an arithmetic
+        intensity of about 2 FLOP/byte, so it is limited by cache and memory
+        bandwidth rather than raw FP32 throughput. Geekbench 7's GPU suite is a
+        geometric mean over ML, raytracing and image workloads that lean on units
+        scaling with SM count — its 1.22× is close to the 1.20× SM ratio. Two
+        benchmarks measuring different things, agreeing on order.
+      </p>
+      <p class="methodology__p">
+        For scale: 372.8 GFLOPS is <strong>2.9% of the 4060 Laptop's theoretical
+        FP32 peak</strong>, and 2.0% for the 4050. A naive-but-coalesced native
+        CUDA kernel reaches roughly 5% of peak; cuBLAS reaches about 60%. Our GPU
+        number is therefore around half a naive native kernel and a twentieth of an
+        optimised one. It is a throughput probe, not a peak-FLOPS measurement.
+      </p>
+
+      <h3 class="methodology__h3">What does not agree</h3>
+      <p class="methodology__p">
+        <strong>Both CPU rankings inverted.</strong> 9bench ranked A above B on
+        single-core and multi-core; Geekbench ranked B above A on both. Two
+        separate causes, both in our code:
+      </p>
+      <ul class="weight-list">
+        <li><strong>The workload is not really a CPU workload.</strong> One
+          iteration costs about 2,135 ns on Device A. A 64-byte SHA-256 using the
+          SHA-NI instructions present on both chips is roughly 20 ns. The other
+          ~99% is <code>crypto.subtle</code> argument validation, an ArrayBuffer
+          allocation, a promise and a microtask drain — the loop awaits every
+          digest, so it can never batch. We measure the browser's crypto call path,
+          and that path's cost tracks the JS engine and the OS scheduler, not core
+          width.</li>
+        <li><strong>The multi-core estimator measures the slowest thread.</strong>
+          Every worker is handed an identical iteration count and we wait for all of
+          them, then divide total hashes by wall clock. When the per-worker cap
+          binds — as it did on both these machines — that reduces algebraically to
+          <code>threads × (rate of the single slowest worker)</code>. Fast cores
+          contribute nothing except by not being slowest. Equal-work-plus-barrier is
+          a documented anti-pattern on hybrid CPUs.</li>
+        <li><strong>The scaling number gives it away.</strong> A 20-thread Alder
+          Lake scales 2.37× in 9bench and 5.38× in Geekbench. An 8-thread Snapdragon
+          phone scales 2.77× in 9bench. When a 20-thread laptop scales worse than an
+          8-thread phone, the benchmark has hit a shared bottleneck and stopped
+          measuring cores.</li>
+      </ul>
+      <p class="methodology__p">
+        Note which way the barrier bias actually points: it penalises the machine
+        with more threads, so on its own it should have put Device B
+        <strong>ahead</strong>. The observed result is the other way. The barrier is
+        a real defect, but the dispatch-bound workload is what produced this
+        inversion.
+      </p>
+
+      <h3 class="methodology__h3">What this does NOT establish</h3>
+      <ul class="weight-list">
+        <li><strong>n = 2 machines, one run each, one browser, one day.</strong> No
+          repeats, no idle gate, no best-of. A single background stall on one of 20
+          workers moves the multi-core number directly.</li>
+        <li><strong>It does not give a correction factor.</strong> We can say the
+          ranking inverted on this pair. We cannot say by how much 9bench is wrong
+          in general, and we will not publish a percentage that pretends otherwise.</li>
+        <li><strong>It does not prove the GPU test is right</strong> — only that it
+          agreed on order once. One agreeing pair is not validation.</li>
+        <li><strong>It says nothing about non-hybrid CPUs, Apple Silicon, AMD, or
+          any other browser.</strong> Both machines are Intel hybrid running the
+          same browser.</li>
+      </ul>
+      <p class="methodology__p">
+        If you have run both 9bench and Geekbench on the same machine,
+        <a href="https://github.com/Xley9/9bench/issues" rel="external noopener">file an
+        issue with both result links</a>. Paired data is the only thing that turns
+        this section into a real validation, and right now we have one pair.
+      </p>
+    </section>
+
+    <!-- Section 7 — FAQ -->
     <section id="faq" class="methodology__section">
-      <h2 class="section-h">6. FAQ</h2>
+      <h2 class="section-h">7. FAQ</h2>
       <div class="faq">
         {FAQ.map((item) => (
           <details class="faq-item">
@@ -298,9 +418,9 @@ const FAQ = [
       </div>
     </section>
 
-    <!-- Section 7 — License -->
+    <!-- Section 8 — License -->
     <section id="license" class="methodology__section">
-      <h2 class="section-h">7. License</h2>
+      <h2 class="section-h">8. License</h2>
       <p class="methodology__p">
         9bench is MIT-licensed. You can fork it, ship your own variant, run it
         commercially. Truth-series tools should not be locked behind proprietary
@@ -313,9 +433,9 @@ const FAQ = [
       </p>
     </section>
 
-    <!-- Section 8 — Changelog -->
+    <!-- Section 9 — Changelog -->
     <section id="changelog" class="methodology__section">
-      <h2 class="section-h">8. Changelog</h2>
+      <h2 class="section-h">9. Changelog</h2>
       <p class="methodology__p">
         A benchmark that changes its measurement silently cannot be trusted.
         Every change to how scores are measured or computed is documented here,
@@ -349,6 +469,57 @@ const FAQ = [
           GPU measurement collapsed the overall score. Now the weights
           renormalize over CPU + RAM (45/65 · 20/65), those runs rank in their
           own percentile pool, and the leaderboard only lists GPU-measured runs.
+        </li>
+      </ul>
+
+      <h3 class="methodology__h3">v3.5 — July 29, 2026</h3>
+      <ul class="methodology__list">
+        <li>
+          <strong>We published an accuracy claim we had never measured, and it was
+          wrong.</strong> Both the landing page and this page said 9bench lands
+          "within 3-10% of native benchmarks for CPU and GPU compute." No native
+          benchmark had ever been run alongside 9bench to check it — it was an
+          estimate that hardened into a fact through repetition. On the natural
+          reading it is wrong by roughly an order of magnitude: our GPU test reaches
+          about 3% of a card's theoretical FP32 peak, and the CPU test is a similar
+          fraction of native SHA-256 throughput. Both claims are retracted and
+          replaced by Section 6, which shows the actual comparison including the
+          result that contradicts us.
+        </li>
+        <li>
+          <strong>On the two machines we finally tested, our CPU ranking came out
+          backwards.</strong> Two laptops, same chassis, same session, both on mains
+          power. Geekbench 7 ranked the i7-12700H machine ahead on both CPU
+          single-core (+4%) and multi-core (+12%). 9bench ranked the i7-12650H
+          machine ahead on both (+21% and +41%). The GPU ranking agreed with
+          Geekbench; both CPU rankings inverted. <strong>n = 2 machines, one run
+          each</strong> — enough to falsify our claim, not enough to calibrate a
+          replacement, and we are not going to present it as more than that.
+        </li>
+        <li>
+          <strong>The multi-core estimator measures the slowest thread, not
+          aggregate throughput.</strong> Every worker gets an identical iteration
+          count and we wait for all of them, then divide total hashes by wall clock.
+          When the per-worker cap binds — as it did on both machines above — that is
+          algebraically identical to <code>thread count × the rate of the single
+          slowest worker</code>. Every fast core's contribution is discarded. Each
+          worker already reports its own elapsed time and we have been throwing that
+          value away. This is a defect, it is ours, and Section 6 documents it in
+          full.
+        </li>
+        <li>
+          <strong>The GPU headline number takes a maximum where the code comment
+          says median.</strong> The result resolves to the larger of the measurement
+          and the best warm-up sample, across up to 15 draws. A maximum over many
+          noisy samples is biased upward, and the bias grows with variance — a
+          machine with background load can score higher than a quiet machine with
+          identical real throughput. Flagged here because it is live.
+        </li>
+        <li>
+          <strong>What did not change: any stored score.</strong> Nothing in this
+          release alters a number. Everything above is disclosure. The fixes, and
+          what they mean for the roughly 2,900 stored results, come in v3.6 —
+          announced before they ship, not after.
         </li>
       </ul>
 
@@ -538,7 +709,34 @@ const FAQ = [
   }
   .methodology__p a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
 
-  /* Changelog (Section 8) */
+  /* Validation table (Section 6) — 5 columns, scrolls on mobile */
+  .table-scroll { overflow-x: auto; margin-top: 24px; }
+  .compare-table {
+    border-collapse: collapse;
+    width: 100%;
+    min-width: 560px;
+    border: 1px solid var(--line);
+  }
+  .compare-table th, .compare-table td {
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--line);
+    font-family: var(--mono);
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  .compare-table th {
+    color: var(--fg-3);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+  .compare-table td:first-child { color: var(--fg-2); white-space: normal; }
+  .compare-table td.ok  { color: var(--accent); }
+  .compare-table td.bad { color: var(--warn); font-weight: 700; }
+
+  /* Changelog */
   .methodology__h3 {
     font-family: var(--mono);
     font-size: 14px;

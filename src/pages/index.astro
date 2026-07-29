@@ -19,7 +19,7 @@ const SITE = 'https://9bench.com';
 const HOME_FAQS = [
   {
     q: 'Is 9bench accurate?',
-    a: 'Within 3-10% of native benchmarks for CPU and GPU compute. RAM scores are browser-sandboxed (30-50% of native). For absolute peak measurement use Geekbench or Cinebench. For instant relative comparison across machines, 9bench is purpose-built.'
+    a: "Accurate at ranking machines against each other — reliably so for GPU, currently not for CPU. 9bench measures what your hardware delivers through the browser: a WebGPU compute shader, a Web Crypto hash chain, TypedArray memory traffic. These are not native figures and are not comparable to Geekbench or Cinebench numbers. We tested two laptops against Geekbench 7 (n=2, one run each): the GPU ranking agreed, both CPU rankings came out inverted. The CPU test is dominated by browser crypto-call overhead rather than by the CPU. Data, cause and fix status are in the methodology. A previous version of this answer claimed 'within 3-10% of native' — that was never verified and has been retracted."
   },
   {
     q: 'How does 9bench compare to UserBenchmark?',
@@ -179,7 +179,7 @@ const FEATURES = [
         If you find a flaw, file an issue. We ship the patch the same week.
         <span class="text-accent">"</span>
       </blockquote>
-      <div class="pullquote__attr">— METHODOLOGY · v3.4 · JUL 2026</div>
+      <div class="pullquote__attr">— METHODOLOGY · v3.5 · JUL 2026</div>
     </section>
 
     <!-- ── Permalink paste box ────────────────────────────────────── -->
@@ -257,7 +257,7 @@ const FEATURES = [
         <dt>Download required</dt><dd>None — runs entirely in the browser</dd>
         <dt>Privacy</dt><dd>All measurements run locally; score submission is opt-in and anonymous</dd>
         <dt>License</dt><dd>MIT open source (<a href="https://github.com/Xley9/9bench" rel="external noopener">GitHub</a>)</dd>
-        <dt>Last updated</dt><dd><time datetime="2026-07-29">July 29, 2026</time> (methodology v3.4)</dd>
+        <dt>Last updated</dt><dd><time datetime="2026-07-29">July 29, 2026</time> (methodology v3.5)</dd>
       </dl>
 
       <h3 class="seo-body__h3" id="how-it-works">How does the 9bench benchmark work?</h3>
