@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "astro dev",
     "start": "astro dev",
-    "build": "astro build",
+    "build": "node scripts/check-kernels.mjs && astro build",
+    "kernels": "node scripts/build-kernels.mjs",
     "preview": "astro preview",
     "astro": "astro",
     "seed:hw": "node scripts/seed-reference-hardware.mjs"
@@ -19,6 +20,7 @@
     "workers-og": "^0.0.27"
   },
   "devDependencies": {
+    "assemblyscript": "0.28.20",
     "sharp": "^0.34.5"
   }
 }

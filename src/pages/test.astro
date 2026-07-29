@@ -803,6 +803,59 @@ import TruthDisclaimer from '../components/bench/TruthDisclaimer.astro';
       return;
     }
 
+    // ── v4.0 SOLO MODE: /test/?v4solo=1 ───────────────────────────
+    // Runs ONLY the full-length v4.0 candidate on a cold chip and prints a
+    // JSON block for a validation-pair GitHub issue. Never touches
+    // /api/submit or /api/shadow — the gate's accuracy criteria consume
+    // these cold runs; fleet shadow data (thermally contaminated by its
+    // after-the-test placement) is only used for scaling shape and rates.
+    if (new URLSearchParams(location.search).has('v4solo')) {
+      if (typeof WebAssembly === 'undefined') {
+        showError('The v4.0 candidate needs WebAssembly, which this browser does not expose.');
+        return;
+      }
+      try {
+        setStatus('● V4 SOLO RUN', 'FULL-LENGTH v4.0 CANDIDATE · NOT SCORED · NOT SUBMITTED');
+        appendLog('v4solo → full-length v4.0 candidate · cold-chip validation run');
+        appendLog('v4solo → nothing is submitted; copy the JSON below into a validation-pair issue');
+        setBlockUnmeasured('gpu', 'NOT PART OF THE V4 SOLO RUN');
+        setBlockUnmeasured('ram', 'NOT PART OF THE V4 SOLO RUN');
+        startGraph('cpu');
+        setBlockActive('cpu', true, 50);
+        const { runCPUBenchV4 } = await import('../bench/cpu-test-v4');
+        const solo = await runCPUBenchV4({
+          singleMs: 2000, multiWindowMs: 10000, warmupMs: 300, probe: false,
+          onLog: appendLog,
+        });
+        stopGraph('cpu');
+        setBlockActive('cpu', false, 100);
+        setProgress(100);
+        const block = JSON.stringify({
+          v4solo: 1,
+          wl: solo.wl,
+          intSingle: Math.round(solo.intSingle),
+          fpSingle: Math.round(solo.fpSingle),
+          intMulti: Math.round(solo.intMulti),
+          fpMulti: Math.round(solo.fpMulti),
+          workers: solo.workersSpawned,
+          intWorkerRates: solo.intWorkerRates,
+          fpWorkerRates: solo.fpWorkerRates,
+          clockSkewMs: solo.clockSkewMs,
+          verifyOk: solo.verifyOk,
+          cores: navigator.hardwareConcurrency || null,
+          error: solo.error ?? null,
+        });
+        appendLog('v4solo → RESULT (copy everything between the markers):');
+        appendLog('----- BEGIN 9BENCH V4 SOLO -----');
+        appendLog(block);
+        appendLog('----- END 9BENCH V4 SOLO -----');
+        setStatus('✓ V4 SOLO COMPLETE', 'copy the JSON from the log into a validation-pair issue');
+      } catch (e: any) {
+        showError('v4 solo run failed: ' + (e?.message || e));
+      }
+      return;
+    }
+
     // Probe WebGPU for real before we claim anything in the UI. Checking
     // `'gpu' in navigator` is not enough: the common Android case is the
     // property being present while requestAdapter() resolves null.
@@ -1014,7 +1067,68 @@ import TruthDisclaimer from '../components/bench/TruthDisclaimer.astro';
       if (submitRes.ok) {
         const submitted = await submitRes.json() as { id?: string };
         if (submitted.id) {
+          // Permalink FIRST — the scored result is saved; everything after
+          // this line is optional and skippable.
           appendLog(`submit → /r/${submitted.id}`);
+
+          // ── v3.7 SHADOW PHASE — v4.0 candidate workload, unscored ──
+          // Runs strictly AFTER the scored result is stored: ~12s of extra
+          // all-core load before or between scored phases would heat the
+          // chip and silently depress scored phone numbers. Here it can
+          // contaminate nothing by construction. A shadow failure of any
+          // kind must never strand the user — worst case is one log line
+          // and the normal redirect.
+          const totalElapsedS = (Date.now() - startedAt) / 1000;
+          const shadowEligible =
+            typeof WebAssembly !== 'undefined' &&
+            totalElapsedS < 90;   // slowest devices: highest bail risk, worst data
+          if (shadowEligible) {
+            try {
+              setStatus('✓ RESULT SAVED', 'running experimental v4.0 workload · skippable');
+              appendLog('shadow → experimental v4.0 workload (~12s) · not scored · does not affect your result');
+              appendLog(`shadow → click your result link above to skip: /r/${submitted.id}`);
+              let shadowHidden = document.hidden;
+              const onVis = () => { if (document.hidden) shadowHidden = true; };
+              document.addEventListener('visibilitychange', onVis);
+              const { runCPUBenchV4 } = await import('../bench/cpu-test-v4');
+              const shadow = await runCPUBenchV4({
+                singleMs: 1200, multiWindowMs: 4000, warmupMs: 300, probe: true,
+                onLog: appendLog,
+              });
+              document.removeEventListener('visibilitychange', onVis);
+              await fetch('/api/shadow', {
+                method: 'POST',
+                headers: { 'content-type': 'application/json' },
+                body: JSON.stringify({
+                  resultId: submitted.id,
+                  wl: shadow.wl,
+                  probeHashesSingle: shadow.probeHashesSingle,
+                  intSingle: shadow.intSingle,
+                  fpSingle: shadow.fpSingle,
+                  intMulti: shadow.intMulti,
+                  fpMulti: shadow.fpMulti,
+                  singleElapsedMs: shadow.singleElapsedMs,
+                  multiWindowMs: shadow.multiWindowMs,
+                  workersSpawned: shadow.workersSpawned,
+                  workersReported: shadow.workersReported,
+                  intWorkerRates: shadow.intWorkerRates,
+                  fpWorkerRates: shadow.fpWorkerRates,
+                  clockSkewMs: shadow.clockSkewMs,
+                  verifyOk: shadow.verifyOk,
+                  verifyFailKernel: shadow.verifyFailKernel,
+                  wentHidden: shadowHidden,
+                  shadowElapsedMs: shadow.shadowElapsedMs,
+                  cores: navigator.hardwareConcurrency || undefined,
+                  error: shadow.error,
+                }),
+              }).catch(() => { /* shadow row lost, user unaffected */ });
+              appendLog('shadow → recorded (unvalidated · not comparable to anything yet)');
+            } catch (e) {
+              appendLog('shadow → skipped (candidate failed to run — your result is unaffected)');
+              console.warn('shadow phase failed (non-fatal):', e);
+            }
+          }
+
           setStatus('✓ COMPLETE', 'redirecting to your result…');
           // Tiny delay so the user sees the success state before navigation
           setTimeout(() => { window.location.href = `/r/${submitted.id}/`; }, 600);

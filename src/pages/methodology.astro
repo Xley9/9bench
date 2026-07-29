@@ -69,11 +69,11 @@ const FAQ = [
   })} />
   <main class="container methodology">
 
-    <IssueNameplate middle="Methodology — Truth Series" right="v3.6 · Jul 2026" />
+    <IssueNameplate middle="Methodology — Truth Series" right="v3.7 · Jul 2026" />
 
     <!-- Hero -->
     <section class="methodology__hero">
-      <div class="eyebrow eyebrow--accent">// METHODOLOGY · v3.6</div>
+      <div class="eyebrow eyebrow--accent">// METHODOLOGY · v3.7</div>
       <h1 class="methodology__h1">
         Every formula.<br />
         <span class="text-fg-3">Every constant.</span><br />
@@ -99,6 +99,7 @@ const FAQ = [
         <li><a href="#faq">7. FAQ</a></li>
         <li><a href="#license">8. License</a></li>
         <li><a href="#changelog">9. Changelog</a></li>
+        <li><a href="#v4-gate">10. The v4.0 gate</a></li>
       </ul>
     </nav>
 
@@ -523,6 +524,65 @@ const FAQ = [
         </li>
       </ul>
 
+      <h3 class="methodology__h3">v3.7 — July 29, 2026</h3>
+      <ul class="methodology__list">
+        <li>
+          <strong>A candidate replacement CPU workload now runs after every
+          consenting test, unscored.</strong> Once the scored phases finish and
+          your result is saved, the page spends about twelve extra seconds on the
+          v4.0 candidate: a 0.4-second re-probe of the current workload (to measure
+          how much your chip has throttled since the scored phase), then two
+          WebAssembly kernels — a SHA-256 integer chain and a Mandelbrot
+          floating-point loop — single-threaded and then one worker per thread.
+          The raw rates are stored next to your result and printed in the console
+          log, labelled experimental. They are not scored, not ranked, not shown on
+          your result page, and do not touch your number or anyone else's.
+        </li>
+        <li>
+          <strong>Why: the multi-core ranking is still inverted.</strong> Section 6
+          has the numbers. v3.6 fixed the estimator; re-testing showed the workload
+          is the remaining defect. Every iteration of the current test crosses into
+          the browser's crypto machinery, which runs on a small shared thread pool
+          the browser controls — so the multi-core number measures that pool, not
+          your cores. Worse, hashing this way rides on dedicated SHA hardware that
+          2021+ CPUs have and 2015–2020 Intel desktops don't — a 4× cliff that has
+          nothing to do with how fast a CPU is. The workload has to be replaced,
+          and after once publishing an accuracy claim we had never measured, we are
+          not scoring a new one until it passes a gate.
+        </li>
+        <li>
+          <strong>The pass criteria are published now, before the data
+          exists.</strong> Section 10: at least 20 devices with paired Geekbench
+          references across four CPU families, rank correlation with its confidence
+          interval, an inversion-rate bound on close pairs including the exact pair
+          we got wrong, scaling, cross-browser and repeatability bounds, and a
+          self-verification rate. The kernels check their own output against tables
+          computed by an independent implementation at build time — a run that
+          computes the wrong answer cannot produce a number. If the candidate fails
+          the gate, we revise it and the clock restarts, or we drop it. The
+          criteria do not move after we see the numbers, and every qualifying pair
+          enters the published dataset — we cannot drop the ones that make us look
+          bad.
+        </li>
+        <li>
+          <strong>Known limits of the shadow measurement itself.</strong> It runs
+          on a chip that has just done 25–40 seconds of benchmark work, so on
+          thermally limited devices its rates read low — that is why it starts with
+          a throttle probe, and why promotion never rests on shadow-position
+          numbers: accuracy runs use a cold, full-length solo mode
+          (<code>/test/?v4solo=1</code>). If you close the tab during the shadow
+          phase, your scored result is unaffected; we lose the shadow row, and we
+          count how often that happens.
+        </li>
+        <li>
+          <strong>What this does not change: every scored number.</strong> Same
+          workloads, same estimator, same pools, same leaderboard. The scored
+          submit path is byte-identical to v3.6 — you can diff it. The test grows
+          by about twelve seconds, all of them after your result is already saved,
+          and your result link appears first so you can skip them.
+        </li>
+      </ul>
+
       <h3 class="methodology__h3">v3.6 — July 29, 2026</h3>
       <ul class="methodology__list">
         <li>
@@ -745,6 +805,88 @@ const FAQ = [
         <li>Calibrated scoring formulas for browser-API ceilings (GFLOPS × 3, SHA/s ÷ 300 and ÷ 600, bandwidth × 60).</li>
         <li>Weighted geometric mean composite: GPU 35% · CPU-multi 45% · RAM 20%.</li>
       </ul>
+    </section>
+
+    <!-- Section 10 — The v4.0 gate (precommitment) -->
+    <section id="v4-gate" class="methodology__section">
+      <h2 class="section-h">10. The v4.0 gate — pass criteria, published before the data exists</h2>
+
+      <p class="methodology__p">
+        The v4.0 CPU workload (two WebAssembly kernels: a SHA-256 integer chain and
+        a Mandelbrot f64 loop, both self-verifying against tables computed at build
+        time by independent implementations) replaces the current workload
+        <strong>only if all of the following hold</strong>. These criteria were
+        published before shadow collection began and do not move after we see the
+        numbers.
+      </p>
+
+      <ul class="methodology__list">
+        <li><strong>G1 — Paired references.</strong> At least 20 devices, each with
+          a 9bench v4 solo run (<code>/test/?v4solo=1</code>) and a public Geekbench
+          6 or 7 result link, spanning at least 4 CPU families with at least 3
+          devices each: Intel hybrid, AMD, Apple Silicon, ARM Android. GB6 and GB7
+          analysed as separate strata. (Why 20: the Spearman confidence interval has
+          Fisher-z SE ≈ 1.03/√(n−3) — below n≈20 no correlation claim survives its
+          own confidence interval.)</li>
+        <li><strong>G2 — Rank correlation.</strong> Spearman ρ ≥ 0.90 observed AND
+          95% lower bound ≥ 0.75, for multi-vs-GB-multi and single-vs-GB-single.
+          The CI clause exists so the threshold cannot be gamed by keeping n small.</li>
+        <li><strong>G3 — Close-pair inversions.</strong> Among device pairs whose GB
+          multi ratio is in [1.10, 1.50] — the zone where the current workload
+          failed — at least 8 pairs required, inversion rate ≤ 10%, zero inversions
+          at ratio ≥ 1.50. Named regression pair: <strong>i7-12650H vs i7-12700H
+          (GB multi ratio 1.12) must rank correctly.</strong> (Why ≤ 10% and not 0:
+          under the G5 noise bound, an unbiased measure still inverts ~9% of pairs
+          at the bottom edge of that zone — demanding 0 would reject a correct
+          workload on noise.)</li>
+        <li><strong>G4 — Scaling.</strong> On devices with ≥ 8 threads:
+          (9bench multi/single) ÷ (GB multi/single) per device within [0.5, 1.5],
+          median within [0.7, 1.3]. Falsifiable prediction, recorded now: the
+          validation laptop pair's multi ratio moves from 1.14× to 0.85–0.95×
+          (Geekbench: 0.89×), and 16/20-thread scaling from 3.21×/2.47× to
+          ≥ 4.5×/≥ 5.0×. If not, the shared-dispatch diagnosis was incomplete and
+          we investigate before shipping anything.</li>
+        <li><strong>G5 — Repeatability.</strong> Five back-to-back solo runs on at
+          least 3 machines including one phone: CV ≤ 3% single / ≤ 5% multi on
+          mains power, ≤ 10% on the phone.</li>
+        <li><strong>G6 — Cross-browser spread.</strong> Same machine, Chrome +
+          Firefox (+ Safari where possible), at least 3 machines: max/min ≤ 1.25
+          multi, ≤ 1.20 single, per kernel. Per-browser medians get published
+          regardless of outcome. Above ~25% the number is a browser property again
+          — the current workload's disease.</li>
+        <li><strong>G7 — Self-verification.</strong> Fleet verify-failure rate
+          below 0.5% on the final candidate revision; failed rows excluded from
+          analysis but counted and published.</li>
+        <li><strong>G8 — Volume.</strong> At least 1,000 shadow rows on the final
+          candidate revision, including at least 200 Android and 100 Apple.</li>
+      </ul>
+
+      <p class="methodology__p">
+        <strong>Failure branch, precommitted:</strong> any gate fails → the
+        candidate is revised (revision counter bumps, the gate clock restarts for
+        affected metrics) or v4.0 is dropped; the failure is published here with
+        the numbers. Shadow collection <strong>hard-stops after 12 weeks</strong>
+        regardless — a permanent 12-second parasite on your time would be its own
+        honesty failure.
+      </p>
+      <p class="methodology__p">
+        <strong>Anti-cherry-picking rule:</strong> every submitted pair meeting the
+        hygiene criteria enters the analysis, and the raw pair table ships as CSV
+        in the repository before the verdict. We cannot drop the pairs that make us
+        look bad.
+      </p>
+      <p class="methodology__p">
+        <strong>We need your paired references.</strong> If you can run 9bench and
+        Geekbench 6/7 on the same machine: run
+        <a href="/test/?v4solo=1"><code>/test/?v4solo=1</code></a> (cold machine,
+        mains power, nothing heavy running), then file a
+        <a href="https://github.com/Xley9/9bench/issues/new?template=validation-pair.yml" rel="external noopener">validation-pair
+        issue</a> with the JSON block the solo run prints, your public Geekbench
+        result link and version, your <code>/r/</code> link from a normal run
+        (same-machine provenance), the browser used, and the OS power mode.
+        <strong>Most wanted right now: Apple Silicon (any M-series),
+        Snapdragon/Dimensity Android, AMD Zen 4/5, and older 4-core machines.</strong>
+      </p>
     </section>
 
     <!-- CTA -->

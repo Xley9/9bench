@@ -90,7 +90,9 @@ self.onmessage = async (e) => {
  * The deadline check costs one integer AND per iteration against a digest call
  * measured in microseconds — free, and it guarantees the phase is bounded.
  */
-async function shaChain(
+// Exported for the v4.0 shadow probe (cpu-test-v4.ts) — an export-only
+// change; the scored path in this file is untouched by v3.7.
+export async function shaChain(
   iterations: number,
   deadlineMs = Infinity
 ): Promise<{ elapsed: number; iters: number }> {

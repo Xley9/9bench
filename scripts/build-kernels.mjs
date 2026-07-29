@@ -1,0 +1,170 @@
+// Build the v4.0 candidate CPU kernels and generate their verification tables.
+//
+//   node scripts/build-kernels.mjs
+//
+// Steps:
+//   1. Compile src/bench/kernels/assembly/index.ts → src/bench/kernels/kernels.wasm
+//      (scalar only: no SIMD, no threads — identical semantics everywhere).
+//   2. Cross-check the compiled kernel against INDEPENDENT references:
+//        INT  — node:crypto SHA-256 chains for all 256 seeds
+//        FP64 — a plain-JS Mandelbrot mirror for all 64 tiles
+//      The kernel never generates its own reference; a miscompilation fails
+//      the build here instead of shipping wrong expected tables.
+//   3. Generate src/bench/kernels/kernels-inline.ts (base64 wasm + tables).
+//
+// The compiled kernels.wasm and kernels-inline.ts are COMMITTED. A compiler
+// upgrade that changes the bytes must fail scripts/check-kernels.mjs, so a
+// rebase can never happen by accident — see that script for the policy.
+
+import { createHash } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
+const ASM_SRC = join(ROOT, 'src/bench/kernels/assembly/index.ts');
+const WASM_OUT = join(ROOT, 'src/bench/kernels/kernels.wasm');
+const INLINE_OUT = join(ROOT, 'src/bench/kernels/kernels-inline.ts');
+
+/** Bump on ANY change to kernels, units, windows or verification scheme. */
+export const WL_REVISION = 1;
+const INT_STEPS_PER_UNIT = 8192;
+const INT_SEED_COUNT = 256;
+const FP_TILE_COUNT = 64;
+
+// ── 1. Compile ──────────────────────────────────────────────────────
+export function compile(outPath = WASM_OUT) {
+  mkdirSync(dirname(outPath), { recursive: true });
+  execFileSync('npx', [
+    'asc', ASM_SRC,
+    '-o', outPath,
+    '-O3',
+    '--noAssert',
+    '--runtime', 'stub',
+    '--disable', 'simd',
+    '--disable', 'threads',
+    '--disable', 'relaxed-simd',
+  ], { cwd: ROOT, stdio: 'pipe', shell: process.platform === 'win32' });
+  return readFileSync(outPath);
+}
+
+// ── 2. Independent references ───────────────────────────────────────
+export function intReference() {
+  const seeds = [];
+  const expected = [];
+  for (let i = 0; i < INT_SEED_COUNT; i++) {
+    const seed = createHash('sha256').update(`9bench-v4-int-${i}`).digest();
+    let state = Buffer.from(seed);
+    for (let s = 0; s < INT_STEPS_PER_UNIT; s++) {
+      state = createHash('sha256').update(state).digest();
+    }
+    seeds.push(seed);
+    expected.push(state);
+  }
+  return { seeds, expected };
+}
+
+/** Plain-JS Mandelbrot mirror — MUST match the AssemblyScript kernel
+ *  expression-for-expression. WASM f64 ops are IEEE-754 exact, so identical
+ *  operation order gives bit-identical doubles and identical iteration
+ *  counts. Do not "simplify" either side independently. */
+export function fpReferenceTile(tileIdx) {
+  const tx = tileIdx & 7;
+  const ty = tileIdx >> 3;
+  const dx = 2.5 / 512.0;
+  const dy = 2.5 / 512.0;
+  let checksum = 0;
+  for (let py = 0; py < 64; py++) {
+    const cy = -1.25 + ((ty * 64 + py) + 0.5) * dy;
+    for (let px = 0; px < 64; px++) {
+      const cx = -2.0 + ((tx * 64 + px) + 0.5) * dx;
+      let zx = 0.0, zy = 0.0;
+      let iter = 0;
+      while (iter < 256) {
+        const zx2 = zx * zx;
+        const zy2 = zy * zy;
+        if (zx2 + zy2 > 4.0) break;
+        zy = 2.0 * zx * zy + cy;
+        zx = zx2 - zy2 + cx;
+        iter++;
+      }
+      checksum = (checksum + iter) >>> 0;
+    }
+  }
+  return checksum;
+}
+
+// ── Cross-check wasm vs references ──────────────────────────────────
+export async function crossCheck(wasmBytes) {
+  const { instance } = await WebAssembly.instantiate(wasmBytes, {});
+  const ex = instance.exports;
+  const mem = new Uint8Array(ex.memory.buffer);
+  const sp = ex.statePtr();
+
+  const { seeds, expected } = intReference();
+  for (let i = 0; i < INT_SEED_COUNT; i++) {
+    mem.set(seeds[i], sp);
+    ex.int_unit(INT_STEPS_PER_UNIT);
+    const got = Buffer.from(mem.subarray(sp, sp + 32));
+    if (!got.equals(expected[i])) {
+      throw new Error(`INT cross-check FAILED at seed ${i}: wasm ${got.toString('hex')} != node:crypto ${expected[i].toString('hex')}`);
+    }
+  }
+
+  const fpExpected = [];
+  for (let t = 0; t < FP_TILE_COUNT; t++) {
+    const ref = fpReferenceTile(t);
+    const got = ex.fp_tile(t) >>> 0;
+    if (got !== ref) {
+      throw new Error(`FP cross-check FAILED at tile ${t}: wasm ${got} != js-ref ${ref}`);
+    }
+    fpExpected.push(ref);
+  }
+
+  return { seeds, expected, fpExpected };
+}
+
+// ── 3. Generate the inline module ───────────────────────────────────
+function generateInline(wasmBytes, seeds, expected, fpExpected) {
+  const seedsB64 = Buffer.concat(seeds).toString('base64');
+  const expectedB64 = Buffer.concat(expected).toString('base64');
+  const src = `// GENERATED by scripts/build-kernels.mjs — do not edit by hand.
+// Committed on purpose: scripts/check-kernels.mjs fails the build if a
+// rebuild produces different bytes, so a toolchain upgrade can never
+// silently change what the benchmark measures.
+
+/** Candidate revision — bump in build-kernels.mjs on ANY kernel change. */
+export const WL_REVISION = ${WL_REVISION};
+export const INT_STEPS_PER_UNIT = ${INT_STEPS_PER_UNIT};
+export const INT_SEED_COUNT = ${INT_SEED_COUNT};
+export const FP_TILE_COUNT = ${FP_TILE_COUNT};
+
+/** Compiled scalar WASM kernels (SHA-256 chain + Mandelbrot f64). */
+export const WASM_B64 = '${wasmBytes.toString('base64')}';
+
+/** ${INT_SEED_COUNT} x 32-byte seeds: SHA256("9bench-v4-int-" + i). */
+export const INT_SEEDS_B64 = '${seedsB64}';
+
+/** Expected state after ${INT_STEPS_PER_UNIT} chained hashes per seed —
+ *  computed by node:crypto at build time, NOT by the kernel. */
+export const INT_EXPECTED_B64 = '${expectedB64}';
+
+/** Expected iteration-count checksum per tile — computed by the plain-JS
+ *  reference at build time. Doubles as exact work (pixel-iterations) per
+ *  tile, so rates derive from this table, not from kernel self-reporting. */
+export const FP_EXPECTED: number[] = [${fpExpected.join(', ')}];
+`;
+  writeFileSync(INLINE_OUT, src);
+}
+
+const isMain = process.argv[1] && fileURLToPath(import.meta.url) === join(process.argv[1].startsWith('/') || /^[A-Za-z]:/.test(process.argv[1]) ? process.argv[1] : join(process.cwd(), process.argv[1]));
+if (import.meta.url === `file://${process.argv[1]}` || process.argv[1]?.endsWith('build-kernels.mjs')) {
+  const wasmBytes = compile();
+  console.log(`compiled kernels.wasm: ${wasmBytes.length} bytes`);
+  const { seeds, expected, fpExpected } = await crossCheck(wasmBytes);
+  console.log(`INT cross-check ok (${INT_SEED_COUNT} seeds x ${INT_STEPS_PER_UNIT} steps vs node:crypto)`);
+  console.log(`FP cross-check ok (${FP_TILE_COUNT} tiles vs JS reference)`);
+  generateInline(wasmBytes, seeds, expected, fpExpected);
+  console.log(`generated kernels-inline.ts (wl revision ${WL_REVISION})`);
+}

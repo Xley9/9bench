@@ -1,0 +1,64 @@
+name: v4.0 validation pair
+description: Submit a paired 9bench-v4-solo + Geekbench reference for the v4.0 workload gate (methodology section 10)
+title: "[validation-pair] <CPU model> / <browser>"
+labels: ["validation-pair"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks — paired references are the only thing that turns the v4.0 gate
+        into a real validation. Please run **`https://9bench.com/test/?v4solo=1`**
+        on a **cold machine, mains power, nothing heavy running**, and paste the
+        JSON block it prints below. The pass criteria are published in advance at
+        https://9bench.com/methodology/#v4-gate — every qualifying pair enters
+        the published dataset, including the ones that make the benchmark look bad.
+  - type: textarea
+    id: solo-json
+    attributes:
+      label: 9bench v4 solo JSON
+      description: The block between "BEGIN 9BENCH V4 SOLO" and "END 9BENCH V4 SOLO" in the console log.
+      render: json
+    validations:
+      required: true
+  - type: input
+    id: geekbench-link
+    attributes:
+      label: Public Geekbench result link
+      description: browser.geekbench.com link for a CPU run on the SAME machine, same session if possible.
+      placeholder: https://browser.geekbench.com/v7/cpu/...
+    validations:
+      required: true
+  - type: dropdown
+    id: geekbench-version
+    attributes:
+      label: Geekbench version
+      options: ["Geekbench 7", "Geekbench 6"]
+    validations:
+      required: true
+  - type: input
+    id: result-link
+    attributes:
+      label: Your 9bench result link (normal run)
+      description: A /r/ permalink from a normal 9bench run on the same machine — same-machine provenance.
+      placeholder: https://9bench.com/r/...
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser + version
+      placeholder: Chrome 150 / Firefox 152 / Safari 26
+    validations:
+      required: true
+  - type: input
+    id: power-mode
+    attributes:
+      label: OS power mode
+      placeholder: "Windows: Best performance / macOS: — / Android: battery saver off"
+    validations:
+      required: true
+  - type: textarea
+    id: background-notes
+    attributes:
+      label: Background load notes (optional)
+      description: Anything running during the tests worth knowing about.
