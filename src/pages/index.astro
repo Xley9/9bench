@@ -290,7 +290,9 @@ const FEATURES = [
             <tr><td>Open methodology</td><td><strong>Yes (MIT)</strong></td><td>Partial</td><td>No</td><td>No</td></tr>
             <tr><td>Vendor bias</td><td><strong>None</strong></td><td>None</td><td>Documented anti-AMD</td><td>None</td></tr>
             <tr><td>GPU + CPU + RAM</td><td><strong>All three</strong></td><td>CPU + GPU</td><td>All three</td><td>CPU only</td></tr>
-            <tr><td>Mobile support</td><td><strong>iOS, Android</strong></td><td>iOS, Android</td><td>Windows only</td><td>macOS, Windows</td></tr>
+            <tr><td>Mobile support</td><td>iOS, Android (GPU test where WebGPU is available)</td><td>iOS, Android</td><td>Windows only</td><td>macOS, Windows</td></tr>
+            <tr><td>Measures native peak performance</td><td>No — browser execution path (<a href="/methodology/#validation">validation data</a>)</td><td><strong>Yes</strong></td><td>Yes (biased weighting)</td><td><strong>Yes</strong></td></tr>
+            <tr><td>Published validation incl. own failures</td><td><strong>Yes</strong></td><td>No</td><td>No</td><td>No</td></tr>
           </tbody>
         </table>
       </div>
@@ -303,9 +305,12 @@ const FEATURES = [
 
       <h3 class="seo-body__h3" id="score-brackets">What are the 9bench score brackets?</h3>
       <p class="seo-body__p">
-        Scores are calibrated to <time datetime="2026">2026</time> hardware. Our research across submitted
-        results shows that the median score is approximately 1200 (mid-range category), with the top 5%
-        exceeding 4000. A single weak component cannot be masked by strong ones because the composite
+        Scores are calibrated to <time datetime="2026">2026</time> hardware. Across the
+        2,500+ fully-measured runs submitted as of <time datetime="2026-07-29">July 2026</time>,
+        the median score is <strong>526</strong> and the top 5% exceed <strong>2,148</strong> —
+        real figures from the live database, not projections. (An earlier version of this
+        paragraph claimed a median of ~1200; that number predated the data.) A single weak
+        component cannot be masked by strong ones because the composite
         uses a geometric mean.
       </p>
       <div class="seo-body__table-wrap">
@@ -382,9 +387,10 @@ const FEATURES = [
       <p class="seo-body__p">
         <strong>Use Geekbench</strong> if you need absolute peak scores for a hardware review.
         <strong>Use Cinebench</strong> for sustained multi-core rendering performance numbers.
-        <strong>Use 3DMark</strong> for gaming-specific GPU benchmarks. 9bench is the best option
-        for instant, zero-friction, vendor-neutral browser-based benchmarking — and it complements
-        native tools rather than replacing them.
+        <strong>Use 3DMark</strong> for gaming-specific GPU benchmarks. 9bench doesn't replace
+        any of them and doesn't try to: it fills the gap they leave — the machine you can't
+        install anything on, the 15 seconds you actually have, the "can this thing run local
+        AI?" question none of them answer. Different job, honestly labelled.
       </p>
 
       <!-- Author credentials (GEO: authority signal — links to verified author page) -->
