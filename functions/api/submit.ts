@@ -74,6 +74,15 @@ interface Submission {
   hardware: { gpu: string; cores: number; ua: string };
   durationMs: number;
   /**
+   * Which measurement estimator produced these numbers.
+   * Absent => pre-v3.6 client (old multi-core estimator, max-of-samples GPU).
+   * 2      => v3.6+ (fixed-time window, summed per-worker rates, median GPU).
+   * The two are not comparable and are ranked in separate pools.
+   */
+  estimatorVersion?: number;
+  /** Per-worker elapsed spread of the multi-core window, ms (v3.6+). */
+  workerElapsedMs?: { min: number; median: number; max: number };
+  /**
    * AI capability snapshot from probeAICapabilities (Phase G).
    * Optional — pre-Phase-G clients don't send this; submission still
    * succeeds with NULL ai_* fields. Empty object also accepted.
@@ -234,13 +243,24 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     // The schema column may still exist in the DB — we just don't write to it.
     // Migrating the column away requires a separate migration. Until then,
     // any reads should ignore it. r/[id].ts already does (selects specific cols).
+    // Estimator version. A client that doesn't declare one is pre-v3.6 and
+    // lands in the legacy pool. Only the known value is accepted — anything
+    // else is treated as legacy rather than trusted.
+    const estimatorVersion = body.estimatorVersion === 2 ? 2 : null;
+    const we = body.workerElapsedMs;
+    const okMs = (v: unknown) => isNum(v) && v >= 0 && v < 600_000 ? Math.round(v as number) : null;
+    const weMin    = estimatorVersion === 2 ? okMs(we?.min) : null;
+    const weMedian = estimatorVersion === 2 ? okMs(we?.median) : null;
+    const weMax    = estimatorVersion === 2 ? okMs(we?.max) : null;
+
     await env.DB.prepare(`
       INSERT INTO results
         (id, created_at, score_overall, score_gpu, score_cpu_single, score_cpu_multi, score_ram,
          gpu_gflops, gpu_name, cpu_cores, cpu_hashes_single, cpu_hashes_multi,
          ram_read_gbs, ram_write_gbs, ram_latency_ns, ua_short,
-         ai_score, ai_tier, ai_max_alloc_gb, ai_fp16)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ai_score, ai_tier, ai_max_alloc_gb, ai_fp16,
+         estimator_version, worker_elapsed_min_ms, worker_elapsed_median_ms, worker_elapsed_max_ms)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       id,
       Date.now(),
@@ -261,7 +281,11 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       aiScore,
       aiTier,
       aiMaxAllocGB,
-      aiFp16
+      aiFp16,
+      estimatorVersion,
+      weMin,
+      weMedian,
+      weMax
     ).run();
 
     // Compute percentile: count rows with score < this user's overall, divide by total.
@@ -272,16 +296,22 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     // are the discriminator everywhere (api/r/[id].ts, top.ts, og.ts) — no
     // stored flag, because a genuine measurement can never be exactly 0.
     // Rows below the scoring floor match no pool and skew no percentile.
+    // Pools are also split by estimator version: v3.6 changed how multi-core
+    // throughput and the GPU headline are computed, and the old numbers cannot
+    // be converted (only the aggregate was ever stored). Ranking across the
+    // break would compare two different measurements.
     const POOL = `FROM results WHERE cpu_hashes_multi > 0
       AND (gpu_gflops > 0) = ?
-      AND (ram_read_gbs > 0 AND ram_write_gbs > 0) = ?`;
+      AND (ram_read_gbs > 0 AND ram_write_gbs > 0) = ?
+      AND COALESCE(estimator_version, 1) = ?`;
     const hasGpu = body.gpu.gflops > 0 ? 1 : 0;
     const hasRam = (body.ram.readBandwidthGBs > 0 && body.ram.writeBandwidthGBs > 0) ? 1 : 0;
+    const est = estimatorVersion ?? 1;
     const totalRow = await env.DB.prepare(`SELECT COUNT(*) as c ${POOL}`)
-      .bind(hasGpu, hasRam)
+      .bind(hasGpu, hasRam, est)
       .first<{ c: number }>();
     const lowerRow = await env.DB.prepare(`SELECT COUNT(*) as c ${POOL} AND score_overall < ?`)
-      .bind(hasGpu, hasRam, Math.round(s.overall))
+      .bind(hasGpu, hasRam, est, Math.round(s.overall))
       .first<{ c: number }>();
 
     const total = totalRow?.c || 1;

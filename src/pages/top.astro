@@ -312,11 +312,19 @@ import { tierFor } from '../components/bench/tier-system';
 
       // Meta line
       const total = data.total ?? results.length;
-      // The API filters to GPU-measured runs, so this count is not "all
-      // submissions" — say which pool it is.
+      // The API filters to fully-measured runs of one estimator generation,
+      // so this count is not "all submissions" — say which pool it is.
+      const est = data.estimator ?? 1;
+      const other = data.otherEstimatorTotal ?? 0;
       $('#leaderboard-meta')!.textContent =
-        `Showing ${results.length} of ${fmt(total)} GPU-measured runs · period: ${periodLabel[period]}. `
-        + `Runs without WebGPU are scored on CPU + RAM only and ranked separately.`;
+        `Showing ${results.length} of ${fmt(total)} fully-measured runs · period: ${periodLabel[period]} · `
+        + (est === 2
+            ? `measured with the v3.6+ estimator.`
+            : `measured with the pre-v3.6 estimator.`)
+        + ` Runs without WebGPU are scored on CPU + RAM only and ranked separately.`
+        + (other > 0
+            ? ` The ${est === 2 ? 'pre-v3.6' : 'v3.6+'} pool holds ${fmt(other)} runs — the two use different multi-core and GPU measurements and are not comparable.`
+            : '');
 
       // Filter meta on top filter row
       $('#filter-meta')!.textContent = `${fmt(total)} TESTS · LIVE`;

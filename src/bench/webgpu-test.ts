@@ -247,16 +247,18 @@ export async function runWebGPUBench(matrixSize = 1024, iterations = 5): Promise
       result.error = 'GPU measurement below timer resolution — cannot produce a trustworthy number';
       return result;
     }
-    const sorted = [...samples].sort((a, b) => b - a);
-    const best = sorted[0] ?? 0;
-    const median = sorted.length >= 2 ? sorted[1] : best;
-    // Use best when its margin over median is meaningful (others were throttled);
-    // otherwise use median. We also compare against the best warmup sample —
-    // if a warmup wave saw a faster GPU than any measurement, use that
-    // (the GPU may have throttled back down between warmup and measurement).
-    const peakWarmup = warmupSamples.length ? Math.max(...warmupSamples) : 0;
-    const fromMeasurement = (best - median) / Math.max(median, 1) > 0.25 ? best : median;
-    const headlineGflops = Math.max(fromMeasurement, peakWarmup * 0.95);
+    // Median of the timed samples — nothing else.
+    //
+    // Until v3.6 this resolved to max(best-or-median, peakWarmup * 0.95), i.e.
+    // a MAXIMUM over up to 15 draws, while the comment above claimed a median.
+    // A max over many noisy samples is biased upward and the bias grows with
+    // variance, so a machine with background load could out-score a quiet
+    // machine of identical real throughput. It could also publish a headline
+    // that appears nowhere in the `measurements` array we ship for verification.
+    // The 0.95 factor was undocumented and arbitrary.
+    const pool = samples.length ? samples : warmupSamples;
+    const sorted = [...pool].sort((a, b) => a - b);
+    const headlineGflops = sorted[Math.floor(sorted.length / 2)];
     const headlineDurationMs = (2 * N * N * N * iterations) / (headlineGflops * 1e9) * 1000;
 
     result.supported = true;

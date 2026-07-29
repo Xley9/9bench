@@ -69,11 +69,11 @@ const FAQ = [
   })} />
   <main class="container methodology">
 
-    <IssueNameplate middle="Methodology — Truth Series" right="v3.5 · Jul 2026" />
+    <IssueNameplate middle="Methodology — Truth Series" right="v3.6 · Jul 2026" />
 
     <!-- Hero -->
     <section class="methodology__hero">
-      <div class="eyebrow eyebrow--accent">// METHODOLOGY · v3.5</div>
+      <div class="eyebrow eyebrow--accent">// METHODOLOGY · v3.6</div>
       <h1 class="methodology__h1">
         Every formula.<br />
         <span class="text-fg-3">Every constant.</span><br />
@@ -469,6 +469,68 @@ const FAQ = [
           GPU measurement collapsed the overall score. Now the weights
           renormalize over CPU + RAM (45/65 · 20/65), those runs rank in their
           own percentile pool, and the leaderboard only lists GPU-measured runs.
+        </li>
+      </ul>
+
+      <h3 class="methodology__h3">v3.6 — July 29, 2026</h3>
+      <ul class="methodology__list">
+        <li>
+          <strong>The multi-core estimator is fixed.</strong> Every worker now runs
+          until the same absolute deadline and reports its own iteration count and
+          elapsed time; the aggregate is the <strong>sum of per-worker rates</strong>.
+          The old estimator handed every worker an identical iteration count and
+          divided total work by wall clock, which — whenever the per-worker cap
+          bound — reduced algebraically to <code>threads × the rate of the single
+          slowest worker</code>. On a hybrid CPU the efficiency cores set the
+          result and every performance core was discarded. Worker spawn time is
+          also out of the measured window now, which had penalised machines with
+          more threads.
+        </li>
+        <li>
+          <strong>The GPU headline is a median, not a maximum.</strong> It was
+          resolving to the larger of the measurement and the best warm-up sample
+          across up to 15 draws, while the code comment claimed a median. A maximum
+          over noisy samples is biased upward and rewards variance, so a machine
+          with background load could out-score a quiet machine of identical
+          throughput. It now takes the median of the timed samples and nothing
+          else. Expect GPU numbers a few percent lower than before — that is the
+          bias coming out, not your hardware changing.
+        </li>
+        <li>
+          <strong>These two changes rebase the scores, so the pool forks.</strong>
+          Old results <em>cannot</em> be converted — only the aggregate was ever
+          stored, never the per-worker detail, so there is no arithmetic that turns
+          a pre-v3.6 number into a v3.6 one. We are not going to invent one. Every
+          existing result keeps its permalink and its numbers, gains a notice
+          explaining which estimator produced it, and is ranked only against other
+          pre-v3.6 runs. The leaderboard shows one generation at a time and says
+          which. Nothing was recomputed, extrapolated or deleted.
+        </li>
+        <li>
+          <strong>Per-worker timings are now recorded.</strong> Min, median and max
+          worker elapsed time for the multi-core window. The spread between them is
+          a direct measurement of core heterogeneity — it distinguishes "this
+          machine has slow efficiency cores" from "one worker stalled". This data
+          was already being collected and thrown away.
+        </li>
+        <li>
+          <strong>The single-core measurement window is no longer truncated on
+          fast hardware.</strong> v3.4 capped iterations at the old constant so no
+          device would run more work than before; on fast machines that cap bound
+          and collapsed the window to about 0.4 seconds — the shortest measurement
+          on exactly the machines where a scheduler migration does the most damage.
+          The 2-second budget now decides. It is a rate, so the number does not
+          shift; it just varies less.
+        </li>
+        <li>
+          <strong>What this does NOT fix: the magnitude.</strong> At a 64-byte
+          payload the CPU test still spends most of its time in
+          <code>crypto.subtle</code> dispatch rather than in SHA-256. Correcting
+          the estimator fixes <em>which machine ranks higher</em>; it does not make
+          the number a measure of native CPU throughput. Replacing the workload is
+          a genuinely different benchmark that needs its own validation against
+          native references on at least five machines before it ships. That is
+          v4.0, and it will be announced the same way.
         </li>
       </ul>
 

@@ -84,6 +84,24 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
     <!-- ── Result content (populated client-side) ───────────────── -->
     <article id="result" class="result" hidden>
 
+      <!-- Legacy-estimator notice: shown on results produced before v3.6 -->
+      <aside class="legacy-notice" id="legacy-notice" hidden>
+        <p class="legacy-notice__head">// MEASURED WITH THE PRE-v3.6 ESTIMATOR</p>
+        <p class="legacy-notice__body">
+          This run's multi-core CPU number was computed as total work ÷ wall
+          clock, which is bounded by the slowest of N workers and discards the
+          faster cores' contribution. The GPU headline took a maximum over the
+          samples rather than the median. Both were fixed in v3.6.
+        </p>
+        <p class="legacy-notice__body">
+          We can't convert this result — only the aggregate was stored, never the
+          per-worker detail. So the numbers below are exactly what was measured
+          on the day, and they are ranked only against other pre-v3.6 runs.
+          <a href="/methodology/#changelog">What changed →</a> ·
+          <a href="/test/">Run it again on the current version →</a>
+        </p>
+      </aside>
+
       <!-- Header strip -->
       <header class="result__header">
         <div class="result__header-left">
@@ -895,6 +913,31 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
     margin-top: 20px;
     flex-wrap: wrap;
   }
+
+  /* Legacy-estimator notice */
+  .legacy-notice {
+    border: 1px solid var(--line);
+    border-left: 2px solid var(--fg-3);
+    background: var(--bg-2);
+    padding: 14px 16px;
+    margin-bottom: 20px;
+  }
+  .legacy-notice__head {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: var(--fg-2);
+    margin: 0 0 8px 0;
+  }
+  .legacy-notice__body {
+    font-family: var(--sans);
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--fg-2);
+    margin: 0 0 8px 0;
+  }
+  .legacy-notice__body:last-child { margin-bottom: 0; }
+  .legacy-notice__body a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
 
   /* ── Incomplete run (below the scoring floor) ───────────────── */
   .incomplete-run { padding: 0 0 40px; max-width: 720px; }
@@ -2205,6 +2248,12 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
       document.title = basis === 'full'
         ? `9bench ${fmt(r.scores.overall)} (${tier.label}) — your hardware in 15 seconds`
         : `9bench ${fmt(r.scores.overall)} (${basis === 'cpu+ram' ? 'CPU+RAM' : 'GPU+CPU'} only) — your hardware in 15 seconds`;
+
+      // Results measured before the v3.6 estimator change carry a notice —
+      // their numbers are real but not comparable to current ones.
+      if ((data.estimatorVersion ?? 1) !== 2) {
+        $('#legacy-notice')?.removeAttribute('hidden');
+      }
 
       // ── Header strip ─────────────────────────────────────────
       setText('#result-status', basisLabel.status);

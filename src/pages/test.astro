@@ -992,6 +992,12 @@ import TruthDisclaimer from '../components/bench/TruthDisclaimer.astro';
           ram: result.ram,
           hardware: result.hardware,
           durationMs: result.durationMs,
+          // v3.6 estimator: fixed-time multi-core window with summed per-worker
+          // rates, and a median (not max) GPU headline. Declared so the server
+          // ranks this run against other v3.6 runs and not against numbers
+          // produced by the old estimator.
+          estimatorVersion: 2,
+          workerElapsedMs: result.cpu.workerElapsedMs,
           // ── Phase G: AI capabilities snapshot ──
           // We send only the small subset needed to reproduce predictions
           // for visitors of /r/[id] (score, tier, memory headroom, FP16).

@@ -18,7 +18,8 @@ export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => {
       SELECT id, created_at, score_overall, score_gpu, score_cpu_single, score_cpu_multi, score_ram,
              gpu_gflops, gpu_name, cpu_cores, cpu_hashes_single, cpu_hashes_multi,
              ram_read_gbs, ram_write_gbs, ram_latency_ns,
-             ai_score, ai_tier, ai_max_alloc_gb, ai_fp16
+             ai_score, ai_tier, ai_max_alloc_gb, ai_fp16,
+             estimator_version, worker_elapsed_min_ms, worker_elapsed_median_ms, worker_elapsed_max_ms
       FROM results WHERE id = ?
     `).bind(id).first<any>();
 
@@ -33,6 +34,8 @@ export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => {
     // columns: every metric is work/elapsed with a non-zero numerator, so a
     // real measurement is never exactly 0. Same discriminator as submit.ts,
     // top.ts and og.ts — no stored flag, no migration.
+    // Which estimator produced this row. Legacy rows have no value.
+    const estimatorVersion = Number(row.estimator_version) === 2 ? 2 : 1;
     const measured = {
       gpu:        Number(row.gpu_gflops) > 0,
       cpuSingle:  Number(row.cpu_hashes_single) > 0,
@@ -51,16 +54,19 @@ export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => {
     let percentile = 0;
     let total = 0;
     if (scorable) {
+      // Also split by estimator version — v3.6 changed the multi-core and GPU
+      // computation and the old numbers cannot be converted.
       const POOL = `FROM results WHERE cpu_hashes_multi > 0
         AND (gpu_gflops > 0) = ?
-        AND (ram_read_gbs > 0 AND ram_write_gbs > 0) = ?`;
+        AND (ram_read_gbs > 0 AND ram_write_gbs > 0) = ?
+        AND COALESCE(estimator_version, 1) = ?`;
       const hasGpu = measured.gpu ? 1 : 0;
       const hasRam = measured.ram ? 1 : 0;
       const totalRow = await env.DB.prepare(`SELECT COUNT(*) as c ${POOL}`)
-        .bind(hasGpu, hasRam)
+        .bind(hasGpu, hasRam, estimatorVersion)
         .first<{ c: number }>();
       const lowerRow = await env.DB.prepare(`SELECT COUNT(*) as c ${POOL} AND score_overall < ?`)
-        .bind(hasGpu, hasRam, row.score_overall)
+        .bind(hasGpu, hasRam, estimatorVersion, row.score_overall)
         .first<{ c: number }>();
       total = totalRow?.c || 1;
       percentile = Math.round(((lowerRow?.c || 0) / total) * 100);
@@ -96,6 +102,12 @@ export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => {
       measured,
       basis,
       scorable,
+      estimatorVersion,
+      workerElapsedMs: estimatorVersion === 2 && row.worker_elapsed_min_ms != null ? {
+        min: row.worker_elapsed_min_ms,
+        median: row.worker_elapsed_median_ms,
+        max: row.worker_elapsed_max_ms,
+      } : null,
       percentile,
       total
     }), {

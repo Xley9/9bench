@@ -10,8 +10,13 @@
 // of fixed. The reported number is a THROUGHPUT RATE (hashes/sec), so the
 // length of the measurement window does not change it — but a fixed 500,000
 // iterations per worker could not finish inside the timeout on slow devices,
-// which returned no multi-core result at all. Counts are capped at the old
-// constants, so no device ever runs MORE work than it did before.
+// which returned no multi-core result at all.
+//
+// MULTI-CORE ESTIMATOR (v3.6): fixed-time window, aggregate = SUM of per-worker
+// rates. Not total-work/wall-clock, which is bounded by the slowest worker and
+// therefore discards every fast core on a hybrid CPU. See /methodology#validation.
+// This is a deliberate break: v3.6+ multi-core numbers are NOT comparable to
+// earlier ones and are ranked in a separate pool.
 //
 // HONEST FAILURE (v3.4): a phase that fails reports measured=false rather than
 // a zero. A zero is indistinguishable from "very slow hardware" downstream, and
@@ -34,6 +39,12 @@ export interface CPUResult {
   multiMeasured: boolean;
   /** Diagnostic: how many workers reported out of `cores`. */
   workersReported: number;
+  /**
+   * Per-worker elapsed spread (ms) for the multi-core window. The gap between
+   * min and max is a direct read on core heterogeneity — on a hybrid CPU the
+   * E-core workers finish the same wall-clock window having done far less work.
+   */
+  workerElapsedMs?: { min: number; median: number; max: number };
   singleError?: string;
   multiError?: string;
   error?: string;
@@ -50,16 +61,23 @@ self.onerror = function (msg) {
 };
 self.onmessage = async (e) => {
   try {
-    const iterations = e.data.iterations;
-    const deadlineMs = e.data.deadlineMs;
+    // deadlineEpoch is a Date.now() timestamp, NOT performance.now():
+    // a worker has its own performance timeOrigin, so a main-thread
+    // performance.now() value is meaningless here. Date.now() shares an
+    // epoch across threads, and ms resolution is ample for a 10s window.
+    const deadlineEpoch = e.data.deadlineEpoch;
+    const maxIterations = e.data.maxIterations;
     let buf = new Uint8Array(64);
     for (let i = 0; i < 64; i++) buf[i] = i;
     const t0 = performance.now();
     let i = 0;
-    for (; i < iterations; i++) {
+    for (; i < maxIterations; i++) {
       buf = new Uint8Array(await crypto.subtle.digest('SHA-256', buf));
-      if ((i & 511) === 511 && performance.now() - t0 >= deadlineMs) { i++; break; }
+      if ((i & 255) === 255 && Date.now() >= deadlineEpoch) { i++; break; }
     }
+    // Each worker reports its OWN elapsed time. The aggregate is the sum of
+    // per-worker rates — never total/wallclock, which is bounded by the
+    // slowest worker and discards every fast core's contribution.
     self.postMessage({ ok: true, elapsed: performance.now() - t0, iters: i });
   } catch (err) {
     self.postMessage({ ok: false, error: String((err && err.message) || err) });
@@ -101,8 +119,8 @@ interface WorkerOutcome { elapsed: number; iters: number }
  */
 async function spawnWorkers(
   k: number,
-  iterations: number,
-  deadlineMs: number,
+  maxIterations: number,
+  deadlineEpoch: number,
   hardTimeoutMs: number
 ): Promise<PromiseSettledResult<WorkerOutcome>[]> {
   const blob = new Blob([WORKER_SOURCE], { type: 'application/javascript' });
@@ -135,7 +153,7 @@ async function spawnWorkers(
           clearTimeout(timer);
           reject(new Error(ev?.message || 'Worker error'));
         };
-        w.postMessage({ iterations, deadlineMs });
+        w.postMessage({ maxIterations, deadlineEpoch });
       }));
     }
     return await Promise.allSettled(jobs);
@@ -148,15 +166,20 @@ async function spawnWorkers(
 // Time budgets. The measurement is a rate, so these bound the wall clock
 // without changing the number that comes out.
 const TARGET_SINGLE_S = 2.0;
-const TARGET_MULTI_S  = 10.0;
-/** Per-worker soft deadline — 3x the target; only trips on severe throttling. */
-const WORKER_DEADLINE_MS = 30_000;
+/** Multi-core measurement window. Every worker runs until the same absolute deadline. */
+const MULTI_WINDOW_MS = 10_000;
+/** Iteration ceiling per worker — a safety stop only; the deadline is what ends the run. */
+const MULTI_MAX_ITERATIONS = 50_000_000;
 /** Anti-hang backstop for a worker that never reports at all. */
-const WORKER_HARD_TIMEOUT_MS = 35_000;
+const WORKER_HARD_TIMEOUT_MS = MULTI_WINDOW_MS + 20_000;
 
 export async function runCPUBench(
-  maxSingleCoreIterations = 200_000,
-  maxMultiCoreIterationsPerWorker = 500_000
+  // Raised from 200,000 in v3.6: the old cap bound on fast hardware, which
+  // collapsed the single-core window to ~0.4s — the shortest measurement on
+  // exactly the machines where a scheduler migration does the most damage.
+  // It is a rate, so a longer window does not change the number, only its
+  // variance. The TARGET_SINGLE_S budget is what actually ends the phase.
+  maxSingleCoreIterations = 5_000_000
 ): Promise<CPUResult> {
   // Resource sanity bound only. Deliberately NOT clamped to 16: that would
   // halve a 32-thread machine's score against its own stored history.
@@ -205,22 +228,22 @@ export async function runCPUBench(
     result.singleError = e?.message || String(e);
   }
 
-  // ── Multi-core ─────────────────────────────────────────────────
+  // ── Multi-core (v3.6 estimator) ────────────────────────────────
+  // Fixed-time window: every worker runs until the SAME absolute deadline and
+  // reports its own iteration count and elapsed time. The aggregate is the sum
+  // of per-worker rates.
+  //
+  // The previous estimator handed every worker an identical iteration count and
+  // divided total hashes by wall clock. Whenever the per-worker cap bound, that
+  // reduced algebraically to `threads x rate of the slowest worker` — every
+  // fast core's contribution was discarded, and on a hybrid CPU the E-cores set
+  // the result. It also put worker spawn time inside the measured window, which
+  // penalised machines with more threads.
   try {
-    // Under K-way load each worker runs slower than the single-core rate.
-    // Estimate that contention factor from the core count so the phase lands
-    // near the time budget instead of overshooting on many-core machines.
-    const cEst = Math.min(6, Math.max(2, 1.5 + cores / 4));
-    const perWorker = rate > 0
-      ? Math.min(
-          maxMultiCoreIterationsPerWorker,
-          Math.max(2_000, Math.round((rate * TARGET_MULTI_S) / cEst))
-        )
-      : maxMultiCoreIterationsPerWorker;
-
-    const startMulti = performance.now();
-    const settled = await spawnWorkers(cores, perWorker, WORKER_DEADLINE_MS, WORKER_HARD_TIMEOUT_MS);
-    const multiElapsed = performance.now() - startMulti;
+    const deadlineEpoch = Date.now() + MULTI_WINDOW_MS;
+    const settled = await spawnWorkers(
+      cores, MULTI_MAX_ITERATIONS, deadlineEpoch, WORKER_HARD_TIMEOUT_MS
+    );
 
     const done = settled.filter(
       (s): s is PromiseFulfilledResult<WorkerOutcome> => s.status === 'fulfilled'
@@ -231,17 +254,28 @@ export async function runCPUBench(
     // machine has while the failed ones still consumed scheduler time — the
     // resulting rate would understate the hardware, which is exactly the kind
     // of wrong-but-plausible number this benchmark must not publish.
-    if (done.length === cores && multiElapsed > 0) {
-      // Estimator unchanged from previous versions: total work over wall clock,
-      // worker spawn included. Only the iteration count is adaptive.
-      const totalHashes = done.reduce((a, s) => a + s.value.iters, 0);
-      result.hashesPerSecondMulti = totalHashes / (multiElapsed / 1000);
+    const usable = done.filter(s => s.value.iters > 0 && s.value.elapsed > 0);
+    if (usable.length === cores) {
+      result.hashesPerSecondMulti = usable.reduce(
+        (a, s) => a + s.value.iters / (s.value.elapsed / 1000), 0
+      );
       result.multiMeasured = true;
+
+      // Per-worker telemetry. The spread between the fastest and slowest worker
+      // is the direct measurement of core heterogeneity — it is what tells a
+      // reader whether a low score came from slow cores or from one stalled
+      // thread. Previously this data was collected and thrown away.
+      const el = usable.map(s => s.value.elapsed).sort((a, b) => a - b);
+      result.workerElapsedMs = {
+        min: Math.round(el[0]),
+        median: Math.round(el[Math.floor(el.length / 2)]),
+        max: Math.round(el[el.length - 1]),
+      };
     } else {
       const firstErr = settled.find(s => s.status === 'rejected') as PromiseRejectedResult | undefined;
-      result.multiError = done.length === 0
+      result.multiError = usable.length === 0
         ? `No worker reported (${firstErr?.reason?.message || 'unknown cause'})`
-        : `Only ${done.length}/${cores} workers reported (${firstErr?.reason?.message || 'unknown cause'})`;
+        : `Only ${usable.length}/${cores} workers reported (${firstErr?.reason?.message || 'unknown cause'})`;
     }
   } catch (e: any) {
     result.multiError = e?.message || String(e);

@@ -9,12 +9,18 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   const url = new URL(request.url);
   const limit = Math.min(200, Math.max(10, parseInt(url.searchParams.get('limit') || '50') || 50));
   const period = url.searchParams.get('period') || 'all'; // all|week|month
+  // Which estimator generation to rank. v3.6 changed how multi-core throughput
+  // and the GPU headline are computed; the old numbers cannot be converted, so
+  // the board forks rather than migrates. Default stays on the legacy pool
+  // until the v3.6 pool has enough entries to be a meaningful ranking.
+  const estimator = url.searchParams.get('estimator') === '2' ? 2 : 1;
 
   // Leaderboard ranks FULL runs only — every component measured. Partial runs
   // use a renormalized formula and compete on a different basis; runs with a
   // failed sub-test (raw metric exactly 0) are excluded entirely.
   let timeFilter = ' WHERE gpu_gflops > 0 AND cpu_hashes_multi > 0'
-                 + ' AND ram_read_gbs > 0 AND ram_write_gbs > 0';
+                 + ' AND ram_read_gbs > 0 AND ram_write_gbs > 0'
+                 + ` AND COALESCE(estimator_version, 1) = ${estimator}`;
   if (period === 'week') {
     const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
     timeFilter += ` AND created_at > ${weekAgo}`;
@@ -34,9 +40,18 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
 
     const totalRow = await env.DB.prepare(`SELECT COUNT(*) as c FROM results${timeFilter}`).first<{ c: number }>();
 
+    // Size of the other pool, so the UI can offer the switch honestly.
+    const otherFilter = timeFilter.replace(
+      `COALESCE(estimator_version, 1) = ${estimator}`,
+      `COALESCE(estimator_version, 1) = ${estimator === 2 ? 1 : 2}`
+    );
+    const otherRow = await env.DB.prepare(`SELECT COUNT(*) as c FROM results${otherFilter}`).first<{ c: number }>();
+
     return new Response(JSON.stringify({
       ok: true,
       period,
+      estimator,
+      otherEstimatorTotal: otherRow?.c || 0,
       total: totalRow?.c || 0,
       results: (rows.results || []).map((r: any, i: number) => ({
         rank: i + 1,
