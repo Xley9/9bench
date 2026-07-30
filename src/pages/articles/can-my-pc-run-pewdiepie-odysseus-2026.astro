@@ -1,0 +1,336 @@
+---
+import ArticleLayout from '../../layouts/ArticleLayout.astro';
+
+const props = {
+  title: "Can Your PC Run PewDiePie's Odysseus? The Honest Answer: There Are No Official Requirements (2026)",
+  description: "Odysseus publishes no official hardware requirements — every spec table you've seen elsewhere is unofficial. What actually decides: model × quantization × memory. Measure yours in 15 seconds, no install.",
+  slug: 'can-my-pc-run-pewdiepie-odysseus-2026',
+  publishedDate: '2026-07-30',
+  readingMinutes: 11,
+  category: 'Reality Check',
+  primaryKeyword: 'odysseus hardware requirements',
+  secondaryKeywords: [
+    'can my pc run odysseus', 'pewdiepie odysseus hardware requirements',
+    'odysseus minimum specs', 'odysseus system requirements',
+    'odysseus vs ollama', 'run odysseus locally', 'odysseus gpu requirements',
+    'odysseus vram requirements', 'pewdiepie ai workspace hardware'
+  ],
+  heroEmoji: '🏺',
+  heroGradientFrom: '#F59E0B',
+  heroGradientTo: '#7C2D12',
+  faqs: [
+    { q: 'Does Odysseus have official minimum system requirements?', a: "No. The official setup guide says the app itself is lightweight and that local model serving is the heavy part, depending on the model, runtime, GPU, and VRAM. The project publishes no minimum-spec table — the same sentence points small hosts to API or remote model servers instead. Any 'Odysseus system requirements' table you find on third-party sites is unofficial — the numbers don't come from the Odysseus repository." },
+    { q: 'Odysseus vs Ollama — which one do I need?', a: "They're not competitors. Odysseus is a self-hosted AI workspace (chat, agents, documents, research) that sits on top of a model-serving backend. Ollama is one of those backends — alongside llama.cpp, vLLM, and SGLang. On Windows, Odysseus's own docs call Ollama the easiest path for local models. You don't choose between them; Odysseus runs on top of Ollama (or another serving backend)." },
+    { q: 'Can I run Odysseus without a GPU?', a: 'Yes. The app itself runs fine without a GPU, and in API mode (cloud models like GPT or Claude behind your own workspace) almost any machine works. Local model serving without a GPU is where it gets painful — CPU-only inference of 7B+ models is slow enough that most people fall back to API mode or a smaller model.' },
+    { q: 'Which Odysseus sources are official?', a: 'Only two: the GitHub repository github.com/odysseus-dev/odysseus and the docs site odysseus-dev.github.io/odysseus. Several lookalike domains publish invented requirement tables and download links — none are affiliated with the project.' },
+    { q: 'How much memory do local models in Odysseus actually need?', a: "It's model math, not app math: a 7B model at Q4 quantization is ~4 GB of weights plus KV cache — roughly 6 GB of free memory in practice. 13B Q4 needs ~10 GB, 70B Q4 ~40+ GB. Odysseus's own hardware-fit logic (as of July 2026) wants 1.2×–1.5× headroom over the raw requirement before it calls a fit 'good' or 'perfect'." }
+  ],
+  relatedArticles: [
+    { slug: 'can-my-pc-run-it-15-second-test-2026', title: 'Can My PC Run It? Test in 15 Seconds', emoji: '🎯' },
+    { slug: 'how-much-vram-do-you-need-for-local-llm-2026', title: 'How Much VRAM Do You Need for Local LLMs?', emoji: '💾' },
+    { slug: 'run-local-llm-on-8gb-vram-2026-reality-check', title: 'Run Local LLMs on 8 GB VRAM — Reality Check', emoji: '🪙' }
+  ]
+};
+---
+
+<ArticleLayout {...props}>
+  <div class="tldr">
+    <div class="tldr-title">TL;DR</div>
+    Odysseus — PewDiePie's open-source AI workspace — publishes <strong>no official hardware
+    requirements</strong> — and its own docs explain why. The app is lightweight; what's heavy is the local model you
+    serve behind it, and that depends on model size × quantization × free memory.
+    Every "Odysseus system requirements" table on third-party sites is unofficial.
+    The honest path: <a href="/test/" class="text-brand"><strong>measure your hardware in 15 seconds</strong></a>,
+    then match the result to the model class you want to run. In API mode, Odysseus runs on
+    almost anything.
+  </div>
+
+  <p>
+    Since Odysseus hit 84,000+ GitHub stars, "can my PC run Odysseus" has become an autocomplete
+    query — and the top results answer it with requirement tables that the Odysseus project never
+    published. This article does it the honest way: what the official docs actually say (with
+    sources), what genuinely decides whether your machine can handle it, and how to measure that
+    in your browser before you install anything.
+  </p>
+
+  <h2>What Odysseus is (in 60 seconds)</h2>
+  <p>
+    Odysseus is an open-source, self-hosted AI workspace: chat, agents, research, documents,
+    email, notes, and calendar in one locally-run app, licensed AGPL-3.0. It was started by
+    Felix "PewDiePie" Kjellberg and is now developed in the open at
+    <a href="https://github.com/odysseus-dev/odysseus" rel="noopener" target="_blank">github.com/odysseus-dev/odysseus</a>.
+    The point of self-hosting: your data stays on your machine, and you decide which AI models
+    do the work.
+  </p>
+  <p>
+    For the "can my PC run it" question, one architectural fact matters more than anything else:
+    <strong>Odysseus doesn't run AI models itself.</strong> It connects to a model backend —
+    Ollama, llama.cpp, vLLM, or SGLang for local models, or cloud APIs if you'd rather not run
+    models locally at all. So the real question is never "can my PC run Odysseus" — it's
+    "can my PC serve the model I want behind Odysseus."
+  </p>
+
+  <h2>The truth: there are no official requirements</h2>
+  <p>
+    The official setup guide addresses hardware in exactly one general sentence:
+  </p>
+  <blockquote>
+    "The app itself is lightweight; local model serving is the heavy part and depends on the
+    model, runtime, GPU, and VRAM, so small hosts can connect to API or remote model servers
+    instead."
+    <cite>— <a href="https://github.com/odysseus-dev/odysseus/blob/main/docs/setup.md" rel="noopener" target="_blank">docs/setup.md</a>, Odysseus repository</cite>
+  </blockquote>
+  <p>
+    That's it. No minimum-spec table, no "recommended: 16 GB RAM", no tiers. The hardware question
+    in the project's own discussions
+    (<a href="https://github.com/odysseus-dev/odysseus/discussions/274" rel="noopener" target="_blank">#274</a>,
+    open since June 2026) has no official spec answer — the only project-team reply is a
+    single-GPU anecdote, and the community replies disagree with each other, because the honest
+    answer really is "it depends on the model you pick."
+  </p>
+  <div class="info-box">
+    <strong>About those requirement tables elsewhere:</strong> several third-party sites publish
+    detailed "Odysseus system requirements" — minimum CPU, recommended VRAM, the works. None of
+    them are affiliated with the project, and the numbers don't trace back to anything in the
+    Odysseus repository. If a spec table isn't on
+    <a href="https://github.com/odysseus-dev/odysseus" rel="noopener" target="_blank">github.com/odysseus-dev/odysseus</a> or
+    <a href="https://odysseus-dev.github.io/odysseus" rel="noopener" target="_blank">odysseus-dev.github.io/odysseus</a>,
+    it's someone's guess.
+  </div>
+
+  <h3>The one official sizing sentence</h3>
+  <p>
+    The setup guide does contain a single concrete piece of sizing advice:
+  </p>
+  <blockquote>
+    "For first-time local model testing on 8 GB laptop GPUs, start with GGUF/Q4 models on
+    llama.cpp before trying GPTQ/AWQ models on vLLM or SGLang."
+    <cite>— docs/setup.md, Odysseus repository</cite>
+  </blockquote>
+  <p>
+    Translated: if you have a mainstream gaming laptop (RTX 4060 class, 8 GB VRAM), the project
+    itself points you at 4-bit-quantized GGUF models served by llama.cpp. That's the entry door —
+    and it's exactly the model class we test against below.
+  </p>
+
+  <h2>What actually decides: model × quantization × memory</h2>
+  <p>
+    Whether a local model runs on your machine comes down to arithmetic, not app specs.
+    A model's weights have to fit in memory (VRAM, unified memory, or system RAM with CPU
+    offload), plus working space for the KV cache. Quantization shrinks the weights:
+    a 7-billion-parameter model at Q4 (4-bit) is roughly 4 GB of weights — per the
+    <a href="https://github.com/ggml-org/llama.cpp" rel="noopener" target="_blank">llama.cpp</a>
+    quantization docs — where the same model at FP16 would be ~14 GB.
+  </p>
+  <p>
+    Rough memory math for the model classes most people serve behind Odysseus
+    (weights + typical KV cache, Q4 GGUF):
+  </p>
+  <table class="spec-table">
+    <thead>
+      <tr><th>Model class</th><th>Approx. memory needed</th><th>Typical hardware that clears it</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>7B Q4 (Llama, Qwen, Mistral class)</td><td>~6 GB free</td><td>Most 2022+ laptops with dGPU; 8 GB VRAM cards; M-series Macs</td></tr>
+      <tr><td>13B Q4</td><td>~10–11 GB free</td><td>16 GB RAM laptops (unified/offload), 12 GB+ VRAM GPUs</td></tr>
+      <tr><td>32B Q4 (coder models)</td><td>~22 GB free</td><td>24 GB VRAM GPUs, 32 GB+ unified memory Macs</td></tr>
+      <tr><td>70B Q4</td><td>~40+ GB free</td><td>Workstations, 64 GB+ RAM, Ultra-tier Apple Silicon</td></tr>
+    </tbody>
+  </table>
+  <p class="table-caveat">
+    ⚠ This is <strong>model math derived from llama.cpp/Ollama documentation — not an official
+    Odysseus spec</strong>. Odysseus publishes no such table.
+  </p>
+  <p>
+    Odysseus's own hardware-fit logic agrees that headroom is what matters. Its
+    <code>hwfit</code> service (as of July 2026) labels a GPU fit "perfect" when VRAM is at least
+    <strong>1.5×</strong> the model's requirement and "good" at <strong>1.2×</strong> —
+    below that, "marginal." In other words, the project's own code treats memory headroom as the
+    deciding factor. That's a moving target (the constants can change), but the principle —
+    measure your memory headroom before picking a model — is stable.
+  </p>
+
+  <h2>Measure it in 15 seconds (before you install anything)</h2>
+  <p>
+    Odysseus ships a built-in hardware scanner (the Cookbook) that recommends models from a
+    270+ model catalog — but it only works <em>after</em> you've installed the whole stack.
+    If you want the answer <em>before</em> committing to Docker, WSL2, and a multi-gigabyte
+    setup, that's what <a href="/test/" class="text-brand"><strong>9bench</strong></a> is for:
+    a 15-second browser test, no install, no account.
+  </p>
+  <p>What it gives you, kept honest by separating two kinds of numbers:</p>
+  <ul>
+    <li><strong>Measured:</strong> GPU compute (WebGPU GFLOPS), CPU single/multi-core throughput,
+      RAM bandwidth, and browser memory headroom — actual numbers from your actual machine.</li>
+    <li><strong>Estimated:</strong> what the same hardware would achieve natively with llama.cpp
+      or Ollama — an extrapolation calibrated against published benchmarks, labeled as an
+      estimate on every result page, with the reasoning shown per row.</li>
+  </ul>
+  <p>
+    There's also an optional <strong>live LLM test</strong> that downloads a small model and runs
+    real inference in your tab. That number is measured, not estimated — but note it's a
+    <em>browser</em> number: native llama.cpp on the same machine typically runs 5–10× faster.
+    Treat the live test as a lower bound and a reality check, not as a prediction of Odysseus
+    performance.
+  </p>
+  <div class="cta-box">
+    <a href="/test/" class="cta-button">▶ Test my hardware (15 seconds)</a>
+  </div>
+
+  <h2>Reading your result for Odysseus</h2>
+  <p>
+    Your <a href="/test/">9bench result page</a> shows per-model verdicts (Llama 7B/13B/70B Q4
+    GGUF, and more) for both browser and native execution. Here's how they map to Odysseus:
+  </p>
+  <ul>
+    <li><strong>Local models:</strong> the native verdicts apply directly, because Odysseus serves
+      models through the same backends the predictions are calibrated for (Ollama / llama.cpp).
+      A "yes" on Llama 7B Q4 GGUF means that model class should serve locally on your machine.
+      Leave headroom — Odysseus's own fit logic wants 1.2–1.5× — so if a model is "marginal"
+      on the result page, pick the next size down.</li>
+    <li><strong>API mode — the honest bright spot:</strong> if your verdicts are mostly "no",
+      you can still run Odysseus. The app itself is lightweight, and the same docs sentence
+      points small hosts at API or remote model servers — in API mode the heavy lifting happens
+      on someone else's hardware. A 2018 office laptop
+      that fails every local-model verdict still runs Odysseus as a private workspace over APIs.</li>
+    <li><strong>After you install:</strong> use Odysseus's Cookbook scanner for fine-tuning the
+      exact model pick. 9bench answers "is this machine worth setting up for local AI at all" in
+      the browser; the Cookbook picks the specific checkpoint once the stack is running.
+      They're complementary steps, not competitors.</li>
+  </ul>
+
+  <h2>Install reality check (the part spec tables never mention)</h2>
+  <p>
+    Hardware capability is necessary but not sufficient — the installation path has real
+    platform caveats, straight from the project's docs and issue tracker:
+  </p>
+  <ul>
+    <li><strong>Windows:</strong> local GPU serving via vLLM/SGLang needs Linux or WSL2; the docs
+      call Ollama the easiest local-model path on Windows. Be aware of open issue
+      <a href="https://github.com/odysseus-dev/odysseus/issues/5606" rel="noopener" target="_blank">#5606</a>:
+      the Docker image lacks the CUDA toolkit, so llama.cpp inside the container can fall back to
+      CPU even when GPU passthrough works — check your logs for "no usable GPU found" before
+      blaming your hardware.</li>
+    <li><strong>macOS:</strong> Docker on macOS can't use the Metal GPU. For GPU-accelerated
+      local models on an M-series Mac, run Odysseus natively — and note vLLM/SGLang are
+      CUDA/ROCm-only, so they don't run on macOS at all. llama.cpp/Ollama are the Mac path.</li>
+    <li><strong>Every platform:</strong> a working <code>nvidia-smi</code> (or Apple unified
+      memory) is the start, not the finish. If the model doesn't fit in memory with headroom,
+      no install path fixes that.</li>
+  </ul>
+
+  <div class="info-box disclaimer">
+    <strong>Honesty footnotes:</strong> 9bench is not affiliated with Odysseus, its maintainers,
+    or PewDiePie. Browser measurements are not native performance — native llama.cpp typically
+    runs 5–10× faster than in-tab inference, which is why estimated native values are labeled
+    as estimates everywhere they appear. The live in-browser tokens/s is a measured lower bound,
+    not an Odysseus performance prediction. Odysseus's fit-logic constants (1.2× / 1.5×) are as
+    of July 2026 and may change; the memory-math table above is derived from llama.cpp/Ollama
+    documentation, not from the Odysseus project.
+  </div>
+
+  <h2>The 15-second answer</h2>
+  <p>
+    Nobody can tell you "Odysseus needs X" — the project itself doesn't.
+    But your machine can tell you what model class it serves. Measure it, match it, then install.
+  </p>
+  <div class="cta-box">
+    <a href="/test/" class="cta-button">▶ Test my hardware (15 seconds)</a>
+  </div>
+</ArticleLayout>
+
+<style>
+  .tldr {
+    background: var(--bg-2);
+    border-left: 3px solid var(--accent);
+    padding: 18px 22px;
+    margin: 24px 0;
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.6;
+  }
+  .tldr-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .info-box {
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    padding: 16px 20px;
+    margin: 20px 0;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  .info-box strong { color: var(--accent); }
+  .info-box.disclaimer { border-left: 3px solid var(--warn); }
+  .info-box.disclaimer strong { color: var(--warn); }
+  blockquote {
+    border-left: 3px solid var(--line);
+    margin: 20px 0;
+    padding: 8px 22px;
+    font-style: italic;
+    color: var(--fg-2);
+  }
+  blockquote cite {
+    display: block;
+    margin-top: 8px;
+    font-style: normal;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--fg-3);
+  }
+  .spec-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0 8px;
+    font-size: 14px;
+  }
+  .spec-table th, .spec-table td {
+    border: 1px solid var(--line);
+    padding: 10px 12px;
+    text-align: left;
+    line-height: 1.5;
+  }
+  .spec-table th {
+    background: var(--bg-2);
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .table-caveat {
+    font-size: 13px;
+    color: var(--fg-2);
+    font-family: var(--mono);
+  }
+  .cta-box {
+    text-align: center;
+    margin: 40px 0;
+  }
+  .cta-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 16px 32px;
+    background: var(--accent);
+    color: #000;
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-decoration: none;
+  }
+  .cta-button:hover { background: var(--fg); }
+  code {
+    font-family: var(--mono);
+    font-size: 0.92em;
+    background: var(--bg-2);
+    padding: 1px 6px;
+    color: var(--accent);
+  }
+</style>

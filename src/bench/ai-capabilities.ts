@@ -211,7 +211,7 @@ function generatePredictions(
 
     if (largestAllocatableGB < 4) {
       predictions.push({
-        name: 'Llama 7B (Q4)',
+        name: 'Llama 7B (Q4 GGUF)',
         description: 'Local LLM, 7-billion parameters, 4-bit quantized',
         verdict: 'no',
         performance: null,
@@ -220,7 +220,7 @@ function generatePredictions(
       });
     } else if (predictedTPS >= 15) {
       predictions.push({
-        name: 'Llama 7B (Q4)',
+        name: 'Llama 7B (Q4 GGUF)',
         description: 'Local LLM, 7-billion parameters, 4-bit quantized',
         verdict: 'yes',
         performance: `~${Math.round(predictedTPS - 5)}–${Math.round(predictedTPS + 10)} tokens/s`,
@@ -229,7 +229,7 @@ function generatePredictions(
       });
     } else {
       predictions.push({
-        name: 'Llama 7B (Q4)',
+        name: 'Llama 7B (Q4 GGUF)',
         description: 'Local LLM, 7-billion parameters, 4-bit quantized',
         verdict: 'maybe',
         performance: `~${Math.max(2, Math.round(predictedTPS - 3))}–${Math.round(predictedTPS + 5)} tokens/s`,
@@ -246,7 +246,7 @@ function generatePredictions(
 
     if (largestAllocatableGB < 8) {
       predictions.push({
-        name: 'Llama 13B (Q4)',
+        name: 'Llama 13B (Q4 GGUF)',
         description: 'Local LLM, 13-billion parameters, 4-bit quantized',
         verdict: 'no',
         performance: null,
@@ -255,7 +255,7 @@ function generatePredictions(
       });
     } else if (predictedTPS >= 8) {
       predictions.push({
-        name: 'Llama 13B (Q4)',
+        name: 'Llama 13B (Q4 GGUF)',
         description: 'Local LLM, 13-billion parameters, 4-bit quantized',
         verdict: 'yes',
         performance: `~${Math.max(3, Math.round(predictedTPS - 3))}–${Math.round(predictedTPS + 5)} tokens/s`,
@@ -264,7 +264,7 @@ function generatePredictions(
       });
     } else {
       predictions.push({
-        name: 'Llama 13B (Q4)',
+        name: 'Llama 13B (Q4 GGUF)',
         description: 'Local LLM, 13-billion parameters, 4-bit quantized',
         verdict: 'maybe',
         performance: `~${Math.max(2, Math.round(predictedTPS - 1))}–${Math.round(predictedTPS + 2)} tokens/s`,
@@ -278,7 +278,7 @@ function generatePredictions(
   // Always 'no' for browser-based — the memory cap is ~8 GB on Chrome,
   // and 70B models simply don't fit. Native machines need 32 GB+ RAM.
   predictions.push({
-    name: 'Llama 70B (Q4)',
+    name: 'Llama 70B (Q4 GGUF)',
     description: 'Large flagship LLM, 70-billion parameters',
     verdict: 'no',
     performance: null,
@@ -475,7 +475,7 @@ export function aiTierLabel(tier: AICapabilities['tier']): { letter: string; sub
     case 'AI-Entry':
     case 'AI-Workstation':  // legacy rows stored before the rename
                             return { letter: '◯', sub: 'Entry level — 7B Q4 marginal, smaller models work',         color: 'var(--fg-2)' };
-    case 'AI-Office':       return { letter: '◯', sub: 'Cloud-first — local AI is impractical on this hardware',    color: 'var(--fg-3)' };
-    case 'AI-Limited':      return { letter: '⚠', sub: 'Cloud-only — not a local-AI machine',                        color: 'var(--warn)' };
+    case 'AI-Office':       return { letter: '◯', sub: 'Cloud-first — local AI is impractical; AI workspaces still work in API mode', color: 'var(--fg-3)' };
+    case 'AI-Limited':      return { letter: '⚠', sub: 'Cloud-only — not a local-AI machine; AI workspaces still work in API mode',   color: 'var(--warn)' };
   }
 }

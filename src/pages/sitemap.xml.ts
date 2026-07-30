@@ -13,8 +13,9 @@ export const GET: APIRoute = () => {
     { loc: `${SITE}/faq/`, lastmod: '2026-07-29', priority: '0.9', changefreq: 'monthly' },
     { loc: `${SITE}/about/`, lastmod: '2026-07-29', priority: '0.7', changefreq: 'monthly' },
     { loc: `${SITE}/privacy/`, lastmod: '2026-03-15', priority: '0.5', changefreq: 'yearly' },
-    { loc: `${SITE}/articles/`, lastmod: '2026-04-30', priority: '0.95', changefreq: 'weekly' },
+    { loc: `${SITE}/articles/`, lastmod: '2026-07-30', priority: '0.95', changefreq: 'weekly' },
     // Articles
+    { loc: `${SITE}/articles/can-my-pc-run-pewdiepie-odysseus-2026/`, lastmod: '2026-07-30', priority: '0.9', changefreq: 'monthly' },
     { loc: `${SITE}/articles/userbenchmark-alternatives-2026/`, lastmod: '2026-04-27', priority: '0.9', changefreq: 'monthly' },
     { loc: `${SITE}/articles/how-to-test-cpu-gpu-ram-online-no-download/`, lastmod: '2026-04-27', priority: '0.9', changefreq: 'monthly' },
     { loc: `${SITE}/articles/geekbench-vs-cinebench-vs-9bench/`, lastmod: '2026-04-27', priority: '0.9', changefreq: 'monthly' },
@@ -30,7 +31,7 @@ export const GET: APIRoute = () => {
     { loc: `${SITE}/articles/run-local-llm-on-8gb-vram-2026-reality-check/`, lastmod: '2026-04-29', priority: '0.85', changefreq: 'monthly' },
     { loc: `${SITE}/articles/best-laptop-for-local-ai-2026/`, lastmod: '2026-04-29', priority: '0.85', changefreq: 'monthly' },
     { loc: `${SITE}/articles/browser-vs-native-llm-performance/`, lastmod: '2026-04-29', priority: '0.85', changefreq: 'monthly' },
-    { loc: `${SITE}/articles/can-my-pc-run-it-15-second-test-2026/`, lastmod: '2026-04-29', priority: '0.85', changefreq: 'monthly' },
+    { loc: `${SITE}/articles/can-my-pc-run-it-15-second-test-2026/`, lastmod: '2026-07-30', priority: '0.85', changefreq: 'monthly' },
   ];
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>

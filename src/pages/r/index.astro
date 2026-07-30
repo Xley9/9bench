@@ -269,6 +269,17 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
           </div>
         </div>
 
+        <!-- Vocabulary bridge: readers arriving from self-hosted-workspace
+             guides (Open WebUI, Odysseus) need to know these rows ARE the
+             model classes those apps serve — and what a "yes" does NOT
+             promise. -->
+        <p class="ai-section__note" id="ai-pred-context">
+          These are the model families self-hosted AI workspaces (Open WebUI,
+          <a href="/articles/can-my-pc-run-pewdiepie-odysseus-2026/">PewDiePie's Odysseus</a>)
+          serve locally via Ollama / llama.cpp — a "yes" refers to the model
+          class, not any specific app's guaranteed performance.
+        </p>
+
         <!-- ── PHASE L: Live LLM inference test ─────────────────────
              The killer differentiator. Click → loads transformers.js
              from CDN → runs a tiny LLM in the browser → measures real
@@ -1428,8 +1439,8 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
       case 'AI-Entry':
       case 'AI-Workstation': // legacy rows stored before the rename
                              return { letter: '◯', sub: 'Entry level — 7B Q4 marginal, smaller models work', color: 'var(--fg-2)' };
-      case 'AI-Office':      return { letter: '◯', sub: 'Cloud-first — local AI is impractical on this hardware', color: 'var(--fg-3)' };
-      case 'AI-Limited':     return { letter: '⚠', sub: 'Cloud-only — not a local-AI machine', color: 'var(--warn)' };
+      case 'AI-Office':      return { letter: '◯', sub: 'Cloud-first — local AI is impractical; AI workspaces still work in API mode', color: 'var(--fg-3)' };
+      case 'AI-Limited':     return { letter: '⚠', sub: 'Cloud-only — not a local-AI machine; AI workspaces still work in API mode', color: 'var(--warn)' };
       default:               return { letter: '?', sub: 'Unknown AI tier', color: 'var(--fg-3)' };
     }
   }
@@ -1564,7 +1575,7 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
         // Phase K (fix): keep name plain so it pairs up with the
         // browser-side prediction row. The matched-class info already
         // shows in the native score sub-text and in the reasoning.
-        name: 'Llama 7B (Q4)',
+        name: 'Llama 7B (Q4 GGUF)',
         description: '7-billion params, 4-bit quantized',
         verdict: 'yes',
         performance: `~${Math.max(5, tpsLow)}–${Math.max(15, tpsHigh)} tokens/s`,
@@ -1573,7 +1584,7 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
       });
     } else {
       out.push({
-        name: 'Llama 7B (Q4)', description: '7-billion params, 4-bit quantized',
+        name: 'Llama 7B (Q4 GGUF)', description: '7-billion params, 4-bit quantized',
         verdict: 'no', performance: null,
         reasoning: `Native estimated free RAM is ~${usableRamGB} GB; 7B Q4 needs at least 6 GB.`,
         category: 'llm',
@@ -1585,7 +1596,7 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
       const tpsLow  = Math.round(lo / 160);
       const tpsHigh = Math.round(hi / 160);
       out.push({
-        name: 'Llama 13B (Q4)', description: '13-billion params, 4-bit quantized',
+        name: 'Llama 13B (Q4 GGUF)', description: '13-billion params, 4-bit quantized',
         verdict: 'yes',
         performance: `~${Math.max(3, tpsLow)}–${Math.max(8, tpsHigh)} tokens/s`,
         reasoning: `Estimated ${usableRamGB} GB usable RAM accommodates the 8 GB weights + KV cache.`,
@@ -1593,7 +1604,7 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
       });
     } else {
       out.push({
-        name: 'Llama 13B (Q4)', description: '13-billion params, 4-bit quantized',
+        name: 'Llama 13B (Q4 GGUF)', description: '13-billion params, 4-bit quantized',
         verdict: 'no', performance: null,
         reasoning: `Estimated free RAM ${usableRamGB} GB; 13B Q4 needs ~10 GB minimum.`,
         category: 'llm',
@@ -1605,7 +1616,7 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
       const tpsLow  = Math.round(lo / 600);
       const tpsHigh = Math.round(hi / 600);
       out.push({
-        name: 'Llama 70B (Q4)', description: 'Flagship LLM, 70-billion params',
+        name: 'Llama 70B (Q4 GGUF)', description: 'Flagship LLM, 70-billion params',
         verdict: 'yes',
         performance: `~${Math.max(2, tpsLow)}–${Math.max(6, tpsHigh)} tokens/s`,
         reasoning: `Workstation-class ${usableRamGB} GB free RAM fits the 40 GB weights + cache.`,
@@ -1613,7 +1624,7 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
       });
     } else if (usableRamGB >= 32) {
       out.push({
-        name: 'Llama 70B (Q4)', description: 'Flagship LLM, 70-billion params',
+        name: 'Llama 70B (Q4 GGUF)', description: 'Flagship LLM, 70-billion params',
         verdict: 'maybe',
         performance: 'GGUF disk-streaming · ~1-3 t/s',
         reasoning: `Marginal — ${usableRamGB} GB RAM is below the 48 GB ideal. Disk-streaming GGUF works but is slow.`,
@@ -1621,7 +1632,7 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
       });
     } else {
       out.push({
-        name: 'Llama 70B (Q4)', description: 'Flagship LLM, 70-billion params',
+        name: 'Llama 70B (Q4 GGUF)', description: 'Flagship LLM, 70-billion params',
         verdict: 'no', performance: null,
         reasoning: `Estimated ${usableRamGB} GB free RAM — needs ≥48 GB. Use a workstation or cloud.`,
         category: 'llm',
@@ -1636,7 +1647,7 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
       const tpsLow  = Math.max(8,  Math.round(cls.llama7BQ4TPSLow  * 0.30));
       const tpsHigh = Math.max(15, Math.round(cls.llama7BQ4TPSHigh * 0.30));
       out.push({
-        name: 'Qwen2.5-Coder 32B (Q4)',
+        name: 'Qwen2.5-Coder 32B (Q4 GGUF)',
         description: 'Local coding-agent LLM, 32B params, 4-bit quantized',
         verdict: 'yes',
         performance: `~${tpsLow}–${tpsHigh} tokens/s`,
@@ -1647,7 +1658,7 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
       const tpsLow  = Math.max(5,  Math.round(lo / 250));
       const tpsHigh = Math.max(10, Math.round(hi / 250));
       out.push({
-        name: 'Qwen2.5-Coder 32B (Q4)',
+        name: 'Qwen2.5-Coder 32B (Q4 GGUF)',
         description: 'Local coding-agent LLM, 32B params, 4-bit quantized',
         verdict: 'yes',
         performance: `~${tpsLow}–${tpsHigh} tokens/s`,
@@ -1656,7 +1667,7 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
       });
     } else {
       out.push({
-        name: 'Qwen2.5-Coder 32B (Q4)',
+        name: 'Qwen2.5-Coder 32B (Q4 GGUF)',
         description: 'Local coding-agent LLM, 32B params, 4-bit quantized',
         verdict: 'no', performance: null,
         reasoning: `Estimated ${usableRamGB} GB free RAM — needs ≥22 GB for the 19 GB Q4 weights + KV cache.`,
@@ -1671,7 +1682,7 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
       const tpsLow  = Math.max(5,  Math.round(cls.llama7BQ4TPSLow  * 0.55));
       const tpsHigh = Math.max(12, Math.round(cls.llama7BQ4TPSHigh * 0.55));
       out.push({
-        name: 'Qwen2-VL 7B (Q4)',
+        name: 'Qwen2-VL 7B (Q4 GGUF)',
         description: 'Vision-language model — OCR, screenshots, multimodal',
         verdict: 'yes',
         performance: `~${tpsLow}–${tpsHigh} tokens/s`,
@@ -1682,7 +1693,7 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
       const tpsLow  = Math.max(3,  Math.round(lo / 145));
       const tpsHigh = Math.max(8,  Math.round(hi / 145));
       out.push({
-        name: 'Qwen2-VL 7B (Q4)',
+        name: 'Qwen2-VL 7B (Q4 GGUF)',
         description: 'Vision-language model — OCR, screenshots, multimodal',
         verdict: 'yes',
         performance: `~${tpsLow}–${tpsHigh} tokens/s`,
@@ -1691,7 +1702,7 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
       });
     } else {
       out.push({
-        name: 'Qwen2-VL 7B (Q4)',
+        name: 'Qwen2-VL 7B (Q4 GGUF)',
         description: 'Vision-language model — OCR, screenshots, multimodal',
         verdict: 'no', performance: null,
         reasoning: `Estimated ${usableRamGB} GB free RAM; 7B Q4 + vision encoder needs ~6 GB minimum.`,
@@ -1989,14 +2000,14 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
       const compT = estimatedNativeGFLOPS / 50;
       const tps = Math.min(memT, compT);
       if (largestAllocatableGB < 4) {
-        out.push({ name: 'Llama 7B (Q4)', description: 'Local LLM, 7B params, 4-bit quantized', verdict: 'no', performance: null,
+        out.push({ name: 'Llama 7B (Q4 GGUF)', description: 'Local LLM, 7B params, 4-bit quantized', verdict: 'no', performance: null,
           reasoning: `Browser memory headroom is ${largestAllocatableGB.toFixed(1)} GB; 7B Q4 needs ~4 GB just for weights.`, category: 'llm' });
       } else if (tps >= 15) {
-        out.push({ name: 'Llama 7B (Q4)', description: 'Local LLM, 7B params, 4-bit quantized', verdict: 'yes',
+        out.push({ name: 'Llama 7B (Q4 GGUF)', description: 'Local LLM, 7B params, 4-bit quantized', verdict: 'yes',
           performance: `~${Math.round(tps - 5)}–${Math.round(tps + 10)} tokens/s`,
           reasoning: `Memory bandwidth (${ramReadGBs.toFixed(1)} GB/s browser ≈ ${estimatedNativeRAM.toFixed(0)} GB/s native est.) supports comfortable inference.`, category: 'llm' });
       } else {
-        out.push({ name: 'Llama 7B (Q4)', description: 'Local LLM, 7B params, 4-bit quantized', verdict: 'maybe',
+        out.push({ name: 'Llama 7B (Q4 GGUF)', description: 'Local LLM, 7B params, 4-bit quantized', verdict: 'maybe',
           performance: `~${Math.max(2, Math.round(tps - 3))}–${Math.round(tps + 5)} tokens/s`,
           reasoning: 'Will run but slowly — bandwidth-bound. RAM upgrade or faster storage helps.', category: 'llm' });
       }
@@ -2005,33 +2016,33 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
     {
       const tps = (estimatedNativeRAM * 0.7) / 8;
       if (largestAllocatableGB < 8) {
-        out.push({ name: 'Llama 13B (Q4)', description: 'Local LLM, 13B params, 4-bit quantized', verdict: 'no', performance: null,
+        out.push({ name: 'Llama 13B (Q4 GGUF)', description: 'Local LLM, 13B params, 4-bit quantized', verdict: 'no', performance: null,
           reasoning: `Needs ~8 GB for weights; browser allocated only ${largestAllocatableGB.toFixed(1)} GB max.`, category: 'llm' });
       } else if (tps >= 8) {
-        out.push({ name: 'Llama 13B (Q4)', description: 'Local LLM, 13B params, 4-bit quantized', verdict: 'yes',
+        out.push({ name: 'Llama 13B (Q4 GGUF)', description: 'Local LLM, 13B params, 4-bit quantized', verdict: 'yes',
           performance: `~${Math.max(3, Math.round(tps - 3))}–${Math.round(tps + 5)} tokens/s`,
           reasoning: 'Bandwidth supports usable inference. Suitable for chatbot use cases.', category: 'llm' });
       } else {
-        out.push({ name: 'Llama 13B (Q4)', description: 'Local LLM, 13B params, 4-bit quantized', verdict: 'maybe',
+        out.push({ name: 'Llama 13B (Q4 GGUF)', description: 'Local LLM, 13B params, 4-bit quantized', verdict: 'maybe',
           performance: `~${Math.max(2, Math.round(tps - 1))}–${Math.round(tps + 2)} tokens/s`,
           reasoning: 'Functional but slow. OK for batch jobs, not interactive chat.', category: 'llm' });
       }
     }
     // Llama 70B — always no for browser
-    out.push({ name: 'Llama 70B (Q4)', description: 'Large flagship LLM, 70B params', verdict: 'no', performance: null,
+    out.push({ name: 'Llama 70B (Q4 GGUF)', description: 'Large flagship LLM, 70B params', verdict: 'no', performance: null,
       reasoning: 'Needs ~40 GB just for weights. Browser memory model caps allocation well below this. Use a native llama.cpp setup with 64 GB+ RAM.', category: 'llm' });
 
     // Qwen2.5-Coder 32B — always no for browser (~19 GB weights)
-    out.push({ name: 'Qwen2.5-Coder 32B (Q4)', description: 'Local coding-agent LLM, 32B params, 4-bit quantized', verdict: 'no', performance: null,
+    out.push({ name: 'Qwen2.5-Coder 32B (Q4 GGUF)', description: 'Local coding-agent LLM, 32B params, 4-bit quantized', verdict: 'no', performance: null,
       reasoning: 'Needs ~19 GB just for Q4 weights. Way beyond browser allocation caps. Native llama.cpp on 24 GB+ GPU only.', category: 'llm' });
 
     // Qwen2-VL 7B — similar headroom math to Llama 7B
     {
       if (largestAllocatableGB < 5) {
-        out.push({ name: 'Qwen2-VL 7B (Q4)', description: 'Vision-language model — OCR, screenshots, multimodal', verdict: 'no', performance: null,
+        out.push({ name: 'Qwen2-VL 7B (Q4 GGUF)', description: 'Vision-language model — OCR, screenshots, multimodal', verdict: 'no', performance: null,
           reasoning: `Browser memory headroom is ${largestAllocatableGB.toFixed(1)} GB; 7B Q4 + vision encoder needs ~5 GB minimum.`, category: 'llm' });
       } else {
-        out.push({ name: 'Qwen2-VL 7B (Q4)', description: 'Vision-language model — OCR, screenshots, multimodal', verdict: 'maybe',
+        out.push({ name: 'Qwen2-VL 7B (Q4 GGUF)', description: 'Vision-language model — OCR, screenshots, multimodal', verdict: 'maybe',
           performance: 'Slow — vision encoder is unoptimized in browser',
           reasoning: 'transformers.js supports it but vision-encoder kernels run unoptimized. Use native llama.cpp / Ollama for usable speed.', category: 'llm' });
       }

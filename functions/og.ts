@@ -53,6 +53,7 @@ const ARTICLES: Record<string, { title: string; subtitle?: string }> = {
   'best-laptop-for-local-ai-2026':                      { title: 'Best Laptop for Local AI in 2026' },
   'browser-vs-native-llm-performance':                  { title: 'Browser vs Native LLM Performance' },
   'can-my-pc-run-it-15-second-test-2026':               { title: 'Can My PC Run It? Test in 15 Seconds' },
+  'can-my-pc-run-pewdiepie-odysseus-2026':              { title: "Can Your PC Run PewDiePie's Odysseus?" },
   'apple-m3-max-vs-rtx-4090-local-ai':                  { title: 'Apple M3 Max vs RTX 4090 for Local AI' },
   'test-pc-stable-diffusion-xl-15-seconds':             { title: 'Test Your PC for Stable Diffusion XL' },
 };

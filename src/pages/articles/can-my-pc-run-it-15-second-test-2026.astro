@@ -6,6 +6,7 @@ const props = {
   description: 'Stop downloading "can-you-run-it" tools. 9bench tests your CPU, GPU, and RAM in 15 seconds — and tells you what games, AI models, and modern apps your hardware can actually handle. No account, no install, no bias.',
   slug: 'can-my-pc-run-it-15-second-test-2026',
   publishedDate: '2026-04-29',
+  updatedDate: '2026-07-30',
   readingMinutes: 14,
   category: 'How-to',
   primaryKeyword: 'can my pc run it',
@@ -153,6 +154,12 @@ const props = {
     typical RAM headroom and direct GPU access).
   </p>
 
+  <p>
+    Sizing up a specific self-hosted AI workspace like PewDiePie's Odysseus? We've answered that
+    separately: <a href="/articles/can-my-pc-run-pewdiepie-odysseus-2026/">Can Your PC Run
+    PewDiePie's Odysseus? The Honest Answer</a>.
+  </p>
+
   <h3>Llama 7B (Q4 quantized) — the entry-level local LLM</h3>
   <p>
     Llama 7B at 4-bit quantization needs ~4 GB for weights + ~2 GB for KV cache = ~6 GB usable RAM.
@@ -165,7 +172,7 @@ const props = {
     <li><strong>Iris Xe / UHD Graphics integrated</strong>: ~5-12 tokens/s native (CPU-bound)</li>
   </ul>
   <p>
-    <strong>Browser-side (transformers.js)</strong>: typically 5-15× slower due to WebAssembly
+    <strong>Browser-side (transformers.js)</strong>: typically 5-10× slower due to WebAssembly
     overhead vs native CUDA/Metal/Vulkan. Still functional for testing — 9bench has a
     <strong>live LLM test</strong> button that downloads Phi-3-mini and runs real inference
     in your browser, so you can verify the prediction without leaving the page.
