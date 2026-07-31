@@ -181,6 +181,11 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
         <header class="ai-section__head">
           <div class="eyebrow eyebrow--accent" id="ai-eyebrow">// LOCAL AI · WHAT YOUR PC CAN RUN</div>
 
+          <!-- Jump link, not a duplicate test block: the live test stays
+               below the predictions it verifies, and above-the-fold dynamic
+               content risks CLS regressions. -->
+          <a class="ai-livetest-jump" href="#ai-live-test">⚡ Verify with a live LLM test — real tokens/s, measured in this tab ↓</a>
+
           <!-- Shown instead of the score blocks + prediction table when the
                GPU was never benchmarked. Everything in this section derives
                from GPU GFLOPS; without them the only honest move is to say
@@ -1242,6 +1247,19 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
   }
   .ai-section__note strong { color: var(--fg-2); }
   .ai-section__note a { color: var(--accent); }
+
+  .ai-livetest-jump {
+    display: inline-block;
+    align-self: flex-start;
+    margin-top: 10px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.04em;
+    color: var(--accent);
+    text-decoration: none;
+    border-bottom: 1px dashed var(--accent);
+  }
+  .ai-livetest-jump:hover { color: var(--fg); border-bottom-color: var(--fg); }
 
   /* ── Phase L · Live LLM test panel ──────────────────────────── */
   .ai-live-test {
