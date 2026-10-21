@@ -1,10 +1,16 @@
 // GET /api/r/[id] — fetch a stored benchmark result + its current percentile
+//
+// The percentile used to be two full scans of `results` per call (~15k D1 rows). It now comes
+// from a cached, sorted score list per pool (functions/_lib/aggregates.ts: 1 row read + binary
+// search); the original live queries remain as the fallback.
+
+import { poolPercentile } from '../../_lib/aggregates';
 
 interface Env {
   DB: D1Database;
 }
 
-export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => {
+export const onRequestGet: PagesFunction<Env> = async ({ params, env, waitUntil }) => {
   const id = String(params.id || '').slice(0, 16);
   if (!/^[a-f0-9]{8}$/.test(id)) {
     return new Response(JSON.stringify({ ok: false, error: 'Invalid id' }), {
@@ -56,20 +62,29 @@ export const onRequestGet: PagesFunction<Env> = async ({ params, env }) => {
     if (scorable) {
       // Also split by estimator version — v3.6 changed the multi-core and GPU
       // computation and the old numbers cannot be converted.
-      const POOL = `FROM results WHERE cpu_hashes_multi > 0
+      const hasGpu = measured.gpu ? 1 : 0;
+      const hasRam = measured.ram ? 1 : 0;
+      const cached = await poolPercentile({ db: env.DB, waitUntil }, {
+        gpu: hasGpu, ram: hasRam, est: estimatorVersion, score: row.score_overall, createdAt: row.created_at,
+      });
+      if (cached) {
+        total = cached.total;
+        percentile = cached.percentile;
+      } else {
+        // Fallback: the original live queries.
+        const POOL = `FROM results WHERE cpu_hashes_multi > 0
         AND (gpu_gflops > 0) = ?
         AND (ram_read_gbs > 0 AND ram_write_gbs > 0) = ?
         AND COALESCE(estimator_version, 1) = ?`;
-      const hasGpu = measured.gpu ? 1 : 0;
-      const hasRam = measured.ram ? 1 : 0;
-      const totalRow = await env.DB.prepare(`SELECT COUNT(*) as c ${POOL}`)
-        .bind(hasGpu, hasRam, estimatorVersion)
-        .first<{ c: number }>();
-      const lowerRow = await env.DB.prepare(`SELECT COUNT(*) as c ${POOL} AND score_overall < ?`)
-        .bind(hasGpu, hasRam, estimatorVersion, row.score_overall)
-        .first<{ c: number }>();
-      total = totalRow?.c || 1;
-      percentile = Math.round(((lowerRow?.c || 0) / total) * 100);
+        const totalRow = await env.DB.prepare(`SELECT COUNT(*) as c ${POOL}`)
+          .bind(hasGpu, hasRam, estimatorVersion)
+          .first<{ c: number }>();
+        const lowerRow = await env.DB.prepare(`SELECT COUNT(*) as c ${POOL} AND score_overall < ?`)
+          .bind(hasGpu, hasRam, estimatorVersion, row.score_overall)
+          .first<{ c: number }>();
+        total = totalRow?.c || 1;
+        percentile = Math.round(((lowerRow?.c || 0) / total) * 100);
+      }
     }
 
     // AI block is included only when this row was captured post-Phase-G

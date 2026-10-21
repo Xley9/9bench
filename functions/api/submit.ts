@@ -1,5 +1,12 @@
 // POST /api/submit — store benchmark result, return short ID + percentile
 // Body: { scores, gpu, cpu, ram, hardware, durationMs }
+//
+// The percentile used to be two full scans of `results` (~15k D1 rows) per submission. It now
+// comes from a cached, sorted score list per pool (functions/_lib/aggregates.ts); the row that
+// was just inserted is newer than the snapshot and is added to `total` there, exactly as the
+// live count would have included it. The original live queries remain as the fallback.
+
+import { poolPercentile } from '../_lib/aggregates';
 
 interface Env {
   DB: D1Database;
@@ -187,7 +194,7 @@ function belowFloor(body: Submission): boolean {
   return !mMulti || !(mGpu || mRam);
 }
 
-export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
+export const onRequestPost: PagesFunction<Env> = async ({ request, env, waitUntil }) => {
   try {
     let body: Submission;
     try {
@@ -253,6 +260,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     const weMedian = estimatorVersion === 2 ? okMs(we?.median) : null;
     const weMax    = estimatorVersion === 2 ? okMs(we?.max) : null;
 
+    const createdAt = Date.now();
     await env.DB.prepare(`
       INSERT INTO results
         (id, created_at, score_overall, score_gpu, score_cpu_single, score_cpu_multi, score_ram,
@@ -263,7 +271,7 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).bind(
       id,
-      Date.now(),
+      createdAt,
       Math.round(s.overall),
       Math.round(s.gpu),
       Math.round(s.cpuSingle),
@@ -300,23 +308,34 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
     // throughput and the GPU headline are computed, and the old numbers cannot
     // be converted (only the aggregate was ever stored). Ranking across the
     // break would compare two different measurements.
-    const POOL = `FROM results WHERE cpu_hashes_multi > 0
-      AND (gpu_gflops > 0) = ?
-      AND (ram_read_gbs > 0 AND ram_write_gbs > 0) = ?
-      AND COALESCE(estimator_version, 1) = ?`;
     const hasGpu = body.gpu.gflops > 0 ? 1 : 0;
     const hasRam = (body.ram.readBandwidthGBs > 0 && body.ram.writeBandwidthGBs > 0) ? 1 : 0;
     const est = estimatorVersion ?? 1;
-    const totalRow = await env.DB.prepare(`SELECT COUNT(*) as c ${POOL}`)
-      .bind(hasGpu, hasRam, est)
-      .first<{ c: number }>();
-    const lowerRow = await env.DB.prepare(`SELECT COUNT(*) as c ${POOL} AND score_overall < ?`)
-      .bind(hasGpu, hasRam, est, Math.round(s.overall))
-      .first<{ c: number }>();
+    let total: number;
+    let percentile: number;
+    const cached = await poolPercentile({ db: env.DB, waitUntil }, {
+      gpu: hasGpu, ram: hasRam, est, score: Math.round(s.overall), createdAt,
+    });
+    if (cached) {
+      total = cached.total;
+      percentile = cached.percentile;
+    } else {
+      // Fallback: the original live queries.
+      const POOL = `FROM results WHERE cpu_hashes_multi > 0
+      AND (gpu_gflops > 0) = ?
+      AND (ram_read_gbs > 0 AND ram_write_gbs > 0) = ?
+      AND COALESCE(estimator_version, 1) = ?`;
+      const totalRow = await env.DB.prepare(`SELECT COUNT(*) as c ${POOL}`)
+        .bind(hasGpu, hasRam, est)
+        .first<{ c: number }>();
+      const lowerRow = await env.DB.prepare(`SELECT COUNT(*) as c ${POOL} AND score_overall < ?`)
+        .bind(hasGpu, hasRam, est, Math.round(s.overall))
+        .first<{ c: number }>();
 
-    const total = totalRow?.c || 1;
-    const lower = lowerRow?.c || 0;
-    const percentile = Math.round((lower / total) * 100);
+      total = totalRow?.c || 1;
+      const lower = lowerRow?.c || 0;
+      percentile = Math.round((lower / total) * 100);
+    }
 
     return new Response(JSON.stringify({
       ok: true,

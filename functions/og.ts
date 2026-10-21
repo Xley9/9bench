@@ -16,6 +16,7 @@
 // they share vs when they're on the page. Brand consistency.
 
 import { ImageResponse } from 'workers-og';
+import { poolPercentile } from './_lib/aggregates';
 
 interface Env {
   DB: D1Database;
@@ -509,7 +510,7 @@ function articleCard(a: { title: string }): string {
 // ─────────────────────────────────────────────────────────────────────
 // Main handler
 // ─────────────────────────────────────────────────────────────────────
-export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
+export const onRequestGet: PagesFunction<Env> = async ({ request, env, waitUntil }) => {
   const url = new URL(request.url);
   const id = (url.searchParams.get('id') || '').slice(0, 16);
   const page = url.searchParams.get('p') || '';
@@ -526,7 +527,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
 
     try {
       const row = await env.DB.prepare(`
-        SELECT score_overall, score_gpu, score_cpu_single, score_cpu_multi, score_ram,
+        SELECT created_at, score_overall, score_gpu, score_cpu_single, score_cpu_multi, score_ram,
                gpu_gflops, gpu_name, cpu_cores, cpu_hashes_single, cpu_hashes_multi,
                ram_read_gbs, ram_write_gbs,
                ai_tier
@@ -544,15 +545,29 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
         const ramMeasured = Number(row.ram_read_gbs ?? 0) > 0 && Number(row.ram_write_gbs ?? 0) > 0;
         const scorable = multiMeasured && (gpuMeasured || ramMeasured);
 
-        const POOL = `FROM results WHERE cpu_hashes_multi > 0
+        // NOTE: this pool does not split by estimator version (the result page does) — behaviour
+        // kept as it was; the cached path reproduces it by merging both estimator pools ('any').
+        let total: number;
+        let percentile: number;
+        const cached = await poolPercentile({ db: env.DB, waitUntil }, {
+          gpu: gpuMeasured ? 1 : 0, ram: ramMeasured ? 1 : 0, est: 'any',
+          score: row.score_overall, createdAt: row.created_at,
+        });
+        if (cached) {
+          total = cached.total;
+          percentile = cached.percentile;
+        } else {
+          // Fallback: the original live queries.
+          const POOL = `FROM results WHERE cpu_hashes_multi > 0
           AND (gpu_gflops > 0) = ?
           AND (ram_read_gbs > 0 AND ram_write_gbs > 0) = ?`;
-        const totalRow = await env.DB.prepare(`SELECT COUNT(*) as c ${POOL}`)
-          .bind(gpuMeasured ? 1 : 0, ramMeasured ? 1 : 0).first<{ c: number }>();
-        const lowerRow = await env.DB.prepare(`SELECT COUNT(*) as c ${POOL} AND score_overall < ?`)
-          .bind(gpuMeasured ? 1 : 0, ramMeasured ? 1 : 0, row.score_overall).first<{ c: number }>();
-        const total = totalRow?.c || 1;
-        const percentile = Math.round(((lowerRow?.c || 0) / total) * 100);
+          const totalRow = await env.DB.prepare(`SELECT COUNT(*) as c ${POOL}`)
+            .bind(gpuMeasured ? 1 : 0, ramMeasured ? 1 : 0).first<{ c: number }>();
+          const lowerRow = await env.DB.prepare(`SELECT COUNT(*) as c ${POOL} AND score_overall < ?`)
+            .bind(gpuMeasured ? 1 : 0, ramMeasured ? 1 : 0, row.score_overall).first<{ c: number }>();
+          total = totalRow?.c || 1;
+          percentile = Math.round(((lowerRow?.c || 0) / total) * 100);
+        }
 
         cardHtml = resultCard({
           score:          row.score_overall,

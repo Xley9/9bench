@@ -1,7 +1,12 @@
 // GET /api/stats — public site statistics for Landing page counters.
 //
-// Cached for 60 seconds at the edge to prevent every page load from
-// hitting D1. Stats don't need real-time precision; ±60s is fine.
+// NOT cached at the edge: Pages Functions responses are served `cf-cache-status: DYNAMIC`,
+// so the Cache-Control header below only helps browsers. Every call used to full-scan
+// `results` twice (COUNT(*) + COUNT(DISTINCT gpu_name)) — ~21k D1 rows per page view, the
+// main driver behind exhausting the free tier's 5M rows read per day.
+// Now: the numbers come from a snapshot in D1 (functions/_lib/aggregates.ts, 1 row read per
+// call, refreshed at most every few minutes to hours). The original live queries below are
+// the fallback when the snapshot is unavailable. Stats don't need real-time precision.
 //
 // Returned shape (consumed by index.astro <Landing>):
 //   {
@@ -11,6 +16,8 @@
 //     last_24h:             number  // recent activity counter
 //     vendor_payments:      0       // by design — never increases
 //   }
+
+import { getStats } from '../_lib/aggregates';
 
 interface Env {
   DB: D1Database;
@@ -23,22 +30,34 @@ const HEADERS = {
   'cache-control': 'public, max-age=60, s-maxage=60, stale-while-revalidate=300',
 };
 
-export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
+export const onRequestGet: PagesFunction<Env> = async ({ env, waitUntil }) => {
   try {
-    // Run all three count queries in parallel — D1 batches well at this scale.
-    // created_at is stored in MILLISECONDS (Date.now() in submit.ts) — the
-    // cutoff must be in ms too, or the comparison is always true and
-    // last_24h silently equals total_runs.
-    const oneDayAgo = Date.now() - 86400 * 1000;
-    const [totalRow, gpuRow, recentRow] = await env.DB.batch([
-      env.DB.prepare('SELECT COUNT(*) AS n FROM results'),
-      env.DB.prepare("SELECT COUNT(DISTINCT gpu_name) AS n FROM results WHERE gpu_name IS NOT NULL AND gpu_name != ''"),
-      env.DB.prepare('SELECT COUNT(*) AS n FROM results WHERE created_at > ?').bind(oneDayAgo),
-    ]);
+    let totalRuns: number;
+    let gpuModelsSeen: number;
+    let last24h: number;
 
-    const totalRuns      = (totalRow.results?.[0] as any)?.n  ?? 0;
-    const gpuModelsSeen  = (gpuRow.results?.[0] as any)?.n    ?? 0;
-    const last24h        = (recentRow.results?.[0] as any)?.n ?? 0;
+    const snap = await getStats({ db: env.DB, waitUntil });
+    if (snap) {
+      totalRuns = snap.total_runs;
+      gpuModelsSeen = snap.gpu_models_seen;
+      last24h = snap.last_24h;
+    } else {
+      // Fallback: the original live queries (snapshot table missing or refresh failing).
+      // Run all three count queries in parallel — D1 batches well at this scale.
+      // created_at is stored in MILLISECONDS (Date.now() in submit.ts) — the
+      // cutoff must be in ms too, or the comparison is always true and
+      // last_24h silently equals total_runs.
+      const oneDayAgo = Date.now() - 86400 * 1000;
+      const [totalRow, gpuRow, recentRow] = await env.DB.batch([
+        env.DB.prepare('SELECT COUNT(*) AS n FROM results'),
+        env.DB.prepare("SELECT COUNT(DISTINCT gpu_name) AS n FROM results WHERE gpu_name IS NOT NULL AND gpu_name != ''"),
+        env.DB.prepare('SELECT COUNT(*) AS n FROM results WHERE created_at > ?').bind(oneDayAgo),
+      ]);
+
+      totalRuns     = (totalRow.results?.[0] as any)?.n  ?? 0;
+      gpuModelsSeen = (gpuRow.results?.[0] as any)?.n    ?? 0;
+      last24h       = (recentRow.results?.[0] as any)?.n ?? 0;
+    }
 
     // avg_duration_seconds: there's no duration_ms column yet in `results`.
     // Schema migration is Phase F.1 — until then this is the conservative

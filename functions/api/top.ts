@@ -1,11 +1,20 @@
 // GET /api/top?limit=100 — return top N benchmark results (anonymous)
 // Used by /top leaderboard page
+//
+// Each call used to cost three full scans of `results` (~30k D1 rows): the ORDER BY could not use
+// the estimator index because of COALESCE(estimator_version, 1), plus two COUNT(*) totals. The
+// boards (all / week / month x estimator) now come from a snapshot refreshed every few minutes
+// (functions/_lib/aggregates.ts, 1 row read per call, top 200 each; `limit` slices it). New
+// results therefore reach the board after the next refresh (<= ~10 min), not instantly. The
+// original live queries below remain as the fallback.
+
+import { getTop } from '../_lib/aggregates';
 
 interface Env {
   DB: D1Database;
 }
 
-export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
+export const onRequestGet: PagesFunction<Env> = async ({ request, env, waitUntil }) => {
   const url = new URL(request.url);
   const limit = Math.min(200, Math.max(10, parseInt(url.searchParams.get('limit') || '50') || 50));
   const period = url.searchParams.get('period') || 'all'; // all|week|month
@@ -30,6 +39,37 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   }
 
   try {
+    // Cached boards. Unknown `period` values behave like 'all' (as in the live filter below).
+    const board = await getTop(
+      { db: env.DB, waitUntil },
+      estimator as 1 | 2,
+      period === 'week' || period === 'month' ? period : 'all',
+    );
+    if (board) {
+      return new Response(JSON.stringify({
+        ok: true,
+        period,
+        estimator,
+        otherEstimatorTotal: board.other,
+        total: board.total,
+        results: board.rows.slice(0, limit).map((r: any[], i: number) => ({
+          rank: i + 1,
+          id: r[0],
+          createdAt: r[1],
+          scores: { overall: r[2], gpu: r[3], cpuMulti: r[4], ram: r[5] },
+          gpu: { gflops: r[6], name: r[7] },
+          cpu: { cores: r[8] }
+        }))
+      }), {
+        status: 200,
+        headers: {
+          'content-type': 'application/json',
+          'cache-control': 'public, max-age=60'
+        }
+      });
+    }
+
+    // Fallback: the original live queries.
     const rows = await env.DB.prepare(`
       SELECT id, created_at, score_overall, score_gpu, score_cpu_multi, score_ram,
              gpu_gflops, gpu_name, cpu_cores
