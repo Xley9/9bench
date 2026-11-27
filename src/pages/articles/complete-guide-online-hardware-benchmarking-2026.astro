@@ -156,7 +156,7 @@ const props = {
   <h3>WebGPU stable (Chrome 113, Safari 26, Firefox 147)</h3>
   <p>
     The successor to WebGL. Adds compute shaders — meaning a web page can run general-purpose GPU
-    calculations, not just rendering. Performance: 85-95% of native Metal/Vulkan/DirectX.
+    calculations, not just rendering. How close a WebGPU workload gets to native depends on the workload; 9bench's own simple GPU test reaches only a few percent of a card's theoretical peak.
   </p>
 
   <h3>Web Crypto API hardware acceleration</h3>
@@ -199,8 +199,10 @@ const props = {
 
   <h3>WebGPU validation overhead</h3>
   <p>
-    WebGPU adds 5-15% overhead vs native APIs. This is the smallest gap — WebGPU is the closest
-    browser API to native parity.
+    WebGPU itself is the closest browser API to native graphics APIs. But 9bench's GPU number is
+    still far below a card's theoretical peak, because the test is a simple untiled matrix
+    multiplication — 2.9% of peak on an RTX 4060 Laptop in our own measurement. It ranks GPUs
+    against each other; it does not reproduce native figures.
   </p>
 
   <p>
@@ -366,8 +368,8 @@ const props = {
 
   <h3>WebGPU compute parity with native</h3>
   <p>
-    Currently 85-95% of native. By 2028, expect 95-98% as browsers optimize WebGPU implementations
-    further. This will narrow the browser-vs-native gap for GPU benchmarks specifically.
+    We have no reliable measurement of how far WebGPU itself is from native APIs, so we make no
+    forecast here. What we did measure is in the <a href="/methodology/">methodology</a>.
   </p>
 
   <h3>AI inference benchmarks</h3>

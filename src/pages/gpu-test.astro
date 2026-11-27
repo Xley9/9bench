@@ -1,0 +1,65 @@
+---
+import SingleTestPage from '../components/bench/SingleTestPage.astro';
+---
+
+<SingleTestPage
+  kind="gpu"
+  title="GPU Benchmark Online: WebGPU GFLOPS Test — 9bench"
+  description="Free online GPU benchmark: measures your graphics card's compute throughput in GFLOPS with a WebGPU shader, right in the browser. No download, nothing uploaded."
+  kicker="GPU"
+  h1="GPU benchmark online, in GFLOPS."
+  lede="Runs a matrix-multiplication compute shader on your graphics card through WebGPU and reports the throughput in GFLOPS — billions of floating-point operations per second. A few seconds, no download, no account."
+  duration="~2–6 seconds"
+  runNote="Needs WebGPU: Chrome or Edge 113+, Firefox 147+, Safari 26+. Many Android phones have it switched off — then the test says “not measured” instead of showing a number."
+>
+  <section class="st__section">
+    <h2 class="st__h2">What this GPU test measures</h2>
+    <p class="st__p">
+      The shader multiplies two 1024 × 1024 matrices of 32-bit floats. One pass is
+      <code>2 × 1024³</code> ≈ 2.1 billion floating-point operations. The test warms the GPU
+      up first, so a laptop GPU that idles at low clocks gets a fair reading, then takes three
+      timed measurements and reports the middle one (the median), so a single lucky or
+      throttled run cannot move the result. All three runs are shown next to it. GFLOPS is
+      operations divided by time.
+    </p>
+    <p class="st__p">
+      The adapter name comes from the browser. Some browsers hide it for privacy — the test
+      still runs, it just cannot tell you which GPU it ran on.
+    </p>
+  </section>
+
+  <section class="st__section">
+    <h2 class="st__h2">How the GPU score is calculated</h2>
+    <code class="st__formula">GPU score = round( GFLOPS × 3 )</code>
+    <p class="st__p">
+      The same formula as in the full 9bench test. Calibration from the
+      <a href="/methodology/#formulas">methodology</a>: a typical 2024 mid-range GPU reaches
+      around 500 GFLOPS in the browser and scores about 1500.
+    </p>
+  </section>
+
+  <section class="st__section">
+    <h2 class="st__h2">Why GFLOPS here are far below the spec sheet</h2>
+    <p class="st__p">
+      Spec sheets list the theoretical FP32 peak. This test is a plain, untiled matrix
+      multiplication: it is limited by cache and memory bandwidth long before the shader
+      cores run out of arithmetic. In our own measurement an RTX 4060 Laptop reached
+      372.8 GFLOPS — 2.9% of its theoretical peak. That is expected, not a fault: it is a
+      throughput probe that ranks GPUs against each other, not a peak-FLOPS measurement.
+    </p>
+    <p class="st__p">
+      Against Geekbench 7 on two laptops, the GPU ranking agreed: both put the same machine
+      ahead. Our gap between them was wider. The full comparison is in the
+      <a href="/methodology/">methodology</a>.
+    </p>
+    <p class="st__p">Things that change the result:</p>
+    <ul class="st__list">
+      <li>Which GPU the browser picks. Laptops with integrated and dedicated graphics often run the browser on the integrated one unless you change it in the graphics settings.</li>
+      <li>Battery vs. mains power.</li>
+      <li>Browser and driver version.</li>
+    </ul>
+    <p class="st__p">
+      More on the unit itself: <a href="/articles/what-is-gflops-gpu-performance-explained/">what GFLOPS mean for GPU performance</a>.
+    </p>
+  </section>
+</SingleTestPage>

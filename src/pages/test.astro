@@ -1079,7 +1079,12 @@ import TruthDisclaimer from '../components/bench/TruthDisclaimer.astro';
           // kind must never strand the user — worst case is one log line
           // and the normal redirect.
           const totalElapsedS = (Date.now() - startedAt) / 1000;
+          // Shadow collection ENDED 2026-11-27 (methodology §10 status). The
+          // published 12-week hard stop (due 2026-10-21) was never coded; this
+          // flag is that stop. Solo mode (/test/?v4solo=1) stays available.
+          const SHADOW_COLLECTION_OPEN = false;
           const shadowEligible =
+            SHADOW_COLLECTION_OPEN &&
             typeof WebAssembly !== 'undefined' &&
             totalElapsedS < 90;   // slowest devices: highest bail risk, worst data
           if (shadowEligible) {

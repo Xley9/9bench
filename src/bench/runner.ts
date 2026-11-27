@@ -22,6 +22,7 @@ import { runCPUBench, type CPUResult } from './cpu-test';
 import { runRAMBench, type RAMResult } from './ram-test';
 import { detectHardware, type HardwareInfo } from './hardware-detect';
 import { probeAICapabilities, type AICapabilities } from './ai-capabilities';
+import { gpuScore, cpuSingleScore, cpuMultiScore, ramScore } from './scores';
 
 export interface BenchResult {
   timestamp: number;
@@ -112,12 +113,11 @@ export async function runFullBench(onProgress?: ProgressCallback): Promise<Bench
     ramLatency: ram.latencyMeasured,
   };
 
-  const scoreGpu = measured.gpu ? Math.round(gpu.gflops * 3) : 0;          // 500 GFLOPS → 1500
-  const scoreCpuS = measured.cpuSingle ? Math.round(cpu.hashesPerSecondSingle / 300) : 0;  // 400K h/s → 1333
-  const scoreCpuM = measured.cpuMulti ? Math.round(cpu.hashesPerSecondMulti / 600) : 0;    // 1.2M h/s → 2000
-  const scoreRam = measured.ram
-    ? Math.round(((ram.readBandwidthGBs + ram.writeBandwidthGBs) / 2) * 60)
-    : 0;
+  // Formulas live in scores.ts (shared with the single-component test pages).
+  const scoreGpu = measured.gpu ? gpuScore(gpu.gflops) : 0;                          // 500 GFLOPS → 1500
+  const scoreCpuS = measured.cpuSingle ? cpuSingleScore(cpu.hashesPerSecondSingle) : 0; // 400K h/s → 1333
+  const scoreCpuM = measured.cpuMulti ? cpuMultiScore(cpu.hashesPerSecondMulti) : 0;    // 1.2M h/s → 2000
+  const scoreRam = measured.ram ? ramScore(ram.readBandwidthGBs, ram.writeBandwidthGBs) : 0;
 
   // ── Composite: weighted geometric mean over the MEASURED components ──
   // Weights GPU 0.35 · CPU-multi 0.45 · RAM 0.20, renormalized over whatever

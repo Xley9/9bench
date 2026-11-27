@@ -190,8 +190,9 @@ const props = {
   </p>
   <p>
     9bench gives you 90% of the answer in 1% of the time, with no install. The tradeoff is
-    absolute-score accuracy: 9bench measures real performance but with browser-API overhead
-    (5-15% lower than native peak).
+    absolute-score accuracy: 9bench numbers are on their own scale and are not comparable to
+    native scores. Against Geekbench 7 on two laptops (n = 2), the GPU ranking agreed and the
+    CPU ranking came out inverted — details in the <a href="/methodology/">methodology</a>.
   </p>
 
   <h3>Sample 9bench scores</h3>
@@ -209,7 +210,7 @@ const props = {
 
   <h3>Limitations</h3>
   <ul>
-    <li><strong>Not Geekbench-grade absolute:</strong> browser-API overhead means 5-15% lower than native</li>
+    <li><strong>Not comparable to native scores:</strong> GPU reaches a few percent of theoretical peak; the CPU ranking disagreed with Geekbench 7 in our two-laptop check</li>
     <li><strong>Multi-core efficiency capped:</strong> Web Workers + Web Crypto serialization limit measurement to ~30-60% of native multi-core</li>
     <li><strong>RAM bandwidth conservative:</strong> V8 doesn't fully vectorize Float32Array, so RAM measurements are typically lower than native memcpy</li>
     <li><strong>No disk testing:</strong> browsers can't access raw disk performance</li>

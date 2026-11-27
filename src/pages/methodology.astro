@@ -113,8 +113,9 @@ const FAQ = [
           <p class="feature-body">
             We run a 1024×1024 FP32 matrix multiplication compute shader on
             your GPU. The shader executes <code>2 × N³</code> floating-point
-            operations per pass. Best-of-3 measurement with adaptive warm-up
-            so laptop GPUs that idle at low power get a fair reading.
+            operations per pass. Adaptive warm-up so laptop GPUs that idle at
+            low power get a fair reading, then three timed runs — the headline
+            is their median, and all three are shipped with the result.
             Output is GFLOPS (billions of FP operations per second).
           </p>
         </article>
@@ -524,6 +525,21 @@ const FAQ = [
         </li>
       </ul>
 
+      <h3 class="methodology__h3">v3.8 — November 27, 2026</h3>
+      <ul class="methodology__list">
+        <li>
+          <strong>Shadow collection of the v4.0 candidate stopped.</strong> It ran five weeks
+          past the 12-week hard stop we had published, because the stop was never coded. The
+          normal test no longer runs the extra phase after your result. Gate status with numbers
+          is in <a href="#v4-gate">Section 10</a>. No scored number changes.
+        </li>
+        <li>
+          <strong>GPU wording corrected.</strong> Section 1 said “best-of-3”; since v3.6 the
+          headline has been the median of three timed runs, as the code and the shipped
+          measurements show.
+        </li>
+      </ul>
+
       <h3 class="methodology__h3">v3.7 — July 29, 2026</h3>
       <ul class="methodology__list">
         <li>
@@ -810,6 +826,42 @@ const FAQ = [
     <!-- Section 10 — The v4.0 gate (precommitment) -->
     <section id="v4-gate" class="methodology__section">
       <h2 class="section-h">10. The v4.0 gate — pass criteria, published before the data exists</h2>
+
+      <div class="methodology__p" style="border:1px solid var(--warn);padding:16px 18px;">
+        <p style="margin:0 0 10px;"><strong>Status — November 27, 2026: shadow collection stopped, v4.0 does not ship.</strong></p>
+        <p style="margin:0 0 10px;">
+          <strong>We missed our own hard stop.</strong> Collection began July 29, 2026, so the
+          12-week stop promised below was due on October 21. The stop was never built into the
+          code, and collection ran five more weeks: 3,140 rows arrived after that date, each
+          costing a visitor about 14 seconds (measured average) after their result was saved. As of
+          today the shadow phase no longer runs in the normal test.
+        </p>
+        <p style="margin:0 0 10px;">Gate result on candidate revision 1:</p>
+        <ul class="methodology__list" style="margin:0 0 10px;">
+          <li><strong>G7 — passed.</strong> 0 self-verification failures in 10,077 rows.</li>
+          <li><strong>G8 — passed.</strong> 9,573 clean rows (tab stayed visible, no error), of
+            which 761 Android and 1,093 Apple by browser user-agent.</li>
+          <li><strong>G1–G6 — not evaluable.</strong> Zero paired Geekbench references were
+            submitted. Without them there is no correlation, inversion, scaling, repeatability
+            or cross-browser result to report.</li>
+        </ul>
+        <p style="margin:0;">
+          Under the rule below, a gate that cannot be shown to pass is not passed: the scored CPU
+          test stays unchanged, with the inverted ranking documented in Section 6. Solo mode
+          (<a href="/test/?v4solo=1"><code>/test/?v4solo=1</code></a>) stays open for paired
+          references.
+        </p>
+        <p style="margin:10px 0 0;">
+          <strong>Decision, November 27: v4.0 stays open for paired references.</strong> One
+          cold solo run on Device A from Section 6 (i7-12650H, 16 threads, Chrome, mains power)
+          scaled 7.34× on the integer kernel and 12.08× on the floating-point kernel, against
+          Geekbench 7's 5.01× on the same machine. The G4 prediction (≥ 4.5× at 16 threads) is
+          met; the per-device G4 band is not met for the floating-point kernel (12.08 ÷ 5.01 =
+          2.41, allowed 0.5–1.5) and only just for the integer kernel (1.47). One device is not a
+          verdict, but it already tells us the floating-point kernel will likely need a revision
+          before any gate evaluation.
+        </p>
+      </div>
 
       <p class="methodology__p">
         The v4.0 CPU workload (two WebAssembly kernels: a SHA-256 integer chain and

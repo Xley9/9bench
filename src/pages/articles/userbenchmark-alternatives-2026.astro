@@ -21,7 +21,7 @@ const props = {
     { q: 'Is UserBenchmark banned?', a: 'Yes — r/hardware (1.8M+ subscribers) and r/pcmasterrace (10M+) auto-filter and remove links to userbenchmark.com. Most major tech communities have done the same since 2019. The reason is documented bias: their scoring algorithm heavily weights single-core performance, which systematically disadvantages AMD multi-core CPUs.' },
     { q: 'What\'s the best free UserBenchmark alternative?', a: 'There\'s no single "best" — different tools excel at different things. For a quick browser-based score: 9bench. For absolute peak measurement: Geekbench 6 (free version available). For GPU rendering specifically: 3DMark (paid). For CPU rendering: Cinebench. For comparison databases: technical.city or nanoreview.net.' },
     { q: 'Why does UserBenchmark hate AMD?', a: 'Their public statements claim methodology choices, but the math is clear: their scoring formula puts 60% weight on single-thread performance and only 30% on quad-core performance. This was reasonable in 2010 when most apps were single-threaded. In 2026, with virtually all modern apps being multi-threaded, this weighting is roughly two generations behind reality. AMD\'s strength has historically been multi-core; this scoring punishes that.' },
-    { q: 'Can I trust browser-based benchmarks?', a: 'For relative comparison between machines: yes, very reliable. For absolute peak measurement vs native tools: no, browser APIs add 5-15% overhead. The honest answer: use browser benchmarks for instant triage and shareability; use native tools (Geekbench, Cinebench) when you need definitive numbers for review or comparison to manufacturer claims.' },
+    { q: 'Can I trust browser-based benchmarks?', a: 'For ranking GPUs: reasonably — in a two-laptop check against Geekbench 7 the GPU order agreed. For ranking CPUs: not yet — the CPU order came out inverted in the same check. For absolute numbers vs native tools: no, browser scores are on their own scale. The honest answer: use browser benchmarks for instant triage and shareability; use native tools (Geekbench, Cinebench) when you need definitive numbers for review or comparison to manufacturer claims.' },
     { q: 'Is there a totally free, install-free PC benchmark?', a: 'Yes — 9bench.com (this site) runs entirely in your browser via WebGPU + WebAssembly + Web Workers. No download, no account, no upload. Tests CPU, GPU, and RAM in 15 seconds. Open methodology, transparent scoring. The score is most useful for relative comparison + quick triage, not for replacing Geekbench-grade measurements.' }
   ],
   relatedArticles: [
@@ -99,7 +99,7 @@ const props = {
     <li><strong>Best for:</strong> instant triage, sharing scores on Reddit/Twitter, comparing two systems quickly</li>
     <li><strong>Cost:</strong> free, no ads, no premium tier</li>
     <li><strong>Methodology:</strong> <a href="/methodology/">fully published</a></li>
-    <li><strong>Limitation:</strong> browser APIs cap measured performance at ~85-95% of native; not a Geekbench replacement for absolute scores</li>
+    <li><strong>Limitation:</strong> scores are on their own scale, not comparable to native tools; CPU ranking disagreed with Geekbench 7 in a two-laptop check</li>
   </ul>
   <p>
     9bench is what I built when I needed a 15-second hardware test for a friend's locked-down

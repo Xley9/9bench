@@ -19,7 +19,7 @@ const props = {
   heroGradientTo: '#4C1D95',
   faqs: [
     { q: 'What does GFLOPS actually mean?', a: 'GFLOPS = Giga-FLoating-point Operations Per Second. One GFLOP = 1 billion floating-point math operations per second. A GPU rated at 500 GFLOPS can do 500 billion math operations per second on real numbers. It\'s a measure of raw compute throughput — more is faster, all else equal.' },
-    { q: 'How many GFLOPS is "good" in 2026?', a: 'Depends on use case: integrated laptop GPUs are 200-800 GFLOPS, mid-range gaming laptop GPUs (RTX 4060) are 1500-2500 GFLOPS, high-end gaming desktops (RTX 4080) are 4000-7000 GFLOPS, top-tier (RTX 5090) reaches 10000+ GFLOPS, Apple M5 Max GPU hits ~5000 GFLOPS. Browser benchmarks measure ~85-95% of these native numbers.' },
+    { q: 'How many GFLOPS is "good" in 2026?', a: 'Depends on use case: integrated laptop GPUs are 200-800 GFLOPS, mid-range gaming laptop GPUs (RTX 4060) are 1500-2500 GFLOPS, high-end gaming desktops (RTX 4080) are 4000-7000 GFLOPS, top-tier (RTX 5090) reaches 10000+ GFLOPS, Apple M5 Max GPU hits ~5000 GFLOPS. These are theoretical-style figures; the 9bench browser test measures far less (a few percent of peak), so compare 9bench numbers only with other 9bench numbers.' },
     { q: 'GFLOPS vs TFLOPS — what\'s the difference?', a: '1 TFLOPS (TeraFLOPS) = 1000 GFLOPS = 1 trillion operations/sec. Marketing teams use TFLOPS for big numbers (RTX 4090 = ~83 TFLOPS native). Browser benchmarks typically report GFLOPS because numbers are smaller and easier to compare. Same units, different prefix.' },
     { q: 'Does higher GFLOPS mean better gaming?', a: 'Mostly yes, but not always. GFLOPS measures peak compute throughput; real games depend on memory bandwidth, ray-tracing units, driver optimization, game-specific factors. A higher-GFLOPS GPU usually wins in compute-bound games, but a slightly lower-GFLOPS card with better memory subsystem can beat it in some titles.' },
     { q: 'Why does my browser GFLOPS measurement differ from manufacturer spec?', a: 'Manufacturer specs report theoretical peak (math: cores × clock × ops-per-cycle). Real-world performance depends on memory access, instruction mix, thermal throttling, driver overhead. Browser WebGPU measurements typically achieve 60-85% of theoretical peak — same as native applications often get. The real-world peak achievable matters more than the spec.' }
@@ -37,7 +37,7 @@ const props = {
     <div class="tldr-title">TL;DR</div>
     <strong>GFLOPS</strong> = Giga-FLoating-point Operations Per Second. 1 GFLOP = 1 billion math
     ops/sec on real numbers. Modern 2026 hardware: integrated laptop GPUs ~200-800 GFLOPS, mid-range
-    desktop ~3000-5000, high-end ~6000-10000+. Browser benchmarks measure 85-95% of native.
+    desktop ~3000-5000, high-end ~6000-10000+. 9bench's browser test measures far less than these figures.
     More GFLOPS usually = better gaming, ML, video editing — but memory bandwidth + driver
     optimization matter too. <a href="/">Test your GPU's GFLOPS</a> in 15 seconds.
   </div>
@@ -92,8 +92,9 @@ const props = {
 
   <h2>What "good" GFLOPS looks like in 2026</h2>
   <p>
-    These are real-world WebGPU compute benchmark numbers (lower than manufacturer theoretical peaks
-    by 5-15% browser-API overhead):
+    These are real-world WebGPU compute benchmark numbers. They sit far below manufacturer
+    theoretical peaks — 9bench's untiled test reaches a few percent of peak, not 85-95%
+    (see <a href="/methodology/">methodology</a>):
   </p>
 
   <h3>Integrated GPUs (laptops + entry-level)</h3>
@@ -216,8 +217,10 @@ const props = {
 
   <h3>1. Browser overhead</h3>
   <p>
-    WebGPU adds 5-15% overhead vs native Metal/Vulkan/DirectX. Expect 9bench to show 85-95% of
-    Geekbench Compute or native benchmarks.
+    9bench's GPU number is not a fraction of Geekbench Compute or of the spec sheet. The test is a
+    plain, untiled 1024×1024 matrix multiplication, limited by cache and memory bandwidth. In our
+    own measurement an RTX 4060 Laptop reached 372.8 GFLOPS — 2.9% of its theoretical FP32 peak.
+    Compare 9bench GPU numbers with other 9bench GPU numbers, not with native benchmarks.
   </p>
 
   <h3>2. Power / battery throttling</h3>
@@ -248,12 +251,13 @@ const props = {
   <p>
     Run <a href="/">9bench</a> — it measures your GPU compute throughput via WebGPU matrix
     multiplication and reports GFLOPS in the result card. Compare to the brackets above to see
-    where your hardware sits.
+    where your hardware sits. To measure only the GPU, use the
+    <a href="/gpu-test/">GPU benchmark</a> — it reports GFLOPS on their own in a few seconds.
   </p>
   <p>
-    Want absolute-accurate GFLOPS? Use Geekbench 6's GPU Compute test (Metal/OpenCL/Vulkan native)
-    — it'll be 5-15% higher than 9bench's WebGPU number, which is the true peak your hardware can
-    achieve.
+    Want a native GPU compute figure? Use a native tool such as Geekbench's GPU Compute test
+    (Metal/OpenCL/Vulkan). Its score is on a different scale and not convertible to 9bench GFLOPS.
+    Against Geekbench 7 on two laptops, both benchmarks ranked the GPUs in the same order.
   </p>
 
   <h2>The honest closing</h2>

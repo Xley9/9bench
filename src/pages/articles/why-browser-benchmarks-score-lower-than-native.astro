@@ -22,7 +22,7 @@ const props = {
     { q: 'My 16-core CPU shows only 3-4× multi-core speedup in browser. Is something wrong?', a: 'No, that\'s expected. Browser Web APIs (Web Crypto, Web Workers) limit true parallelism for security and stability. Real multi-core efficiency in browser is typically 30-60% of what native tools (Cinebench, Geekbench native) measure. Your CPU is fine — the browser just can\'t fully exploit it.' },
     { q: 'Should I trust browser benchmarks or native ones?', a: 'Both. Trust browser benchmarks for relative comparison between machines + browsers. Trust native benchmarks for absolute peak measurement. They\'re measuring different things: browser shows what a website can do with your hardware; native shows what your hardware peaks at.' },
     { q: 'Why is my RAM bandwidth so low in browser tests?', a: 'V8 (Chrome\'s JS engine) doesn\'t fully vectorize Float32Array operations the way native C/C++ memcpy does. Browser RAM measurements typically show 30-50% of native bandwidth. Modern DDR5 native: 45 GB/s. Same hardware in browser: 12-20 GB/s. Both correct — browser is the actual web-platform limit.' },
-    { q: 'Will browser benchmark accuracy improve over time?', a: 'Yes, but slowly. WebGPU is converging on native performance (now ~85-95%). Web Crypto could theoretically use SIMD instructions but adds complexity. Worker thread pool scaling is mostly a design choice for security, unlikely to change much. Expect browser benchmarks to remain 80-95% of native peak for the foreseeable future.' },
+    { q: 'Will browser benchmark accuracy improve over time?', a: 'Yes, but slowly. WebGPU implementations keep improving, but we have no reliable figure for the gap to native. Web Crypto could theoretically use SIMD instructions but adds complexity. Worker thread pool scaling is mostly a design choice for security, unlikely to change much. Browser scores will stay on their own scale, not comparable to native peak figures.' },
     { q: 'How is 9bench supposed to be useful then?', a: '9bench is honest about being a relative comparison tool, not an absolute peak measurement. The score is most useful for: (1) ranking yourself against other 9bench users, (2) comparing two of your own devices, (3) quick triage when native install isn\'t possible. For absolute hardware specs, use Geekbench 6.' }
   ],
   relatedArticles: [
@@ -36,10 +36,11 @@ const props = {
 <ArticleLayout {...props}>
   <div class="tldr">
     <div class="tldr-title">TL;DR</div>
-    Browser benchmarks consistently score 5-50% lower than native because of three structural
-    limits: <strong>Web Crypto serialization</strong> (multi-core SHA-256 capped),
+    Browser benchmarks score lower than native because of three structural limits:
+    <strong>Web Crypto serialization</strong> (multi-core SHA-256 capped),
     <strong>V8 vectorization</strong> (RAM bandwidth measurement underrepresents native), and
-    <strong>WebGPU overhead</strong> (5-15% lower than Metal/Vulkan/DirectX). This is platform,
+    <strong>the GPU test design</strong> (a simple untiled matrix multiplication that reaches only
+    a few percent of a card's theoretical peak). This is platform,
     not hardware — your CPU/GPU/RAM is fine. Browser benchmarks are best for relative comparison;
     native tools for absolute peak.
   </div>
@@ -135,12 +136,7 @@ const props = {
   <h2>What about WebGPU? (GPU performance)</h2>
 
   <p>
-    Good news: WebGPU is the closest browser API to native performance. WebGPU compute shaders
-    achieve 85-95% of native Metal/Vulkan/DirectX performance in most workloads.
-  </p>
-
-  <p>
-    The remaining 5-15% gap comes from:
+    WebGPU is the closest browser API to native graphics APIs. Its own overhead comes from:
   </p>
   <ul>
     <li>Validation overhead (WebGPU is more permissive of garbage data than native APIs)</li>
@@ -149,8 +145,11 @@ const props = {
   </ul>
 
   <p>
-    For 9bench's GPU GFLOPS measurement, expect ~85-95% of what Geekbench Compute reports natively.
-    Cleaner relative comparison than CPU/RAM measurements.
+    But the bigger factor for 9bench is the test itself: an untiled 1024×1024 matmul limited by
+    cache and memory bandwidth. In our own measurement an RTX 4060 Laptop reached 372.8 GFLOPS —
+    2.9% of its theoretical FP32 peak; a naive native kernel reaches about 5%, cuBLAS about 60%.
+    So the GPU number is not a percentage of Geekbench Compute. What it does well: ranking GPUs —
+    against Geekbench 7 on two laptops, the GPU order agreed.
   </p>
 
   <h2>The actual measurements (with real numbers)</h2>
@@ -234,8 +233,8 @@ const props = {
     Slowly. Specifically:
   </p>
   <ul>
-    <li><strong>WebGPU:</strong> Already at 85-95% of native. Will probably reach 95-98% within
-    2-3 years as browsers optimize.</li>
+    <li><strong>WebGPU:</strong> Implementations keep improving; we have no reliable figure for
+    the remaining gap to native and make no forecast.</li>
     <li><strong>Web Crypto:</strong> Unlikely to change much. Serialization is a security feature,
     not a bug. Future SHA-NI bypass paths might emerge but need careful security review.</li>
     <li><strong>V8 / SpiderMonkey vectorization:</strong> Gradual improvement as TurboFan + Ion

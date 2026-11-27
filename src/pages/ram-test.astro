@@ -1,0 +1,60 @@
+---
+import SingleTestPage from '../components/bench/SingleTestPage.astro';
+---
+
+<SingleTestPage
+  kind="ram"
+  title="RAM Benchmark Online: Free Memory Speed Test — 9bench"
+  description="Test your RAM speed online: read, write and copy bandwidth in GB/s plus random-access latency, measured in your browser in a few seconds. No download, nothing uploaded."
+  kicker="RAM"
+  h1="RAM benchmark online."
+  lede="Measures how fast your browser can read, write and copy a 256 MB block of memory — in GB/s — plus the time for one random read. Runs locally in a few seconds. No download, no account."
+  duration="~2–5 seconds"
+  runNote="Needs about 512 MB of free memory. If the browser refuses that allocation, the test says “not measured” instead of guessing a smaller number."
+>
+  <section class="st__section">
+    <h2 class="st__h2">What this RAM test measures</h2>
+    <ul class="st__list">
+      <li><strong>Read bandwidth</strong> — sums a 256 MB <code>Float32Array</code> five times, front to back.</li>
+      <li><strong>Write bandwidth</strong> — fills a second 256 MB array five times.</li>
+      <li><strong>Copy bandwidth</strong> — copies one array into the other (read + write at once).</li>
+      <li><strong>Random-access latency</strong> — one million reads at pseudo-random positions, so the CPU cannot prefetch. Reported in nanoseconds per read.</li>
+    </ul>
+    <p class="st__p">
+      256 MB is deliberately larger than any CPU cache. A smaller block would end up
+      in L3 cache and the test would report cache speed as RAM speed. That is also why the
+      size is fixed: on a device without enough free memory the test fails openly
+      rather than quietly measuring something else.
+    </p>
+  </section>
+
+  <section class="st__section">
+    <h2 class="st__h2">How the RAM score is calculated</h2>
+    <code class="st__formula">RAM score = round( (read GB/s + write GB/s) / 2 × 60 )</code>
+    <p class="st__p">
+      It is the same formula the full 9bench test uses, so the RAM score here matches the
+      RAM line on a full result page from the same browser. Copy bandwidth and latency are
+      shown for context but do not enter the score.
+    </p>
+  </section>
+
+  <section class="st__section">
+    <h2 class="st__h2">Why the number is lower than AIDA64 or MemTest</h2>
+    <p class="st__p">
+      A browser runs JavaScript in a sandbox. It has no direct control over vector
+      instructions, memory placement or which cores run the loop — the JavaScript engine
+      decides all of that. Browser sandboxing caps the measured bandwidth at roughly 30–50% of
+      what native tools report. Use this test to compare machines and settings with each
+      other in the same browser — not to check a value on your RAM kit's spec sheet.
+    </p>
+    <p class="st__p">Things that change the result:</p>
+    <ul class="st__list">
+      <li>Laptop on battery vs. mains power — power-saving modes lower memory clocks.</li>
+      <li>Other open tabs and programs competing for memory bandwidth.</li>
+      <li>The browser itself — the JavaScript engines differ.</li>
+    </ul>
+    <p class="st__p">
+      Running the test two or three times and keeping the best value gives the most stable picture.
+    </p>
+  </section>
+</SingleTestPage>

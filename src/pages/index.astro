@@ -127,6 +127,12 @@ const FEATURES = [
         <p class="hero__sub">
           ~15 seconds · No login · Privacy-first · Cyan or Orange — your call (top right).
         </p>
+        <p class="hero__single">
+          Or test one part:
+          <a href="/cpu-test/">CPU test</a> ·
+          <a href="/gpu-test/">GPU test</a> ·
+          <a href="/ram-test/">RAM test</a>
+        </p>
       </div>
     </section>
 
@@ -485,6 +491,18 @@ const FEATURES = [
     color: var(--accent);
     border-color: var(--accent);
   }
+  .hero__single {
+    margin-top: 12px;
+    font-family: var(--sans);
+    font-size: 14px;
+    color: var(--fg-2);
+  }
+  .hero__single a {
+    color: var(--fg);
+    text-decoration: none;
+    border-bottom: 1px solid var(--fg-3);
+  }
+  .hero__single a:hover { color: var(--accent); border-color: var(--accent); }
   .hero__sub {
     margin-top: 16px;
     font-family: var(--mono);

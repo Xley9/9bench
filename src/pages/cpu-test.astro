@@ -1,0 +1,55 @@
+---
+import SingleTestPage from '../components/bench/SingleTestPage.astro';
+---
+
+<SingleTestPage
+  kind="cpu"
+  title="CPU Benchmark Online: Single & Multi-Core Test — 9bench"
+  description="Free online CPU test: single-core and multi-core throughput with a SHA-256 workload, run in your browser in about 15 seconds. No download. Includes what the number can and cannot tell you."
+  kicker="CPU"
+  h1="CPU test online: single and multi-core."
+  lede="Runs a SHA-256 hash chain on one core, then on every thread your browser reports, and shows hashes per second for both. About 15 seconds, no download, no account — and an honest note on what the number means."
+  duration="~12–15 seconds"
+  runNote="Close heavy tabs first. The multi-core part keeps all threads busy for 10 seconds; fans may spin up."
+>
+  <section class="st__section">
+    <h2 class="st__h2">Read this before comparing CPUs</h2>
+    <p class="st__p">
+      We checked this test against Geekbench 7 on two laptops (n = 2, one run each). The GPU
+      ranking agreed. <strong>Both CPU rankings came out inverted</strong>: the laptop that
+      scored higher here scored lower in Geekbench, single-core and multi-core. The cause is
+      known — the browser's Web Crypto calls carry a fixed overhead per hash, and that
+      overhead dominates the measurement more than the CPU itself does.
+    </p>
+    <p class="st__p">
+      What the test is good for: comparing the <em>same</em> machine before and after a change
+      (power mode, cooling, background load) in the same browser, and seeing how well your
+      browser spreads work across threads. What it is not good for: deciding which of two
+      CPUs to buy. Data, cause and fix status are in the
+      <a href="/methodology/">methodology</a>.
+    </p>
+  </section>
+
+  <section class="st__section">
+    <h2 class="st__h2">What this CPU test measures</h2>
+    <ul class="st__list">
+      <li><strong>Single-core</strong> — a chain of SHA-256 hashes on the main thread, each hash feeding the next, for about 2 seconds.</li>
+      <li><strong>Multi-core</strong> — the same chain in one Web Worker per thread (<code>navigator.hardwareConcurrency</code>), all running until the same 10-second deadline. The result is the sum of every worker's own rate, so fast cores on a hybrid CPU are not held back by slow ones.</li>
+      <li><strong>Scaling</strong> — multi-core divided by single-core.</li>
+    </ul>
+    <p class="st__p">
+      Expect the scaling factor to be well below your thread count. Browsers scale Web
+      Workers far worse than native code: in our two-laptop comparison it was 2.4–2.8× here
+      against about 5× in Geekbench.
+    </p>
+  </section>
+
+  <section class="st__section">
+    <h2 class="st__h2">How the CPU scores are calculated</h2>
+    <code class="st__formula">single-core score = round( hashes/s ÷ 300 )<br />multi-core score = round( hashes/s ÷ 600 )</code>
+    <p class="st__p">
+      The same formulas as in the full 9bench test, so the numbers match the CPU lines on a
+      full result page from the same browser.
+    </p>
+  </section>
+</SingleTestPage>

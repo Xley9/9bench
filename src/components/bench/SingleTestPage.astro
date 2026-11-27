@@ -1,0 +1,258 @@
+---
+/**
+ * Shared shell for the single-component test pages (/ram-test/, /gpu-test/,
+ * /cpu-test/). Each page runs ONE of the scored benchmark modules with the
+ * same arguments as the full run (runner.ts) and shows the raw numbers plus
+ * the component score from bench/scores.ts.
+ *
+ * Fully local by design: nothing is submitted, no API is called, no D1 read
+ * happens. A single component is not a 9bench score (runner.ts refuses to
+ * score runs below 65% weight), so it never enters the ranking pools.
+ */
+import BaseLayout from '../../layouts/BaseLayout.astro';
+
+export interface Props {
+  kind: 'ram' | 'gpu' | 'cpu';
+  title: string;
+  description: string;
+  kicker: string;
+  h1: string;
+  lede: string;
+  duration: string;
+  runNote: string;
+}
+
+const { kind, title, description, kicker, h1, lede, duration, runNote } = Astro.props;
+
+const OTHERS = [
+  { kind: 'cpu', href: '/cpu-test/', label: 'CPU test', sub: 'single + multi-core' },
+  { kind: 'gpu', href: '/gpu-test/', label: 'GPU test', sub: 'WebGPU GFLOPS' },
+  { kind: 'ram', href: '/ram-test/', label: 'RAM test', sub: 'memory bandwidth' },
+].filter(o => o.kind !== kind);
+---
+
+<BaseLayout
+  title={title}
+  description={description}
+  schemaType="WebPage"
+  breadcrumbItems={[{ name: 'Home', item: 'https://9bench.com/' }, { name: kicker }]}
+>
+  <main class="container st" data-single-test={kind}>
+
+    <section class="st__hero">
+      <div class="feature-num">— Single test · {kicker}</div>
+      <h1 class="st__h1">{h1}</h1>
+      <p class="st__lede">{lede}</p>
+    </section>
+
+    <section class="st__panel" aria-live="polite">
+      <div class="st__panel-head">
+        <button type="button" class="run-btn" data-st-start>▶ Start {kicker} test</button>
+        <span class="st__meta">{duration} · nothing is uploaded or stored</span>
+      </div>
+      <p class="st__note">{runNote}</p>
+      <p class="st__status" data-st-status hidden></p>
+      <dl class="st__results" data-st-results hidden></dl>
+      <p class="st__after" data-st-after hidden>
+        This is one component on its own. The <a href="/test/">full 15-second test</a>
+        combines CPU, GPU and RAM into the 9bench score with a global percentile.
+      </p>
+    </section>
+
+    <slot />
+
+    <section class="st__section st__more">
+      <h2 class="st__h2">More tests</h2>
+      <div class="st__more-grid">
+        <a class="st__more-card st__more-card--main" href="/test/">
+          <span class="st__more-label">Full benchmark</span>
+          <span class="st__more-sub">CPU + GPU + RAM · ~15 s · percentile</span>
+        </a>
+        {OTHERS.map(o => (
+          <a class="st__more-card" href={o.href}>
+            <span class="st__more-label">{o.label}</span>
+            <span class="st__more-sub">{o.sub}</span>
+          </a>
+        ))}
+      </div>
+      <p class="st__p st__small">
+        How every number is computed: <a href="/methodology/">methodology</a>.
+      </p>
+    </section>
+  </main>
+</BaseLayout>
+
+<script>
+  import { runRAMBench } from '../../bench/ram-test';
+  import { runWebGPUBench } from '../../bench/webgpu-test';
+  import { runCPUBench } from '../../bench/cpu-test';
+  import { gpuScore, cpuSingleScore, cpuMultiScore, ramScore } from '../../bench/scores';
+
+  type Row = { label: string; value: string; sub?: string; big?: boolean };
+
+  const root = document.querySelector<HTMLElement>('[data-single-test]');
+  if (root) init(root);
+
+  function init(root: HTMLElement) {
+    const kind = root.dataset.singleTest as 'ram' | 'gpu' | 'cpu';
+    const btn = root.querySelector<HTMLButtonElement>('[data-st-start]')!;
+    const status = root.querySelector<HTMLElement>('[data-st-status]')!;
+    const results = root.querySelector<HTMLElement>('[data-st-results]')!;
+    const after = root.querySelector<HTMLElement>('[data-st-after]')!;
+    const NM = 'not measured';
+
+    const fmt = (n: number, d = 1) => n.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+    const int = (n: number) => Math.round(n).toLocaleString('en-US');
+
+    // Two frames so the "running" state is painted before a test that blocks
+    // the main thread (the RAM test allocates 512 MB and loops synchronously).
+    const paint = () => new Promise<void>(r => requestAnimationFrame(() => requestAnimationFrame(() => r())));
+
+    function render(rows: Row[], error?: string) {
+      results.innerHTML = '';
+      for (const r of rows) {
+        const wrap = document.createElement('div');
+        wrap.className = 'st__row' + (r.big ? ' st__row--big' : '');
+        const dt = document.createElement('dt');
+        dt.textContent = r.label;
+        const dd = document.createElement('dd');
+        dd.textContent = r.value;
+        if (r.value === NM) dd.classList.add('st__nm');
+        wrap.append(dt, dd);
+        if (r.sub) {
+          const s = document.createElement('span');
+          s.className = 'st__row-sub';
+          s.textContent = r.sub;
+          wrap.append(s);
+        }
+        results.append(wrap);
+      }
+      results.hidden = false;
+      after.hidden = false;
+      if (error) {
+        status.textContent = 'Browser reported: ' + error;
+        status.hidden = false;
+      }
+    }
+
+    async function runRam() {
+      const ram = await runRAMBench(256);
+      const rows: Row[] = [
+        { label: 'RAM score', value: ram.measured ? int(ramScore(ram.readBandwidthGBs, ram.writeBandwidthGBs)) : NM, sub: 'avg(read, write) × 60', big: true },
+        { label: 'Read', value: ram.measured ? fmt(ram.readBandwidthGBs) + ' GB/s' : NM },
+        { label: 'Write', value: ram.measured ? fmt(ram.writeBandwidthGBs) + ' GB/s' : NM },
+        { label: 'Copy', value: ram.copyBandwidthGBs > 0 ? fmt(ram.copyBandwidthGBs) + ' GB/s' : NM },
+        { label: 'Random access', value: ram.latencyMeasured ? fmt(ram.randomAccessLatencyNs, 2) + ' ns' : NM, sub: 'per read, 1M random reads' },
+      ];
+      render(rows, ram.measured ? undefined : (ram.error || 'the 256 MB working set could not be timed'));
+    }
+
+    async function runGpu() {
+      const gpu = await runWebGPUBench(1024, 5);
+      const ok = gpu.supported && gpu.gflops > 0;
+      const rows: Row[] = [
+        { label: 'GPU score', value: ok ? int(gpuScore(gpu.gflops)) : NM, sub: 'GFLOPS × 3', big: true },
+        { label: 'Throughput', value: ok ? fmt(gpu.gflops) + ' GFLOPS' : NM, sub: '1024×1024 FP32 matmul, median of 3 timed runs' },
+        { label: 'Adapter', value: gpu.adapterName && gpu.adapterName !== 'Unknown' ? gpu.adapterName : 'not exposed by browser' },
+      ];
+      if (ok && gpu.measurements && gpu.measurements.length > 1) {
+        rows.push({ label: 'Runs', value: gpu.measurements.map(m => fmt(m, 0)).join(' · ') + ' GFLOPS' });
+      }
+      render(rows, ok ? undefined : (gpu.error || 'no GPU result'));
+    }
+
+    async function runCpu() {
+      const t0 = performance.now();
+      const tick = setInterval(() => {
+        status.textContent = `Running… ${((performance.now() - t0) / 1000).toFixed(0)} s (about 12–15 s in total)`;
+      }, 500);
+      try {
+        const cpu = await runCPUBench();
+        const rows: Row[] = [
+          { label: 'Multi-core score', value: cpu.multiMeasured ? int(cpuMultiScore(cpu.hashesPerSecondMulti)) : NM, sub: 'hashes/s ÷ 600', big: true },
+          { label: 'Single-core score', value: cpu.singleMeasured ? int(cpuSingleScore(cpu.hashesPerSecondSingle)) : NM, sub: 'hashes/s ÷ 300', big: true },
+          { label: 'Single-core', value: cpu.singleMeasured ? int(cpu.hashesPerSecondSingle) + ' h/s' : NM },
+          { label: 'Multi-core', value: cpu.multiMeasured ? int(cpu.hashesPerSecondMulti) + ' h/s' : NM, sub: `${cpu.workersReported} of ${cpu.cores} workers reported` },
+          { label: 'Scaling', value: cpu.speedup != null ? fmt(cpu.speedup, 2) + '×' : NM, sub: 'multi ÷ single' },
+        ];
+        status.hidden = true;
+        render(rows, cpu.singleMeasured && cpu.multiMeasured ? undefined : (cpu.multiError || cpu.singleError || cpu.error || 'part of the test did not finish'));
+      } finally {
+        clearInterval(tick);
+      }
+    }
+
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      results.hidden = true;
+      after.hidden = true;
+      status.textContent = kind === 'ram'
+        ? 'Running… the page may freeze for a few seconds while 512 MB are moved.'
+        : kind === 'gpu' ? 'Running… compiling and timing the compute shader.' : 'Running…';
+      status.hidden = false;
+      await paint();
+      try {
+        if (kind === 'ram') await runRam();
+        else if (kind === 'gpu') await runGpu();
+        else await runCpu();
+        if (!status.textContent?.startsWith('Browser reported')) status.hidden = true;
+      } catch (e: any) {
+        status.textContent = 'The test stopped: ' + (e?.message || String(e));
+        status.hidden = false;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '↻ Run again';
+      }
+    });
+  }
+</script>
+
+<style is:global>
+  .st { padding-top: 24px; padding-bottom: 56px; max-width: 880px; }
+  .st__hero { padding: 40px 0 28px; }
+  .st__h1 {
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: clamp(34px, 6.5vw, 76px);
+    line-height: 0.98;
+    letter-spacing: -0.04em;
+    margin: 14px 0 20px 0;
+    color: var(--fg);
+  }
+  .st__lede { font-family: var(--sans); font-size: 18px; line-height: 1.55; color: var(--fg-2); max-width: 640px; margin: 0; }
+
+  .st__panel { border: 1px solid var(--line); background: var(--bg-2); padding: 20px; margin: 8px 0 8px; }
+  .st__panel-head { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; }
+  .st__meta { font-family: var(--mono); font-size: 12px; color: var(--fg-3); }
+  .st__note { font-family: var(--sans); font-size: 14px; line-height: 1.55; color: var(--fg-3); margin: 14px 0 0; }
+  .st__status { font-family: var(--mono); font-size: 13px; color: var(--accent); margin: 16px 0 0; }
+  .st__results {
+    display: grid; grid-template-columns: 1fr; gap: 0; margin: 18px 0 0;
+    border-top: 1px solid var(--line);
+  }
+  @media (min-width: 640px) { .st__results { grid-template-columns: 1fr 1fr; column-gap: 24px; } }
+  .st__row { padding: 12px 0; border-bottom: 1px solid var(--line-2); min-width: 0; }
+  .st__row dt { font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-3); }
+  .st__row dd { margin: 4px 0 0; font-family: var(--mono); font-size: 18px; color: var(--fg); overflow-wrap: anywhere; }
+  .st__row--big dd { font-size: 34px; font-weight: 700; color: var(--accent); }
+  .st__row dd.st__nm { font-size: 15px; font-weight: 400; color: var(--warn); }
+  .st__row-sub { display: block; font-family: var(--mono); font-size: 11px; color: var(--fg-3); margin-top: 2px; }
+  .st__after { font-family: var(--sans); font-size: 14px; color: var(--fg-2); margin: 16px 0 0; }
+  .st__after a, .st__p a, .st__list a { color: var(--accent); }
+
+  .st__section { padding: 40px 0 8px; border-top: 1px solid var(--line); margin-top: 40px; }
+  .st__h2 { font-family: var(--sans); font-weight: 700; font-size: clamp(24px, 3.4vw, 36px); line-height: 1.1; letter-spacing: -0.02em; color: var(--fg); margin: 0 0 16px; }
+  .st__p { font-family: var(--sans); font-size: 16px; line-height: 1.7; color: var(--fg-2); margin: 0 0 16px; }
+  .st__small { font-size: 14px; color: var(--fg-3); }
+  .st__list { font-family: var(--sans); font-size: 16px; line-height: 1.7; color: var(--fg-2); margin: 0 0 16px; padding-left: 20px; }
+  .st__list li { margin-bottom: 6px; }
+  .st__formula { display: block; font-family: var(--mono); font-size: 15px; color: var(--accent); background: var(--bg-3); border: 1px solid var(--line); padding: 12px 14px; margin: 0 0 16px; overflow-x: auto; }
+
+  .st__more-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 16px; }
+  @media (min-width: 640px) { .st__more-grid { grid-template-columns: repeat(3, 1fr); } }
+  .st__more-card { display: block; border: 1px solid var(--line); padding: 14px 16px; text-decoration: none; background: var(--bg-2); }
+  .st__more-card:hover { border-color: var(--accent); }
+  .st__more-card--main { border-color: var(--accent); }
+  .st__more-label { display: block; font-family: var(--mono); font-weight: 700; font-size: 14px; color: var(--fg); }
+  .st__more-sub { display: block; font-family: var(--mono); font-size: 12px; color: var(--fg-3); margin-top: 4px; }
+</style>
