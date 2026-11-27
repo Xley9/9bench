@@ -538,6 +538,15 @@ const FAQ = [
           headline has been the median of three timed runs, as the code and the shipped
           measurements show.
         </li>
+        <li>
+          <strong>Result page: unsourced AI speed figures removed.</strong> The “Native”
+          column and score (tokens/s for Llama, Qwen; seconds per image for SDXL, Flux) came
+          from a per-GPU table whose sources were never recorded, and one line even claimed
+          calibration “from public ComfyUI benchmarks”. The live LLM test also showed a
+          “same model on native llama.cpp” figure via an unverified 5–10× factor. All of it is
+          gone. What remains are fit verdicts derived from this run's measurements and the
+          live test's own measured tokens/s.
+        </li>
       </ul>
 
       <h3 class="methodology__h3">v3.7 — July 29, 2026</h3>

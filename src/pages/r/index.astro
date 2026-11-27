@@ -184,7 +184,7 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
           <!-- Jump link, not a duplicate test block: the live test stays
                below the predictions it verifies, and above-the-fold dynamic
                content risks CLS regressions. -->
-          <a class="ai-livetest-jump" href="#ai-live-test">⚡ Verify with a live LLM test — real tokens/s, measured in this tab ↓</a>
+          <a class="ai-livetest-jump" href="#ai-live-test">⚡ Run a live LLM test — real tokens/s of a small model in this tab ↓</a>
 
           <!-- Shown instead of the score blocks + prediction table when the
                GPU was never benchmarked. Everything in this section derives
@@ -214,15 +214,6 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
               <p class="ai-scoreblock__sub" id="ai-browser-sub">—</p>
             </article>
 
-            <article class="ai-scoreblock ai-scoreblock--native">
-              <div class="ai-scoreblock__head">
-                <span class="ai-scoreblock__label">Native</span>
-                <span class="ai-scoreblock__sublabel">estimated · llama.cpp / ComfyUI</span>
-              </div>
-              <div class="ai-scoreblock__score tnum" id="ai-native-score">—</div>
-              <div class="ai-scoreblock__tier" id="ai-native-tier">—</div>
-              <p class="ai-scoreblock__sub" id="ai-native-sub">—</p>
-            </article>
           </div>
         </header>
 
@@ -262,11 +253,7 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
             <div class="ai-pred-table__h-name">Workload</div>
             <div class="ai-pred-table__h-col">
               <span class="ai-pred-table__h-title">Browser</span>
-              <span class="ai-pred-table__h-sub">in this tab today</span>
-            </div>
-            <div class="ai-pred-table__h-col">
-              <span class="ai-pred-table__h-title">Native</span>
-              <span class="ai-pred-table__h-sub">your hardware, no sandbox</span>
+              <span class="ai-pred-table__h-sub">rough fit check from this run's measurements</span>
             </div>
           </header>
           <div class="ai-pred-table__body" id="ai-pred-rows">
@@ -343,23 +330,15 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
                 <span id="llm-result-seconds">—</span>s
               </div>
 
-              <!-- Same-model native estimate (apples-to-apples) -->
-              <div class="ai-live-test__compare" id="llm-compare">
-                <div class="ai-live-test__compare-row">
-                  <span class="text-fg-3 font-mono" style="font-size: 11px;">SAME MODEL ON NATIVE LLAMA.CPP</span>
-                  <span id="llm-compare-verdict">—</span>
-                </div>
-              </div>
 
               <!-- Truth-Series footnote -->
               <p class="ai-live-test__result-note font-mono">
                 <strong>What this measures:</strong>
-                Browser-WebAssembly inference of <span id="llm-model-tag">a small model</span>.
-                Native llama.cpp on the same hardware running the same model
-                typically generates 5-10× more tokens/second because it uses
-                CUDA/Metal/Vulkan directly + skips the WebAssembly + browser-sandbox
-                overhead. The "native" figure above is the same-model
-                extrapolation. Everything here is measured, not estimated.
+                Browser-WebAssembly inference of <span id="llm-model-tag">a small model</span>,
+                on the CPU, single-threaded. It is not your GPU's speed and not what
+                Ollama or llama.cpp would reach on this machine — native runtimes are
+                faster, but we have no measured factor to convert this number, so we
+                don't. The figure above is measured, not estimated.
               </p>
             </div>
 
@@ -379,15 +358,13 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
 
         <!-- Methodology footnote with the 2-context explanation -->
         <p class="ai-section__note" id="ai-pred-note">
-          <strong>How these predictions work:</strong>
-          <span class="text-accent">Browser</span> values reflect what your
-          browser can actually run today (transformers.js, web-llm) — sandbox
-          memory limits + ANGLE/Direct3D translation overhead included.
-          <span class="text-accent">Native</span> values extrapolate to what
-          the same hardware achieves outside the browser (llama.cpp, ComfyUI),
-          assuming typical RAM headroom and direct GPU access. Real native
-          performance varies by ±30% — these are calibration targets, not
-          guarantees. <a href="/methodology#ai">Read the AI methodology →</a>
+          <strong>How to read this:</strong> each verdict is a rough fit check
+          derived from what this run measured in the browser — memory the tab could
+          allocate, GPU compute, FP16 support. We show no tokens/s or seconds-per-image
+          figures: we have no measured, sourced basis for them, and an earlier version
+          of this page showed such numbers (including a “native” column) without one.
+          For real speed, run the live test below or try the model in Ollama / ComfyUI.
+          <a href="/methodology#ai">Read the AI methodology →</a>
         </p>
       </section>
 
@@ -1038,7 +1015,7 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
     margin-top: 20px;
   }
   @media (min-width: 768px) {
-    .ai-scoreblocks { grid-template-columns: 1fr 1fr; }
+    .ai-scoreblocks { grid-template-columns: 1fr; max-width: 520px; }
   }
   .ai-scoreblock {
     border: 1px solid var(--line);
@@ -1114,7 +1091,7 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
   }
   .ai-pred-table__head {
     display: grid;
-    grid-template-columns: 1.4fr 1fr 1fr;
+    grid-template-columns: 1.4fr 1fr;
     gap: 0;
     border-bottom: 1px solid var(--line);
     background: var(--bg-3);
@@ -2635,20 +2612,8 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
     // on 5-10× for the same model running browser vs native on identical
     // hardware. So we show the user what their hardware would do natively
     // running the SAME model they just tested. No cross-model conflation.
-    const verdictEl = $('#llm-compare-verdict');
-    if (verdictEl && result.tokensPerSecond > 0) {
-      const nativeSameLow  = Math.round(result.tokensPerSecond * 5);
-      const nativeSameHigh = Math.round(result.tokensPerSecond * 10);
-      verdictEl.innerHTML =
-        `<span class="text-accent font-mono" style="font-weight: 700;">` +
-        `~${nativeSameLow}–${nativeSameHigh} t/s` +
-        `</span>` +
-        `<span class="text-fg-3 font-mono" style="font-size: 11px; margin-left: 8px;">` +
-        `(extrapolated · 5-10× browser→native)` +
-        `</span>`;
-    } else if (verdictEl) {
-      verdictEl.textContent = '—';
-    }
+    // The "same model on native llama.cpp" 5-10× extrapolation was removed
+    // 2026-11-27: its cited sources were never verified.
     // Suppress the previously-noisy nativeCompare warning (variable kept
     // in signature for API compat — we may use Llama 7B numbers in a
     // future "what about real models?" tooltip).
@@ -2820,33 +2785,16 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
     const browserRamGBs   = r.ram.readGBs || 0;
     const browserTier     = aiTierLabel(ai.tier);
 
-    // ── Native estimation (extrapolated from browser values) ──
-    // Phase K: pass GPU name so the lookup table can refine estimates
-    // when we recognize the hardware (RTX 4060 Laptop, M2 Pro, etc).
-    const nativeCtx       = estimateNativeContext(
-      browserGflops,
-      r.cpu.cores || 4,
-      browserFp16,
-      r.gpu.name || null,
-    );
-    const nativeScore     = computeNativeAIScore(nativeCtx);
-    const nativeTierInfo  = nativeAITier(nativeScore);
+    // Native column removed 2026-11-27: its tokens/s and seconds-per-image
+    // figures came from gpu-class-lookup.ts, whose per-entry sources were
+    // never recorded. estimateNativeContext / generateNativePredictions are
+    // no longer called.
 
     // ── Browser score block ──
     $('#ai-browser-score')!.textContent = ai.score.toLocaleString();
     $('#ai-browser-tier')!.textContent  = ai.tier;
     $('#ai-browser-sub')!.textContent   = browserTier.sub;
 
-    // ── Native score block ──
-    $('#ai-native-score')!.textContent = '~' + nativeScore.toLocaleString();
-    $('#ai-native-tier')!.textContent  = nativeTierInfo.letter;
-    // When we matched a known GPU class, surface that — gives users
-    // confidence the estimates aren't pure extrapolation. Falls back
-    // gracefully to the RAM-only suffix when no class match.
-    const nativeSubExtras = nativeCtx.matchedDisplayName
-      ? ` · matched ${nativeCtx.matchedDisplayName} · ~${nativeCtx.estimatedTotalRamGB} GB unified/system RAM`
-      : ` · est. ${nativeCtx.estimatedTotalRamGB} GB system RAM`;
-    $('#ai-native-sub')!.textContent   = nativeTierInfo.sub + nativeSubExtras;
 
     // ── Feature inventory (browser-only — these describe the sandbox limits) ──
     setFeature('fp16',
@@ -2861,8 +2809,8 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
       memTier,
       `${browserMaxAlloc.toFixed(1)} GB max allocation (browser)`,
       browserMaxAlloc >= 4 ? 'Enough headroom for 7-13B quantized models in-browser.' :
-      browserMaxAlloc >= 2 ? 'Tight in-browser — but ~' + nativeCtx.estimatedTotalRamGB + ' GB system RAM available natively.' :
-      'Browser sandbox-limited. Native estimated ~' + nativeCtx.estimatedTotalRamGB + ' GB available.');
+      browserMaxAlloc >= 2 ? 'Tight in-browser. Native apps are not bound by this tab limit.' :
+      'Browser sandbox-limited. Native apps are not bound by this tab limit.');
 
     // The API always emits an ai.webgpu object for post-Phase-G rows, so a
     // null check reported "✓ compute available" on devices with no WebGPU
@@ -2880,24 +2828,14 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
       browserGflops, browserRamGBs, browserMaxAlloc, browserFp16
     );
 
-    // ── Native predictions (the new generator) ──
-    const nativePreds = generateNativePredictions(nativeCtx);
-
-    // ── Build the 2-column predictions table ──
-    // We pair predictions by name. If a prediction exists in one but
-    // not the other, we render a placeholder cell. In practice both
-    // generators produce the same workload list in the same order.
-    const allNames = Array.from(new Set([
-      ...browserPreds.map(p => p.name),
-      ...nativePreds.map(p => p.name),
-    ]));
+    const allNames = Array.from(new Set(browserPreds.map(p => p.name)));
 
     const renderCell = (p: any) => {
       if (!p) return '<div class="ai-pred-row__cell"><span class="text-fg-3 font-mono">—</span></div>';
       const icon = p.verdict === 'yes' ? '✓' : p.verdict === 'maybe' ? '~' : '✗';
       const verdictText = p.verdict === 'yes' ? 'YES' : p.verdict === 'maybe' ? 'MAYBE' : 'NO';
-      const perfHtml = p.performance
-        ? `<span class="ai-pred-row__perf">${escapeHtml(p.performance)}</span>` : '';
+      // Speed strings (p.performance) are not rendered: no sourced basis.
+      const perfHtml = '';
       return `<div class="ai-pred-row__cell ai-pred-row__cell--${p.verdict}">
         <span class="ai-pred-row__verdict">
           <span class="ai-pred-row__verdict-icon">${icon}</span>
@@ -2910,35 +2848,21 @@ import { tierFor, PERCENTILE_MIN_N } from '../../components/bench/tier-system';
 
     const rowsHtml = allNames.map((name) => {
       const bp = browserPreds.find(p => p.name === name);
-      const np = nativePreds.find(p => p.name === name);
-      const desc = (bp || np)?.description || '';
+      const desc = bp?.description || '';
       return `<div class="ai-pred-row">
         <div class="ai-pred-row__name-cell">
           <span class="ai-pred-row__name">${escapeHtml(name)}</span>
           <span class="ai-pred-row__desc">${escapeHtml(desc)}</span>
         </div>
         ${renderCell(bp)}
-        ${renderCell(np)}
       </div>`;
     }).join('');
 
     $('#ai-pred-rows')!.innerHTML = rowsHtml;
     $('#ai-section')!.removeAttribute('hidden');
 
-    // Return data needed for the live LLM test "vs estimate" comparison.
-    // We use the native Llama 7B prediction range as the calibration
-    // target — that's what users will most likely run with llama.cpp.
-    const llama7B = nativePreds.find(p => p.name.startsWith('Llama 7B'));
-    let lo = 0, hi = 0;
-    if (llama7B?.performance) {
-      const m = llama7B.performance.match(/~?(\d+(?:\.\d+)?)–(\d+(?:\.\d+)?)/);
-      if (m) { lo = parseFloat(m[1]); hi = parseFloat(m[2]); }
-    }
-    return {
-      llama7BTPSLow:  lo,
-      llama7BTPSHigh: hi,
-      matchedDisplayName: nativeCtx.matchedDisplayName,
-    };
+    // No native estimate any more — the live test reports only what it measures.
+    return { llama7BTPSLow: 0, llama7BTPSHigh: 0, matchedDisplayName: null };
   }
 
   // Local escapeHtml (the result page already has one in renderShareButtons

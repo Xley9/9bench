@@ -1001,7 +1001,7 @@ body.theme-bg { background: var(--bg); color: var(--fg); }
    These are JS-injected via innerHTML so must live in global CSS. */
 .ai-pred-row {
   display: grid;
-  grid-template-columns: 1.4fr 1fr 1fr;
+  grid-template-columns: 1.4fr 1fr;
   gap: 0;
   border-bottom: 1px solid var(--line-2);
   align-items: stretch;
